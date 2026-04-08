@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum UserRole {
+  ADMIN
+  TRAINER
+  TRAINEE
+}
+
+enum MembershipStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum SubscriptionPlanType {
+  NONE
+  WEEKLY
+  MONTHLY
+  FIXED
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+enum LessonStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(TRAINEE)
+  membershipStatus      MembershipStatus    @default(INACTIVE)
+  trialEndsAt           DateTime?
+  subscriptionType      SubscriptionPlanType @default(NONE)
+  subscriptionLessons   Int?
+  subscriptionRemaining Int?
+  subscriptionResetAt   DateTime?
+  subscriptionEndsAt    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  sessions     Session[]
+  courses      Course[]  @relation("CourseTrainer")
+  lessons      Lesson[]  @relation("LessonTrainer")
+  lessonBookings LessonBooking[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Course {
+  id                      String   @id @default(cuid())
+  name                    String
+  description             String?
+  icon                    String?
+  durationMinutes         Int
+  maxAttendees            Int
+  trainerName             String?
+  trainerId               String?
+  lessonTypeId            String?
+  bookingAdvanceMonths    Int      @default(1)
+  cancellationWindowHours Int      @default(24)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+  scheduleSlots           CourseScheduleSlot[]
+  trainer                 User?    @relation("CourseTrainer", fields: [trainerId], references: [id], onDelete: SetNull)
+  lessonType              LessonType? @relation(fields: [lessonTypeId], references: [id], onDelete: SetNull)
+  lessons                 Lesson[]
+
+  @@index([name])
+  @@index([trainerId])
+  @@index([lessonTypeId])
+}
+
+model LessonType {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  iconSvg     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  courses     Course[]
+  lessons     Lesson[]
+}
+
+model Lesson {
+  id           String      @id @default(cuid())
+  startsAt     DateTime
+  endsAt       DateTime
+  status       LessonStatus @default(SCHEDULED)
+  maxAttendees Int
+  cancellationWindowHours Int @default(24)
+  sourceWeekday Weekday?
+  sourceStartTime String?
+  isGenerated  Boolean     @default(true)
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  courseId     String?
+  lessonTypeId String?
+  trainerId    String?
+  course       Course?     @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lessonType   LessonType? @relation(fields: [lessonTypeId], references: [id], onDelete: SetNull)
+  trainer      User?       @relation("LessonTrainer", fields: [trainerId], references: [id], onDelete: SetNull)
+  bookings     LessonBooking[]
+
+  @@index([courseId])
+  @@index([lessonTypeId])
+  @@index([trainerId])
+  @@index([startsAt])
+  @@index([status])
+  @@unique([courseId, startsAt])
+}
+
+model LessonBooking {
+  id        String   @id @default(cuid())
+  lessonId  String
+  traineeId String
+  createdAt DateTime @default(now())
+  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  trainee   User     @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, traineeId])
+  @@index([traineeId])
+}
+
+model CourseScheduleSlot {
+  id        String  @id @default(cuid())
+  courseId  String
+  weekday   Weekday
+  startTime String
+  course    Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, weekday, startTime])
+  @@index([courseId, weekday])
+}
+
+model SiteSettings {
+  id             Int      @id @default(1)
+  siteName       String   @default("NekoGym")
+  siteLogoSvg    String   @default("/logo-nekogym.svg")
+  weeklyResetWeekday Weekday @default(MONDAY)
+  openWeekdaysCsv String  @default("MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY")
+  closedDatesCsv  String  @default("")
+  smtpHost       String?
+  smtpPort       Int?
+  smtpUser       String?
+  smtpPassword   String?
+  smtpFromEmail  String?
+  contactAddress String?
+  contactEmail   String?
+  contactPhone   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+

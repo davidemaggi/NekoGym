@@ -1,0 +1,47 @@
+import { requireAnyRole } from "@/lib/authorization";
+import { getDictionary, isLocale } from "@/lib/i18n";
+import { prisma } from "@/lib/prisma";
+
+import { UsersManager } from "@/app/[locale]/(app)/users/users-manager";
+
+export default async function UsersPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  await requireAnyRole(["ADMIN"], locale);
+  const safeLocale = isLocale(locale) ? locale : "it";
+  const labels = getDictionary(safeLocale).usersPage;
+
+  const users = await prisma.user.findMany({
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      membershipStatus: true,
+      trialEndsAt: true,
+      subscriptionType: true,
+      subscriptionLessons: true,
+      subscriptionRemaining: true,
+      subscriptionResetAt: true,
+      subscriptionEndsAt: true,
+    },
+  });
+
+  return (
+    <UsersManager
+      locale={locale}
+      labels={labels}
+      users={users.map((user) => ({
+        ...user,
+        trialEndsAt: user.trialEndsAt ? user.trialEndsAt.toISOString() : null,
+        subscriptionResetAt: user.subscriptionResetAt ? user.subscriptionResetAt.toISOString() : null,
+        subscriptionEndsAt: user.subscriptionEndsAt ? user.subscriptionEndsAt.toISOString() : null,
+      }))}
+    />
+  );
+}
+
