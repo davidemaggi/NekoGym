@@ -16,6 +16,7 @@ export default async function CoursesPage({
   const trainerCandidates =
     currentUser.role === "ADMIN"
       ? await prisma.user.findMany({
+          where: { role: { in: ["ADMIN", "TRAINER"] } },
           select: { id: true, name: true, email: true, role: true },
           orderBy: { name: "asc" },
         })
@@ -36,8 +37,19 @@ export default async function CoursesPage({
   }));
 
   const courses = await prisma.course.findMany({
+    where: { deletedAt: null },
     include: {
       scheduleSlots: true,
+      lessons: {
+        where: {
+          startsAt: { gt: new Date() },
+          status: "SCHEDULED",
+        },
+        select: {
+          id: true,
+          _count: { select: { bookings: true } },
+        },
+      },
       trainer: {
         select: { id: true, name: true, email: true },
       },
@@ -50,6 +62,7 @@ export default async function CoursesPage({
 
   const safeCourses = courses.map((course) => ({
     ...course,
+    futureBookedLessonsCount: course.lessons.filter((lesson) => lesson._count.bookings > 0).length,
     lessonType: course.lessonType
       ? {
           ...course.lessonType,

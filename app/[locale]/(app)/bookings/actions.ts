@@ -1,9 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import type { Prisma } from "@prisma/client";
 
 import { requireAuth } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
+import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
 type BookingActionResult = {
   ok: boolean;
@@ -20,10 +22,10 @@ function bookingMessages(locale: string) {
   return {
     lessonRequired: isIt ? "Lezione non valida." : "Invalid lesson.",
     authRequired: isIt ? "Devi essere autenticato." : "You must be authenticated.",
-    traineeOnly: isIt ? "Solo i trainee possono prenotare." : "Only trainees can book lessons.",
     lessonUnavailable: isIt ? "Lezione non disponibile." : "Lesson is not available.",
     lessonStarted: isIt ? "La lezione e gia iniziata." : "Lesson has already started.",
     alreadyBooked: isIt ? "Sei gia iscritto a questa lezione." : "You are already booked for this lesson.",
+    alreadyQueued: isIt ? "Sei gia in coda per questa lezione." : "You are already queued for this lesson.",
     noSeats: isIt ? "Non ci sono posti disponibili." : "No seats available.",
     sameCourseDay:
       isIt
@@ -42,6 +44,7 @@ function bookingMessages(locale: string) {
         ? "La subscription e scaduta: membership impostata su inattiva."
         : "Subscription expired: membership set to inactive.",
     booked: isIt ? "Prenotazione completata." : "Booking completed.",
+    queued: isIt ? "Lezione piena: sei stato messo in coda." : "Lesson full: you have been added to waitlist.",
     unbooked: isIt ? "Disiscrizione completata." : "Booking cancelled.",
     cannotUnbook: isIt ? "Tempo massimo per disiscriversi superato." : "Cancellation window has expired.",
     notBooked: isIt ? "Non risulti iscritto a questa lezione." : "You are not booked for this lesson.",
@@ -77,6 +80,81 @@ function lessonWindowForPlan(startsAt: Date, type: "WEEKLY" | "MONTHLY") {
   return { start, end };
 }
 
+function formatLessonDateTime(value: Date, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(value);
+}
+
+async function notifyTrainerBookingChanged(input: {
+  tx: Prisma.TransactionClient;
+  locale: string;
+  actorName: string;
+  action: "BOOKED" | "UNBOOKED";
+  lesson: {
+    startsAt: Date;
+    trainerId: string | null;
+    trainer: { id: string; telegramChatId: string | null } | null;
+    course: { name: string } | null;
+  };
+}) {
+  if (!input.lesson.trainerId || !input.lesson.trainer || input.lesson.trainer.id === "") return;
+
+  if (input.lesson.trainer.id === "") return;
+
+  const isIt = input.locale === "it";
+  const actionText = input.action === "BOOKED"
+    ? (isIt ? "si e iscritto" : "booked")
+    : (isIt ? "si e disiscritto" : "cancelled booking");
+
+  const subject = isIt ? "Aggiornamento prenotazione lezione" : "Lesson booking update";
+  const body = isIt
+    ? `${input.actorName} ${actionText} alla lezione ${input.lesson.course?.name ?? "-"} del ${formatLessonDateTime(input.lesson.startsAt, input.locale)}.`
+    : `${input.actorName} ${actionText} for lesson ${input.lesson.course?.name ?? "-"} on ${formatLessonDateTime(input.lesson.startsAt, input.locale)}.`;
+
+  await enqueueNotificationForUsers(
+    input.tx,
+    [{ id: input.lesson.trainer.id, telegramChatId: input.lesson.trainer.telegramChatId }],
+    { subject, body }
+  );
+}
+
+async function notifyWaitlistSeatAvailable(input: {
+  tx: Prisma.TransactionClient;
+  locale: string;
+  lessonId: string;
+  startsAt: Date;
+  courseName: string | null;
+}) {
+  const queued = await input.tx.lessonWaitlistEntry.findMany({
+    where: { lessonId: input.lessonId },
+    select: {
+      trainee: {
+        select: { id: true, telegramChatId: true },
+      },
+    },
+  });
+
+  if (queued.length === 0) return;
+
+  const targets = queued.map((entry) => ({
+    id: entry.trainee.id,
+    telegramChatId: entry.trainee.telegramChatId,
+  }));
+
+  await enqueueNotificationForUsers(input.tx, targets, {
+    subject: input.locale === "it" ? "Posto libero in lezione" : "Seat available in lesson",
+    body:
+      input.locale === "it"
+        ? `Si e liberato un posto per la lezione ${input.courseName ?? "-"} del ${formatLessonDateTime(input.startsAt, input.locale)}.`
+        : `A seat is now available for lesson ${input.courseName ?? "-"} on ${formatLessonDateTime(input.startsAt, input.locale)}.`,
+  });
+}
+
 export async function bookLessonAction(formData: FormData): Promise<BookingActionResult> {
   const locale = getField(formData, "locale") || "it";
   const lessonId = getField(formData, "lessonId");
@@ -92,11 +170,7 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
       return { ok: false, message: messages.authRequired };
     }
 
-    if (user.role !== "TRAINEE") {
-      return { ok: false, message: messages.traineeOnly };
-    }
-
-    await prisma.$transaction(async (tx) => {
+    const queued = await prisma.$transaction(async (tx) => {
       const fullUser = await tx.user.findUnique({ where: { id: user.id } });
       if (!fullUser) {
         throw new Error(messages.authRequired);
@@ -111,14 +185,18 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         throw new Error(messages.subscriptionExpired);
       }
 
-      const membershipAllowed = fullUser.membershipStatus === "ACTIVE" || isTrialActive(fullUser.trialEndsAt);
-      if (!membershipAllowed) {
-        throw new Error(messages.membershipDenied);
+      if (fullUser.role === "TRAINEE") {
+        const membershipAllowed = fullUser.membershipStatus === "ACTIVE" || isTrialActive(fullUser.trialEndsAt);
+        if (!membershipAllowed) {
+          throw new Error(messages.membershipDenied);
+        }
       }
 
       const lesson = await tx.lesson.findUnique({
         where: { id: lessonId },
         include: {
+          course: { select: { name: true } },
+          trainer: { select: { id: true, telegramChatId: true } },
           _count: { select: { bookings: true } },
         },
       });
@@ -144,8 +222,16 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         throw new Error(messages.alreadyBooked);
       }
 
-      if (lesson._count.bookings >= lesson.maxAttendees) {
-        throw new Error(messages.noSeats);
+      const existingQueue = await tx.lessonWaitlistEntry.findUnique({
+        where: {
+          lessonId_traineeId: {
+            lessonId,
+            traineeId: user.id,
+          },
+        },
+      });
+      if (existingQueue) {
+        throw new Error(messages.alreadyQueued);
       }
 
       if (lesson.courseId) {
@@ -173,7 +259,7 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         }
       }
 
-      if (fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType !== "NONE") {
+      if (fullUser.role === "TRAINEE" && fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType !== "NONE") {
         if (fullUser.subscriptionType === "FIXED") {
           const remaining = fullUser.subscriptionRemaining;
           if (remaining !== null && remaining <= 0) {
@@ -206,6 +292,16 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         }
       }
 
+      if (lesson._count.bookings >= lesson.maxAttendees) {
+        await tx.lessonWaitlistEntry.create({
+          data: {
+            lessonId,
+            traineeId: user.id,
+          },
+        });
+        return true;
+      }
+
       await tx.lessonBooking.create({
         data: {
           lessonId,
@@ -213,7 +309,17 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         },
       });
 
-      if (fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType === "FIXED") {
+      if (lesson.trainerId && lesson.trainer && lesson.trainer.id !== user.id) {
+        await notifyTrainerBookingChanged({
+          tx,
+          locale,
+          actorName: fullUser.name,
+          action: "BOOKED",
+          lesson,
+        });
+      }
+
+      if (fullUser.role === "TRAINEE" && fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType === "FIXED") {
         await tx.user.update({
           where: { id: user.id },
           data: {
@@ -222,10 +328,12 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
           },
         });
       }
+
+      return false;
     });
 
     revalidatePath(`/${locale}/bookings`);
-    return { ok: true, message: messages.booked };
+    return { ok: true, message: queued ? messages.queued : messages.booked };
   } catch (error) {
     return {
       ok: false,
@@ -249,10 +357,6 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
       return { ok: false, message: messages.authRequired };
     }
 
-    if (user.role !== "TRAINEE") {
-      return { ok: false, message: messages.traineeOnly };
-    }
-
     await prisma.$transaction(async (tx) => {
       const fullUser = await tx.user.findUnique({ where: { id: user.id } });
       if (!fullUser) {
@@ -262,6 +366,8 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
       const lesson = await tx.lesson.findUnique({
         where: { id: lessonId },
         include: {
+          course: { select: { name: true } },
+          trainer: { select: { id: true, telegramChatId: true } },
           bookings: {
             where: { traineeId: user.id },
             select: { id: true },
@@ -285,7 +391,36 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
 
       await tx.lessonBooking.delete({ where: { id: booking.id } });
 
-      if (fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType === "FIXED") {
+      const remainingBookings = await tx.lessonBooking.count({ where: { lessonId } });
+
+      if (lesson.trainerId && lesson.trainer && lesson.trainer.id !== user.id) {
+        await notifyTrainerBookingChanged({
+          tx,
+          locale,
+          actorName: fullUser.name,
+          action: "UNBOOKED",
+          lesson,
+        });
+      }
+
+      const msUntilStart = lesson.startsAt.getTime() - Date.now();
+      const noticeMs = lesson.cancellationWindowHours * 60 * 60 * 1000;
+      const shouldCancelForNoticeWindow =
+        remainingBookings === 0 && lesson.startsAt > new Date() && msUntilStart <= noticeMs;
+
+      if (shouldCancelForNoticeWindow) {
+        await tx.lesson.update({ where: { id: lessonId }, data: { status: "CANCELLED" } });
+      } else if (remainingBookings < lesson.maxAttendees) {
+        await notifyWaitlistSeatAvailable({
+          tx,
+          locale,
+          lessonId,
+          startsAt: lesson.startsAt,
+          courseName: lesson.course?.name ?? null,
+        });
+      }
+
+      if (fullUser.role === "TRAINEE" && fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType === "FIXED") {
         const currentRemaining = fullUser.subscriptionRemaining ?? 0;
         const maxLessons = fullUser.subscriptionLessons ?? currentRemaining + 1;
         await tx.user.update({
@@ -298,6 +433,7 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
     });
 
     revalidatePath(`/${locale}/bookings`);
+    revalidatePath(`/${locale}/lessons`);
     return { ok: true, message: messages.unbooked };
   } catch (error) {
     return {

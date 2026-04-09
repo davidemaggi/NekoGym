@@ -15,7 +15,7 @@ export function DialogContent({ children, className }: { children: ReactNode; cl
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
       <DialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-900",
+          "fixed left-1/2 top-1/2 z-50 w-full max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-lg",
           className
         )}
       >
@@ -34,7 +34,7 @@ export function DialogTitle({ children }: { children: ReactNode }) {
 }
 
 export function DialogDescription({ children }: { children: ReactNode }) {
-  return <DialogPrimitive.Description className="text-sm text-zinc-600 dark:text-zinc-300">{children}</DialogPrimitive.Description>;
+  return <DialogPrimitive.Description className="text-sm text-[var(--muted-foreground)]">{children}</DialogPrimitive.Description>;
 }
 
 export function DialogFooter({ children }: { children: ReactNode }) {

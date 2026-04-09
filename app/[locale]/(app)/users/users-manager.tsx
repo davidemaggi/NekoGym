@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -25,6 +26,7 @@ type UserItem = {
   id: string;
   name: string;
   email: string;
+  emailVerifiedAt: string | null;
   role: "ADMIN" | "TRAINER" | "TRAINEE";
   membershipStatus: "ACTIVE" | "INACTIVE";
   trialEndsAt: string | null;
@@ -42,6 +44,7 @@ type FormPayload = {
   email: string;
   password: string;
   role: UserItem["role"];
+  emailVerified: string;
   membershipStatus: UserItem["membershipStatus"];
   trialEndsAt: string;
   subscriptionType: UserItem["subscriptionType"];
@@ -108,6 +111,8 @@ type UsersManagerProps = {
     roleOptions: Record<UserItem["role"], string>;
     membershipOptions: Record<UserItem["membershipStatus"], string>;
     subscriptionOptions: Record<UserItem["subscriptionType"], string>;
+    passwordCreateHint: string;
+    passwordKeepHint: string;
   };
 };
 
@@ -124,6 +129,7 @@ function toFormData(payload: FormPayload): FormData {
   formData.set("email", payload.email);
   formData.set("password", payload.password);
   formData.set("role", payload.role);
+  formData.set("emailVerified", payload.emailVerified);
   formData.set("membershipStatus", payload.membershipStatus);
   formData.set("trialEndsAt", payload.trialEndsAt);
   formData.set("subscriptionType", payload.subscriptionType);
@@ -180,6 +186,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
       email: String(formData.get("email") ?? "").trim(),
       password: String(formData.get("password") ?? ""),
       role: String(formData.get("role") ?? "TRAINEE") as UserItem["role"],
+      emailVerified: String(formData.get("emailVerified") ?? ""),
       membershipStatus: String(formData.get("membershipStatus") ?? "INACTIVE") as UserItem["membershipStatus"],
       trialEndsAt: String(formData.get("trialEndsAt") ?? ""),
       subscriptionType: String(formData.get("subscriptionType") ?? "NONE") as UserItem["subscriptionType"],
@@ -203,6 +210,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
       email: String(formData.get("email") ?? "").trim(),
       password: String(formData.get("password") ?? ""),
       role: String(formData.get("role") ?? "TRAINEE") as UserItem["role"],
+      emailVerified: String(formData.get("emailVerified") ?? ""),
       membershipStatus: String(formData.get("membershipStatus") ?? "INACTIVE") as UserItem["membershipStatus"],
       trialEndsAt: String(formData.get("trialEndsAt") ?? ""),
       subscriptionType: String(formData.get("subscriptionType") ?? "NONE") as UserItem["subscriptionType"],
@@ -249,7 +257,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.description}</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
         </div>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -291,7 +299,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
             <select
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value as UserItem["role"] | "ALL")}
-              className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
             >
               <option value="ALL">{labels.filters.allRoles}</option>
               <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
@@ -301,12 +309,12 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
           </div>
 
           {filteredUsers.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.empty}</p>
+            <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+                  <tr className="border-b border-[var(--surface-border)] text-left">
                     <th className="py-2 pr-2">{labels.columns.name}</th>
                     <th className="py-2 pr-2">{labels.columns.email}</th>
                     <th className="py-2 pr-2">{labels.columns.role}</th>
@@ -317,14 +325,22 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-zinc-100 dark:border-zinc-800/60">
+                    <tr key={user.id} className="border-b border-[var(--surface-border)]/70">
                       <td className="py-3 pr-2 font-medium">{user.name}</td>
                       <td className="py-3 pr-2">{user.email}</td>
-                      <td className="py-3 pr-2">{labels.roleOptions[user.role]}</td>
-                      <td className="py-3 pr-2">{labels.membershipOptions[user.membershipStatus]}</td>
                       <td className="py-3 pr-2">
-                        {labels.subscriptionOptions[user.subscriptionType]}
-                        {user.subscriptionRemaining !== null ? ` (${user.subscriptionRemaining})` : ""}
+                        <Badge variant="info">{labels.roleOptions[user.role]}</Badge>
+                      </td>
+                      <td className="py-3 pr-2">
+                        <Badge variant={user.membershipStatus === "ACTIVE" ? "success" : "warning"}>
+                          {labels.membershipOptions[user.membershipStatus]}
+                        </Badge>
+                      </td>
+                      <td className="py-3 pr-2">
+                        <Badge variant={user.subscriptionType === "NONE" ? "neutral" : "info"}>
+                          {labels.subscriptionOptions[user.subscriptionType]}
+                          {user.subscriptionRemaining !== null ? ` (${user.subscriptionRemaining})` : ""}
+                        </Badge>
                       </td>
                       <td className="py-3 text-right">
                         <div className="inline-flex gap-2">
@@ -367,6 +383,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                   name: editUser.name,
                   email: editUser.email,
                   role: editUser.role,
+                  emailVerified: Boolean(editUser.emailVerifiedAt),
                   membershipStatus: editUser.membershipStatus,
                   trialEndsAt: dateInputValue(editUser.trialEndsAt),
                   subscriptionType: editUser.subscriptionType,
@@ -440,6 +457,7 @@ function UserFormFields({
     name: string;
     email: string;
     role: UserItem["role"];
+    emailVerified: boolean;
     membershipStatus: UserItem["membershipStatus"];
     trialEndsAt: string;
     subscriptionType: UserItem["subscriptionType"];
@@ -467,7 +485,16 @@ function UserFormFields({
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <Label htmlFor="password">{labels.fields.password}</Label>
-          <Input id="password" name="password" type="password" placeholder={defaults ? "(opzionale)" : ""} />
+          <Input
+            id="password"
+            name="password"
+            type="password"
+            required={!defaults}
+            placeholder={defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
+          />
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
+          </p>
         </div>
         <div className="space-y-1">
           <Label htmlFor="role">{labels.fields.role}</Label>
@@ -475,7 +502,7 @@ function UserFormFields({
             id="role"
             name="role"
             defaultValue={defaults?.role ?? "TRAINEE"}
-            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
             <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
             <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
@@ -486,12 +513,22 @@ function UserFormFields({
 
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
+          <Label htmlFor="emailVerified">Email verified</Label>
+          <input
+            id="emailVerified"
+            name="emailVerified"
+            type="checkbox"
+            defaultChecked={defaults?.emailVerified ?? false}
+            className="h-4 w-4 rounded border-[var(--surface-border)]"
+          />
+        </div>
+        <div className="space-y-1">
           <Label htmlFor="membershipStatus">{labels.fields.membershipStatus}</Label>
           <select
             id="membershipStatus"
             name="membershipStatus"
             defaultValue={defaults?.membershipStatus ?? "INACTIVE"}
-            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
             <option value="ACTIVE">{labels.membershipOptions.ACTIVE}</option>
             <option value="INACTIVE">{labels.membershipOptions.INACTIVE}</option>
@@ -511,7 +548,7 @@ function UserFormFields({
             name="subscriptionType"
             defaultValue={defaults?.subscriptionType ?? "NONE"}
             onChange={(event) => setSubscriptionType(event.target.value as UserItem["subscriptionType"])}
-            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
             <option value="NONE">{labels.subscriptionOptions.NONE}</option>
             <option value="WEEKLY">{labels.subscriptionOptions.WEEKLY}</option>

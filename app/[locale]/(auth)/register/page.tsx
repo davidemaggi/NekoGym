@@ -21,7 +21,7 @@ export default async function RegisterPage({
     <section className="space-y-4">
       <h1 className="text-2xl font-semibold">{t.auth.registerTitle}</h1>
 
-      <p className="rounded-md bg-zinc-100 px-3 py-2 text-sm text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+      <p className="rounded-md bg-[var(--muted)] px-3 py-2 text-sm text-[var(--foreground)]">
         {t.auth.firstUserHint}
       </p>
 
@@ -40,7 +40,7 @@ export default async function RegisterPage({
             name="name"
             type="text"
             required
-            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
           />
         </label>
 
@@ -50,7 +50,7 @@ export default async function RegisterPage({
             name="email"
             type="email"
             required
-            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
           />
         </label>
 
@@ -61,19 +61,19 @@ export default async function RegisterPage({
             type="password"
             required
             minLength={8}
-            className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 text-sm"
           />
         </label>
 
         <button
           type="submit"
-          className="w-full rounded-md bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+          className="w-full rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-medium text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]"
         >
           {t.auth.registerCta}
         </button>
       </form>
 
-      <p className="text-sm text-zinc-600 dark:text-zinc-300">
+      <p className="text-sm text-[var(--muted-foreground)]">
         {t.auth.hasAccount}{" "}
         <Link href={`/${locale}/login`} className="font-medium underline">
           {t.auth.loginCta}

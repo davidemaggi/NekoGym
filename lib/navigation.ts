@@ -1,7 +1,17 @@
 import type { UserRole } from "@/lib/auth";
 
 export type AppMenuItem = {
-  key: "dashboard" | "courses" | "lessons" | "bookings" | "users" | "reports" | "registries" | "siteSettings";
+  key:
+    | "dashboard"
+    | "courses"
+    | "lessons"
+    | "bookings"
+    | "users"
+    | "reports"
+    | "registries"
+    | "siteSettings"
+    | "manualNotifications"
+    | "profileSettings";
   href: string;
   allowedRoles: UserRole[];
 };
@@ -13,7 +23,9 @@ export const appMenuItems: AppMenuItem[] = [
   { key: "bookings", href: "/bookings", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "users", href: "/users", allowedRoles: ["ADMIN"] },
   { key: "reports", href: "/reports", allowedRoles: ["ADMIN"] },
+  { key: "profileSettings", href: "/settings/profile", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "siteSettings", href: "/settings/site", allowedRoles: ["ADMIN"] },
+  { key: "manualNotifications", href: "/settings/notifications", allowedRoles: ["ADMIN"] },
   { key: "registries", href: "/settings/registries", allowedRoles: ["ADMIN", "TRAINER"] },
 ];
 

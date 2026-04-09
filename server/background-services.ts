@@ -1,4 +1,6 @@
 import { startDailyLessonsReconcileJob } from "@/server/jobs/daily-lessons-reconcile";
+import { startLessonsNoticeWindowJob } from "@/server/jobs/lessons-notice-window";
+import { startOutboxWorker } from "@/server/outbox/worker";
 import { startTelegramBot } from "@/server/telegram/bootstrap";
 
 type StopFn = () => void;
@@ -9,6 +11,8 @@ export function startBackgroundServices(log: Logger): StopFn {
   const stops: StopFn[] = [];
 
   stops.push(startDailyLessonsReconcileJob(log));
+  stops.push(startLessonsNoticeWindowJob(log));
+  stops.push(startOutboxWorker(log));
   stops.push(startTelegramBot(log));
 
   return () => {

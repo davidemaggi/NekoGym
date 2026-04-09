@@ -8,11 +8,14 @@ import {
   BarChart3,
   BookOpen,
   CalendarDays,
+  ChevronDown,
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Megaphone,
   PanelLeftClose,
   PanelLeftOpen,
+  UserCog,
   Settings2,
   Users,
 } from "lucide-react";
@@ -22,7 +25,24 @@ import type { Locale } from "@/lib/i18n";
 import { withLocalePath } from "@/lib/i18n";
 import { getMenuItemsForRole } from "@/lib/navigation";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
-import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader } from "@/components/ui/sidebar";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+} from "@/components/ui/sidebar";
 
 type AppSidebarProps = {
   user: CurrentUser;
@@ -33,9 +53,21 @@ type AppSidebarProps = {
     signedInAs: string;
     logout: string;
     localeLabel: string;
+    themeLabel: string;
+    themeToLight: string;
+    themeToDark: string;
     settingsSection: string;
     nav: Record<
-      "dashboard" | "courses" | "lessons" | "bookings" | "users" | "reports" | "registries" | "siteSettings",
+      | "dashboard"
+      | "courses"
+      | "lessons"
+      | "bookings"
+      | "users"
+      | "reports"
+      | "registries"
+      | "siteSettings"
+      | "manualNotifications"
+      | "profileSettings",
       string
     >;
   };
@@ -46,6 +78,8 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
   useEffect(() => {
     const media = window.matchMedia("(max-width: 767px)");
@@ -69,7 +103,9 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
     bookings: CalendarDays,
     users: Users,
     reports: BarChart3,
+    profileSettings: UserCog,
     siteSettings: Settings2,
+    manualNotifications: Megaphone,
     registries: Settings2,
   };
 
@@ -84,25 +120,26 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
   const menuItems = getMenuItemsForRole(user.role);
   const mainMenuItems = menuItems.filter((item) => !item.href.startsWith("/settings"));
   const settingsMenuItems = menuItems.filter((item) => item.href.startsWith("/settings"));
+  const settingsBaseItems = settingsMenuItems.filter((item) => item.key !== "profileSettings");
   const safeLogoSrc = sanitizeSiteLogoSvg(siteLogoSvg);
+  const settingsPrefix = withLocalePath(locale, "/settings");
+  const profileHref = withLocalePath(locale, "/settings/profile");
+  const logoutHref = withLocalePath(locale, "/logout");
+  const isProfileActive = pathname === profileHref;
+  const isSettingsActive = pathname?.startsWith(settingsPrefix) ?? false;
+  const isSettingsGroupActive = isSettingsActive;
+  const isSettingsExpanded = isSettingsOpen || isSettingsActive;
 
   return (
     <>
-      <Link
-        href={withLocalePath(locale, "/")}
-        className="fixed left-3 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900"
-        aria-label="Home"
-      >
-        <Image src={safeLogoSrc} alt="NekoGym logo" width={20} height={20} />
-      </Link>
 
       <button
         type="button"
         onClick={toggleSidebar}
-        className="fixed right-3 top-3 z-50 inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-300 bg-white text-zinc-700 shadow-sm transition hover:bg-zinc-100 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 md:hidden"
+        className="fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[80] inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm transition hover:bg-[var(--muted)] md:hidden"
         aria-label="Toggle sidebar"
       >
-        {sidebarOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+        {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
       </button>
 
       {isMobile && sidebarOpen ? (
@@ -116,80 +153,49 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
 
     <Sidebar
       className={[
-        "fixed left-0 top-0 z-40 h-screen transition-all duration-200 md:sticky md:top-0",
+        "fixed left-0 top-0 z-40 h-screen overflow-visible transition-all duration-200 md:sticky md:top-0",
         isMobile ? (sidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
         isDesktopCollapsed ? "w-72 md:w-16" : "w-72",
       ].join(" ")}
     >
+      <button
+        type="button"
+        onClick={toggleSidebar}
+        className="absolute left-full top-20 z-50 hidden h-10 w-8 -translate-x-px items-center justify-center rounded-r-md border border-l-0 border-[var(--surface-border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm transition hover:bg-[var(--muted)] md:inline-flex"
+        aria-label="Toggle sidebar"
+      >
+        {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
+      </button>
+
       <SidebarHeader>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
           <div className="flex items-center gap-2">
-            <Image src={safeLogoSrc} alt="NekoGym logo" width={20} height={20} />
-            {!isDesktopCollapsed ? <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{siteName}</h1> : null}
+            <Image src={safeLogoSrc} alt="NekoGym logo" width={30} height={30} />
+            {!isDesktopCollapsed ? <h1 className="text-lg font-semibold text-[var(--foreground)]">{siteName}</h1> : null}
           </div>
-          <button
-            type="button"
-            onClick={toggleSidebar}
-            className="hidden h-8 w-8 items-center justify-center rounded-md border border-zinc-300 text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800 md:inline-flex"
-            aria-label="Toggle sidebar"
-          >
-            {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-          </button>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
-        <nav className="space-y-1">
-          {mainMenuItems.map((item) => {
-            const href = withLocalePath(locale, item.href);
-            const isActive = pathname === href;
-            const Icon = iconByKey[item.key];
+        <nav>
+          <SidebarMenu>
+            {mainMenuItems.map((item) => {
+              const href = withLocalePath(locale, item.href);
+              const isActive = pathname === href;
+              const Icon = iconByKey[item.key];
 
-            return (
-              <Link
-                key={item.href}
-                href={href}
-                title={labels.nav[item.key]}
-                className={[
-                  "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
-                  isDesktopCollapsed ? "justify-center" : "gap-2",
-                  isActive
-                    ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900"
-                    : "text-zinc-700 hover:bg-zinc-200/70 dark:text-zinc-200 dark:hover:bg-zinc-800",
-                ].join(" ")}
-                  onClick={() => {
-                    if (isMobile) setIsMobileOpen(false);
-                  }}
-              >
-                <Icon size={16} />
-                {!isDesktopCollapsed ? labels.nav[item.key] : null}
-              </Link>
-            );
-          })}
-
-          {settingsMenuItems.length > 0 ? (
-            <div className="pt-4">
-              {!isDesktopCollapsed ? (
-                <p className="px-3 pb-2 text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  {labels.settingsSection}
-                </p>
-              ) : null}
-              {settingsMenuItems.map((item) => {
-                const href = withLocalePath(locale, item.href);
-                const isActive = pathname === href;
-                const Icon = iconByKey[item.key];
-
-                return (
+              return (
+                <SidebarMenuItem key={item.href}>
                   <Link
-                    key={item.href}
                     href={href}
                     title={labels.nav[item.key]}
+                    aria-current={isActive ? "page" : undefined}
                     className={[
-                      "flex items-center rounded-md px-3 py-2 text-sm transition-colors",
+                      "flex items-center rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
                       isDesktopCollapsed ? "justify-center" : "gap-2",
                       isActive
-                        ? "bg-zinc-900 text-zinc-50 dark:bg-zinc-100 dark:text-zinc-900"
-                        : "text-zinc-700 hover:bg-zinc-200/70 dark:text-zinc-200 dark:hover:bg-zinc-800",
+                        ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
+                        : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
                     ].join(" ")}
                     onClick={() => {
                       if (isMobile) setIsMobileOpen(false);
@@ -198,17 +204,82 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
                     <Icon size={16} />
                     {!isDesktopCollapsed ? labels.nav[item.key] : null}
                   </Link>
-                );
-              })}
-            </div>
-          ) : null}
+                </SidebarMenuItem>
+              );
+            })}
+
+            {settingsMenuItems.length > 0 ? (
+              <SidebarMenuItem className="pt-4">
+                <SidebarMenuButton
+                  onClick={() => {
+                    if (isDesktopCollapsed) {
+                      setIsCollapsed(false);
+                      setIsSettingsOpen(true);
+                      return;
+                    }
+                    setIsSettingsOpen((prev) => !prev);
+                  }}
+                  aria-expanded={isDesktopCollapsed ? false : isSettingsExpanded}
+                  aria-controls="sidebar-settings-submenu"
+                  aria-label={labels.settingsSection}
+                  title={labels.settingsSection}
+                  className={[
+                    isDesktopCollapsed ? "justify-center" : "gap-2",
+                    isSettingsGroupActive
+                      ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
+                      : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
+                  ].join(" ")}
+                >
+                  <Settings2 size={16} />
+                  {!isDesktopCollapsed ? <span className="flex-1 text-left">{labels.settingsSection}</span> : null}
+                  {!isDesktopCollapsed ? (
+                    <ChevronDown
+                      size={16}
+                      className={isSettingsExpanded ? "rotate-180 transition-transform" : "transition-transform"}
+                    />
+                  ) : null}
+                </SidebarMenuButton>
+
+                {!isDesktopCollapsed && isSettingsExpanded ? (
+                  <SidebarMenuSub id="sidebar-settings-submenu">
+                    {settingsBaseItems.map((item) => {
+                      const href = withLocalePath(locale, item.href);
+                      const isActive = pathname === href;
+
+                      return (
+                        <SidebarMenuSubItem key={item.href}>
+                          <Link
+                            href={href}
+                            title={labels.nav[item.key]}
+                            aria-current={isActive ? "page" : undefined}
+                            className={[
+                              "flex items-center rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
+                              isActive
+                                ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
+                                : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
+                            ].join(" ")}
+                            onClick={() => {
+                              if (isMobile) setIsMobileOpen(false);
+                            }}
+                          >
+                            {labels.nav[item.key]}
+                          </Link>
+                        </SidebarMenuSubItem>
+                      );
+                    })}
+
+                  </SidebarMenuSub>
+                ) : null}
+              </SidebarMenuItem>
+            ) : null}
+          </SidebarMenu>
         </nav>
       </SidebarContent>
 
       <SidebarFooter>
         <div
           className={[
-            "mb-3 flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400",
+            "mb-3 flex items-center gap-2 text-xs text-[var(--muted-foreground)]",
             isDesktopCollapsed ? "justify-center" : "",
           ].join(" ")}
         >
@@ -222,28 +293,84 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
           </Link>
         </div>
 
-        {!isDesktopCollapsed ? <p className="text-xs text-zinc-500 dark:text-zinc-400">{labels.signedInAs}</p> : null}
-        {!isDesktopCollapsed ? <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{user.name}</p> : null}
-        {!isDesktopCollapsed ? <p className="truncate text-xs text-zinc-600 dark:text-zinc-300">{user.email}</p> : null}
+        <div className={["mb-3 flex items-center gap-2", isDesktopCollapsed ? "justify-center" : ""].join(" ")}>
+          {!isDesktopCollapsed ? <span className="text-xs text-[var(--muted-foreground)]">{labels.themeLabel}</span> : null}
+          <ThemeToggle
+            labels={{
+              themeLabel: labels.themeLabel,
+              themeToLight: labels.themeToLight,
+              themeToDark: labels.themeToDark,
+            }}
+          />
+        </div>
+
+        {!isDesktopCollapsed ? <p className="text-xs text-[var(--muted-foreground)]">{labels.signedInAs}</p> : null}
+        <DropdownMenu open={isUserDropdownOpen} onOpenChange={setIsUserDropdownOpen}>
+          <DropdownMenuTrigger asChild>
+            <SidebarMenuButton
+              aria-label={labels.signedInAs}
+              className={[
+                "mt-1 px-2",
+                isDesktopCollapsed ? "justify-center" : "gap-2",
+                isProfileActive
+                  ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
+                  : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
+              ].join(" ")}
+            >
+              <UserCog size={16} />
+              {!isDesktopCollapsed ? (
+                <span className="min-w-0 flex-1 text-left">
+                  <span className="block truncate text-sm font-medium text-[var(--foreground)]">{user.name}</span>
+                  <span className="block truncate text-xs text-[var(--muted-foreground)]">{user.email}</span>
+                </span>
+              ) : null}
+              {!isDesktopCollapsed ? (
+                <ChevronDown size={16} className={isUserDropdownOpen ? "rotate-180 transition-transform" : "transition-transform"} />
+              ) : null}
+            </SidebarMenuButton>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent
+            side={isMobile ? "bottom" : "right"}
+            align="start"
+            sideOffset={isMobile ? 6 : 10}
+            className="w-56"
+          >
+            <DropdownMenuItem asChild>
+              <Link
+                href={profileHref}
+                aria-current={isProfileActive ? "page" : undefined}
+                className="w-full"
+                onClick={() => {
+                  if (isMobile) setIsMobileOpen(false);
+                }}
+              >
+                <UserCog size={14} />
+                {labels.nav.profileSettings}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link
+                href={logoutHref}
+                className="w-full"
+                onClick={() => {
+                  if (isMobile) setIsMobileOpen(false);
+                }}
+              >
+                <LogOut size={14} />
+                {labels.logout}
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <p
           className={[
-            "mt-2 inline-flex rounded-md bg-zinc-200 px-2 py-1 text-xs font-medium text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100",
+            "mt-2 inline-flex rounded-md bg-[var(--role-badge-bg)] px-2 py-1 text-xs font-medium text-[var(--role-badge-fg)]",
             isDesktopCollapsed ? "mx-auto" : "",
           ].join(" ")}
         >
           {user.role}
         </p>
-        <Link
-          href={withLocalePath(locale, "/logout")}
-          className={[
-            "mt-3 inline-flex text-sm text-zinc-700 hover:underline dark:text-zinc-200",
-            isDesktopCollapsed ? "mx-auto items-center justify-center" : "items-center gap-1",
-          ].join(" ")}
-          title={labels.logout}
-        >
-          <LogOut size={16} />
-          {!isDesktopCollapsed ? labels.logout : null}
-        </Link>
       </SidebarFooter>
     </Sidebar>
     </>

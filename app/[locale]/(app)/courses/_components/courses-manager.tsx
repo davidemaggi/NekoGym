@@ -64,6 +64,7 @@ type CourseItem = {
   bookingAdvanceMonths: number;
   cancellationWindowHours: number;
   scheduleSlots: ScheduleSlot[];
+  futureBookedLessonsCount: number;
 };
 
 type CoursePayload = {
@@ -104,6 +105,13 @@ type CurrentUser = {
 type DeletePayload = {
   id: string;
   locale: string;
+  bookedFuturePolicy: "keep" | "cancel";
+};
+
+type DeletePolicyChoiceState = {
+  id: string;
+  name: string;
+  futureBookedLessonsCount: number;
 };
 
 type ConfirmationState =
@@ -175,6 +183,10 @@ type CoursesManagerProps = {
       updateDescription: string;
       deleteTitle: string;
       deleteDescription: string;
+      deletePolicyTitle: string;
+      deletePolicyDescription: string;
+      deletePolicyKeepCta: string;
+      deletePolicyCancelCta: string;
     };
     validation: {
       nameRequired: string;
@@ -217,6 +229,7 @@ function deletePayloadToFormData(payload: DeletePayload): FormData {
   const formData = new FormData();
   formData.set("id", payload.id);
   formData.set("locale", payload.locale);
+  formData.set("bookedFuturePolicy", payload.bookedFuturePolicy);
   return formData;
 }
 
@@ -290,7 +303,6 @@ function validateCoursePayloadClient(
 ): string | null {
   if (!payload.name) return labels.validation.nameRequired;
   if (!payload.lessonTypeId) return labels.validation.lessonTypeRequired;
-  if (!payload.trainerId) return labels.validation.trainerRequired;
 
   const numericValues = [
     Number.parseInt(payload.durationMinutes, 10),
@@ -354,6 +366,7 @@ export function CoursesManager({
   const [trainerFilter, setTrainerFilter] = useState<"all" | "with" | "without">("all");
   const [createSchedule, setCreateSchedule] = useState<ScheduleSlot[]>([]);
   const [editSchedule, setEditSchedule] = useState<ScheduleSlot[]>([]);
+  const [deletePolicyChoice, setDeletePolicyChoice] = useState<DeletePolicyChoiceState | null>(null);
 
   const emptyDraft = useMemo(
     () => ({
@@ -362,11 +375,11 @@ export function CoursesManager({
       lessonTypeId: lessonTypes[0]?.id ?? "",
       durationMinutes: "60",
       maxAttendees: "12",
-      trainerId: currentUser.role === "TRAINER" ? currentUser.id : trainerCandidates[0]?.id ?? "",
+      trainerId: currentUser.role === "TRAINER" ? currentUser.id : "",
       bookingAdvanceMonths: "2",
       cancellationWindowHours: "24",
     }),
-    [currentUser.id, currentUser.role, lessonTypes, trainerCandidates]
+    [currentUser.id, currentUser.role, lessonTypes]
   );
 
   const filteredCourses = useMemo(() => {
@@ -418,13 +431,26 @@ export function CoursesManager({
     });
   }
 
-  function askDeleteConfirmation(courseId: string, courseName: string) {
+  function openDeleteConfirmation(courseId: string, courseName: string, bookedFuturePolicy: "keep" | "cancel") {
     setConfirmation({
       kind: "delete",
       title: labels.confirm.deleteTitle,
       description: labels.confirm.deleteDescription.replace("{name}", courseName),
-      payload: { id: courseId, locale },
+      payload: { id: courseId, locale, bookedFuturePolicy },
     });
+  }
+
+  function askDeleteConfirmation(courseId: string, courseName: string, futureBookedLessonsCount: number) {
+    if (futureBookedLessonsCount > 0) {
+      setDeletePolicyChoice({
+        id: courseId,
+        name: courseName,
+        futureBookedLessonsCount,
+      });
+      return;
+    }
+
+    openDeleteConfirmation(courseId, courseName, "cancel");
   }
 
   function closeDialogsAfterSuccess() {
@@ -489,7 +515,7 @@ export function CoursesManager({
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-          <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.subtitle}</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
         </div>
 
         <div className="flex items-center gap-2">
@@ -519,7 +545,6 @@ export function CoursesManager({
                 scheduleSlots={createSchedule}
                 lessonTypes={lessonTypes}
                 trainerCandidates={trainerCandidates}
-                currentUser={currentUser}
                 onAddSlot={(weekday, startTime) => addScheduleSlot("create", weekday, startTime)}
                 onRemoveSlot={(weekday, startTime) => removeScheduleSlot("create", weekday, startTime)}
               />
@@ -549,7 +574,7 @@ export function CoursesManager({
             <select
               value={trainerFilter}
               onChange={(event) => setTrainerFilter(event.target.value as "all" | "with" | "without")}
-              className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+              className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
             >
               <option value="all">{labels.filterAll}</option>
               <option value="with">{labels.filterWithTrainer}</option>
@@ -558,12 +583,12 @@ export function CoursesManager({
           </div>
 
           {filteredCourses.length === 0 ? (
-            <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.empty}</p>
+            <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-zinc-200 text-left dark:border-zinc-800">
+                  <tr className="border-b border-[var(--surface-border)] text-left">
                     <th className="py-2 pr-2">{labels.columns.name}</th>
                     <th className="py-2 pr-2">{labels.columns.lessonType}</th>
                     <th className="py-2 pr-2">{labels.columns.duration}</th>
@@ -575,7 +600,7 @@ export function CoursesManager({
                 </thead>
                 <tbody>
                   {filteredCourses.map((course) => (
-                    <tr key={course.id} className="border-b border-zinc-100 dark:border-zinc-800/60">
+                    <tr key={course.id} className="border-b border-[var(--surface-border)]/70">
                       <td className="py-3 pr-2 font-medium">{course.name}</td>
                       <td className="py-3 pr-2">
                         {course.lessonType ? (
@@ -590,7 +615,7 @@ export function CoursesManager({
                       <td className="py-3 pr-2">{course.durationMinutes} min</td>
                       <td className="py-3 pr-2">{course.maxAttendees}</td>
                       <td className="py-3 pr-2">{course.trainer?.name ?? course.trainerName ?? "-"}</td>
-                      <td className="py-3 pr-2 text-xs text-zinc-600 dark:text-zinc-300">
+                      <td className="py-3 pr-2 text-xs text-[var(--muted-foreground)]">
                         {(() => {
                           const scheduleGroups = formatScheduleRows(
                             course.scheduleSlots,
@@ -606,13 +631,13 @@ export function CoursesManager({
                             <div className="space-y-2">
                               {scheduleGroups.map((group) => (
                                 <div key={`${course.id}-${group.day}`} className="flex flex-wrap items-center gap-1">
-                                  <span className="rounded-md bg-zinc-200 px-2 py-0.5 font-medium text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+                                  <span className="rounded-md bg-[var(--muted)] px-2 py-0.5 font-medium text-[var(--foreground)]">
                                     {group.day}
                                   </span>
                                   {group.ranges.map((range) => (
                                     <span
                                       key={`${course.id}-${group.day}-${range}`}
-                                      className="rounded-md border border-zinc-200 px-2 py-0.5 text-zinc-700 dark:border-zinc-700 dark:text-zinc-200"
+                                      className="rounded-md border border-[var(--surface-border)] px-2 py-0.5 text-[var(--foreground)]"
                                     >
                                       {range}
                                     </span>
@@ -639,7 +664,7 @@ export function CoursesManager({
                           <Button
                             variant="destructive"
                             size="sm"
-                            onClick={() => askDeleteConfirmation(course.id, course.name)}
+                            onClick={() => askDeleteConfirmation(course.id, course.name, course.futureBookedLessonsCount)}
                           >
                             {labels.actions.delete}
                           </Button>
@@ -682,7 +707,7 @@ export function CoursesManager({
                   lessonTypeId: selectedCourse.lessonType?.id ?? "",
                   durationMinutes: String(selectedCourse.durationMinutes),
                   maxAttendees: String(selectedCourse.maxAttendees),
-                  trainerId: selectedCourse.trainer?.id ?? currentUser.id,
+                  trainerId: selectedCourse.trainer?.id ?? "",
                   bookingAdvanceMonths: String(selectedCourse.bookingAdvanceMonths),
                   cancellationWindowHours: String(selectedCourse.cancellationWindowHours),
                 }}
@@ -692,7 +717,6 @@ export function CoursesManager({
                 scheduleSlots={editSchedule}
                 lessonTypes={lessonTypes}
                 trainerCandidates={trainerCandidates}
-                currentUser={currentUser}
                 onAddSlot={(weekday, startTime) => addScheduleSlot("edit", weekday, startTime)}
                 onRemoveSlot={(weekday, startTime) => removeScheduleSlot("edit", weekday, startTime)}
               />
@@ -727,6 +751,48 @@ export function CoursesManager({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog open={Boolean(deletePolicyChoice)} onOpenChange={(open) => !open && setDeletePolicyChoice(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{labels.confirm.deletePolicyTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {labels.confirm.deletePolicyDescription
+                .replace("{name}", deletePolicyChoice?.name ?? "")
+                .replace("{count}", String(deletePolicyChoice?.futureBookedLessonsCount ?? 0))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel asChild>
+              <Button variant="secondary">{labels.actions.cancel}</Button>
+            </AlertDialogCancel>
+            <AlertDialogAction asChild>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!deletePolicyChoice) return;
+                  openDeleteConfirmation(deletePolicyChoice.id, deletePolicyChoice.name, "keep");
+                  setDeletePolicyChoice(null);
+                }}
+              >
+                {labels.confirm.deletePolicyKeepCta}
+              </Button>
+            </AlertDialogAction>
+            <AlertDialogAction asChild>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (!deletePolicyChoice) return;
+                  openDeleteConfirmation(deletePolicyChoice.id, deletePolicyChoice.name, "cancel");
+                  setDeletePolicyChoice(null);
+                }}
+              >
+                {labels.confirm.deletePolicyCancelCta}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }
@@ -739,7 +805,6 @@ function CourseFields({
   scheduleSlots,
   lessonTypes,
   trainerCandidates,
-  currentUser,
   onAddSlot,
   onRemoveSlot,
 }: {
@@ -759,7 +824,6 @@ function CourseFields({
   scheduleSlots: ScheduleSlot[];
   lessonTypes: LessonTypeItem[];
   trainerCandidates: TrainerCandidate[];
-  currentUser: CurrentUser;
   onAddSlot: (weekday: Weekday, startTime: string) => void;
   onRemoveSlot: (weekday: Weekday, startTime: string) => void;
 }) {
@@ -794,7 +858,7 @@ function CourseFields({
             required
             defaultValue={defaultValues.lessonTypeId}
             onChange={(event) => setSelectedLessonTypeId(event.target.value)}
-            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
             <option value="">-</option>
             {lessonTypes.map((type) => (
@@ -804,9 +868,9 @@ function CourseFields({
             ))}
           </select>
           {selectedLessonType ? (
-            <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-zinc-200 px-2 py-1 dark:border-zinc-800">
+            <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
               <Image src={selectedLessonType.iconSvg} alt={selectedLessonType.name} width={22} height={22} />
-              <span className="text-xs text-zinc-600 dark:text-zinc-300">{selectedLessonType.name}</span>
+              <span className="text-xs text-[var(--muted-foreground)]">{selectedLessonType.name}</span>
             </div>
           ) : null}
         </div>
@@ -815,20 +879,16 @@ function CourseFields({
           <select
             id="trainerId"
             name="trainerId"
-            required
             defaultValue={defaultValues.trainerId}
-            disabled={currentUser.role === "TRAINER"}
-            className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
+            <option value="">-</option>
             {trainerCandidates.map((trainer) => (
               <option key={trainer.id} value={trainer.id}>
                 {trainer.name} ({trainer.email})
               </option>
             ))}
           </select>
-          {currentUser.role === "TRAINER" ? (
-            <input type="hidden" name="trainerId" value={currentUser.id} />
-          ) : null}
         </div>
       </div>
 
@@ -885,15 +945,15 @@ function CourseFields({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-md border border-zinc-200 p-3 dark:border-zinc-800">
+      <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
         <p className="text-sm font-medium">{scheduleLabels.title}</p>
-        <p className="text-xs text-zinc-600 dark:text-zinc-300">{scheduleLabels.description}</p>
+        <p className="text-xs text-[var(--muted-foreground)]">{scheduleLabels.description}</p>
 
         <div className="flex flex-col gap-2 md:flex-row">
           <select
             value={dayToAdd}
             onChange={(event) => setDayToAdd(event.target.value as Weekday)}
-            className="h-10 rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+            className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
             {weekdays.map((weekday) => (
               <option key={weekday.value} value={weekday.value}>
@@ -914,7 +974,7 @@ function CourseFields({
         </div>
 
         {scheduleSlots.length === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">{scheduleLabels.noSlots}</p>
+          <p className="text-sm text-[var(--muted-foreground)]">{scheduleLabels.noSlots}</p>
         ) : (
           <div className="space-y-2">
             {weekdays.map((weekday) => {
@@ -923,12 +983,12 @@ function CourseFields({
 
               return (
                 <div key={weekday.value} className="space-y-1">
-                  <p className="text-xs font-medium text-zinc-600 dark:text-zinc-300">{weekday.label}</p>
+                  <p className="text-xs font-medium text-[var(--muted-foreground)]">{weekday.label}</p>
                   <div className="flex flex-wrap gap-2">
                     {daySlots.map((slot) => (
                       <div
                         key={`${slot.weekday}-${slot.startTime}`}
-                        className="inline-flex items-center gap-2 rounded-md border border-zinc-200 px-2 py-1 text-xs dark:border-zinc-700"
+                        className="inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs"
                       >
                         <span>
                           {slot.startTime} - {computeEndTime(slot.startTime, durationMinutes)}

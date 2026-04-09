@@ -20,6 +20,7 @@ export default async function UsersPage({
       id: true,
       name: true,
       email: true,
+      emailVerifiedAt: true,
       role: true,
       membershipStatus: true,
       trialEndsAt: true,
@@ -37,6 +38,7 @@ export default async function UsersPage({
       labels={labels}
       users={users.map((user) => ({
         ...user,
+        emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
         trialEndsAt: user.trialEndsAt ? user.trialEndsAt.toISOString() : null,
         subscriptionResetAt: user.subscriptionResetAt ? user.subscriptionResetAt.toISOString() : null,
         subscriptionEndsAt: user.subscriptionEndsAt ? user.subscriptionEndsAt.toISOString() : null,

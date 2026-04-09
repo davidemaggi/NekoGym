@@ -1,5 +1,6 @@
 import type { Prisma, Weekday } from "@prisma/client";
 import { DEFAULT_OPEN_WEEKDAYS, parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
+import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
 const WEEKDAY_INDEX: Record<Weekday, number> = {
   SUNDAY: 0,
@@ -68,6 +69,65 @@ function toKey(startsAt: Date): string {
 
 function dateKey(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+function formatLessonDateForNotification(date: Date): string {
+  return new Intl.DateTimeFormat("it-IT", {
+    weekday: "short",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
+async function enqueueAutoCancelledLessonNotifications(
+  tx: Prisma.TransactionClient,
+  input: {
+    lessonId: string;
+    startsAt: Date;
+    courseName: string | null;
+    trainerId: string | null;
+    reason: string;
+  }
+) {
+  const attendees = await tx.lessonBooking.findMany({
+    where: { lessonId: input.lessonId },
+    select: {
+      trainee: {
+        select: {
+          id: true,
+          telegramChatId: true,
+        },
+      },
+    },
+  });
+
+  const targetMap = new Map<string, { id: string; telegramChatId: string | null }>();
+  for (const attendee of attendees) {
+    targetMap.set(attendee.trainee.id, {
+      id: attendee.trainee.id,
+      telegramChatId: attendee.trainee.telegramChatId,
+    });
+  }
+
+  if (input.trainerId) {
+    const trainer = await tx.user.findUnique({
+      where: { id: input.trainerId },
+      select: { id: true, telegramChatId: true },
+    });
+    if (trainer) {
+      targetMap.set(trainer.id, { id: trainer.id, telegramChatId: trainer.telegramChatId });
+    }
+  }
+
+  const targets = Array.from(targetMap.values());
+  if (targets.length === 0) return;
+
+  const subject = "NekoGym - Lezione annullata";
+  const body = `La lezione ${input.courseName ?? "-"} del ${formatLessonDateForNotification(input.startsAt)} e stata annullata (${input.reason}).`;
+
+  await enqueueNotificationForUsers(tx, targets, { subject, body });
 }
 
 export function isLessonAllowedBySiteSchedule(
@@ -143,7 +203,7 @@ export async function reconcileFutureLessonsForCourse(
     include: { scheduleSlots: true },
   });
 
-  if (!course) {
+  if (!course || course.deletedAt) {
     return { created: 0, updated: 0, cancelled: 0, deleted: 0 };
   }
 
@@ -179,11 +239,42 @@ export async function reconcileFutureLessonsForCourse(
     const key = toKey(lesson.startsAt);
     const nextSeed = seedByKey.get(key);
 
+    if (lesson.isCustomized) {
+      if (lesson._count.bookings > 0) {
+        await tx.lesson.update({
+          where: { id: lesson.id },
+          data: { status: "CANCELLED" },
+        });
+        await enqueueAutoCancelledLessonNotifications(tx, {
+          lessonId: lesson.id,
+          startsAt: lesson.startsAt,
+          courseName: course.name,
+          trainerId: lesson.trainerId,
+          reason: "lezione personalizzata non piu allineata al corso",
+        });
+        // Avoid creating a duplicate for same course+startsAt when customized lesson is kept as cancelled.
+        seedByKey.delete(key);
+        cancelled += 1;
+      } else {
+        await tx.lesson.delete({ where: { id: lesson.id } });
+        // Keep seed key so a fresh generated lesson can be recreated.
+        deleted += 1;
+      }
+      continue;
+    }
+
     if (!nextSeed) {
       if (lesson._count.bookings > 0) {
         await tx.lesson.update({
           where: { id: lesson.id },
           data: { status: "CANCELLED" },
+        });
+        await enqueueAutoCancelledLessonNotifications(tx, {
+          lessonId: lesson.id,
+          startsAt: lesson.startsAt,
+          courseName: course.name,
+          trainerId: lesson.trainerId,
+          reason: "aggiornamento corso",
         });
         cancelled += 1;
       } else {
@@ -204,6 +295,7 @@ export async function reconcileFutureLessonsForCourse(
         maxAttendees: course.maxAttendees,
         cancellationWindowHours: course.cancellationWindowHours,
         status: "SCHEDULED",
+        isCustomized: false,
       },
     });
     updated += 1;
@@ -225,6 +317,7 @@ export async function reconcileFutureLessonsForCourse(
         cancellationWindowHours: course.cancellationWindowHours,
         status: "SCHEDULED",
         isGenerated: true,
+        isCustomized: false,
       },
     });
     created += 1;
@@ -236,7 +329,7 @@ export async function reconcileFutureLessonsForCourse(
 export async function reconcileFutureLessonsForAllCourses(
   tx: Prisma.TransactionClient
 ): Promise<LessonsReconcileStats> {
-  const courses = await tx.course.findMany({ select: { id: true } });
+  const courses = await tx.course.findMany({ where: { deletedAt: null }, select: { id: true } });
   const totals: LessonsReconcileStats = {
     coursesProcessed: courses.length,
     created: 0,
@@ -270,6 +363,7 @@ export async function reconcileFutureLessonsForSiteSchedule(tx: Prisma.Transacti
       status: "SCHEDULED",
     },
     include: {
+      course: { select: { name: true } },
       _count: { select: { bookings: true } },
     },
   });
@@ -280,35 +374,102 @@ export async function reconcileFutureLessonsForSiteSchedule(tx: Prisma.Transacti
 
     if (lesson._count.bookings > 0) {
       await tx.lesson.update({ where: { id: lesson.id }, data: { status: "CANCELLED" } });
+      await enqueueAutoCancelledLessonNotifications(tx, {
+        lessonId: lesson.id,
+        startsAt: lesson.startsAt,
+        courseName: lesson.course?.name ?? null,
+        trainerId: lesson.trainerId,
+        reason: "chiusura palestra",
+      });
     } else {
       await tx.lesson.delete({ where: { id: lesson.id } });
     }
   }
 }
 
-export async function cancelFutureLessonsForDeletedCourse(tx: Prisma.TransactionClient, courseId: string) {
+export async function cancelFutureLessonsForDeletedCourse(
+  tx: Prisma.TransactionClient,
+  courseId: string,
+  input: { cancelBookedLessons: boolean }
+) {
   const now = new Date();
 
   const lessons = await tx.lesson.findMany({
     where: {
       courseId,
       startsAt: { gt: now },
-      isGenerated: true,
     },
     include: {
+      course: { select: { name: true } },
       _count: { select: { bookings: true } },
     },
   });
 
   for (const lesson of lessons) {
     if (lesson._count.bookings > 0) {
+      if (!input.cancelBookedLessons) {
+        continue;
+      }
+
       await tx.lesson.update({
         where: { id: lesson.id },
         data: { status: "CANCELLED" },
+      });
+      await enqueueAutoCancelledLessonNotifications(tx, {
+        lessonId: lesson.id,
+        startsAt: lesson.startsAt,
+        courseName: lesson.course?.name ?? null,
+        trainerId: lesson.trainerId,
+        reason: "corso eliminato",
       });
     } else {
       await tx.lesson.delete({ where: { id: lesson.id } });
     }
   }
+}
+
+export async function cancelLessonsEnteringNoticeWindow(tx: Prisma.TransactionClient): Promise<number> {
+  const now = new Date();
+  const lessons = await tx.lesson.findMany({
+    where: {
+      status: "SCHEDULED",
+      startsAt: { gt: now },
+    },
+    include: {
+      course: { select: { name: true } },
+      trainer: { select: { id: true, telegramChatId: true } },
+    },
+    orderBy: { startsAt: "asc" },
+  });
+
+  let cancelled = 0;
+
+  for (const lesson of lessons) {
+    const msUntilStart = lesson.startsAt.getTime() - now.getTime();
+    const noticeMs = lesson.cancellationWindowHours * 60 * 60 * 1000;
+    if (msUntilStart > noticeMs) {
+      continue;
+    }
+
+    await tx.lesson.update({
+      where: { id: lesson.id },
+      data: { status: "CANCELLED" },
+    });
+
+    if (lesson.trainer) {
+      await enqueueNotificationForUsers(
+        tx,
+        [{ id: lesson.trainer.id, telegramChatId: lesson.trainer.telegramChatId }],
+        {
+          subject: "NekoGym - Lezione annullata automaticamente",
+          body: `La lezione ${lesson.course?.name ?? "-"} del ${formatLessonDateForNotification(lesson.startsAt)} e stata annullata automaticamente per limite preavviso.`,
+        }
+      );
+    }
+
+    cancelled += 1;
+  }
+
+  return cancelled;
 }
 

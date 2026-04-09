@@ -15,6 +15,9 @@ type Dictionary = {
     signedInAs: string;
     logout: string;
     localeLabel: string;
+    themeLabel: string;
+    themeToLight: string;
+    themeToDark: string;
     settingsSection: string;
     nav: {
       dashboard: string;
@@ -23,9 +26,65 @@ type Dictionary = {
       bookings: string;
       users: string;
       reports: string;
+      profileSettings: string;
+      manualNotifications: string;
       registries: string;
       siteSettings: string;
     };
+  };
+  profileSettings: {
+    title: string;
+    subtitle: string;
+    telegramTitle: string;
+    telegramDescription: string;
+    linkedStatus: string;
+    notLinkedStatus: string;
+    linkedChatIdLabel: string;
+    linkedUsernameLabel: string;
+    generateCodeCta: string;
+    codeLabel: string;
+    codeHint: string;
+    openTelegramCta: string;
+    qrHint: string;
+    noBotConfiguredHint: string;
+    commandLabel: string;
+    expiresHint: string;
+    generating: string;
+    accountSecurityTitle: string;
+    accountSecurityDescription: string;
+    currentEmailLabel: string;
+    emailVerifiedStatus: string;
+    emailNotVerifiedStatus: string;
+    pendingEmailLabel: string;
+    newEmailLabel: string;
+    newEmailPlaceholder: string;
+    sendEmailChangeCta: string;
+    currentPasswordLabel: string;
+    newPasswordLabel: string;
+    updatePasswordCta: string;
+    webPushTitle: string;
+    webPushDescription: string;
+    webPushSupported: string;
+    webPushNotSupported: string;
+    webPushMissingKey: string;
+    webPushEnabled: string;
+    webPushDisabled: string;
+    webPushEnableCta: string;
+    webPushDisableCta: string;
+    webPushProcessing: string;
+    webPushTestCta: string;
+    notificationPrefsTitle: string;
+    notificationPrefsDescription: string;
+    notificationEmailLabel: string;
+    notificationTelegramLabel: string;
+    notificationWebPushLabel: string;
+    notificationPrefsSaveCta: string;
+  };
+  pwaInstall: {
+    title: string;
+    description: string;
+    installCta: string;
+    dismissCta: string;
   };
   auth: {
     loginTitle: string;
@@ -62,6 +121,9 @@ type Dictionary = {
     bookCta: string;
     unbookCta: string;
     processing: string;
+    youAreQueued: string;
+    queuedLabel: string;
+    joinQueueCta: string;
   };
   lessonsPage: {
     title: string;
@@ -73,6 +135,37 @@ type Dictionary = {
     trainerLabel: string;
     bookedLabel: string;
     courseTag: string;
+    updateTrainerCta: string;
+    modifiedTag: string;
+    modifiedReasonsLabel: string;
+    modifiedReasonTrainer: string;
+    modifiedReasonTime: string;
+    standaloneTitle: string;
+    standaloneDescription: string;
+    standaloneDuration: string;
+    standaloneMaxAttendees: string;
+    standaloneCancellationWindow: string;
+    standaloneLessonType: string;
+    startsAtLabel: string;
+    createStandaloneCta: string;
+    updateStandaloneCta: string;
+    deleteStandaloneCta: string;
+    manageTitle: string;
+    manageDescription: string;
+    manageTriggerLabel: string;
+    manageTabMain: string;
+    manageTabPeople: string;
+    processing: string;
+    closeCta: string;
+    attendeesLabel: string;
+    noAttendees: string;
+    attendeeSelectLabel: string;
+    addAttendeeCta: string;
+    removeAttendeeCta: string;
+    waitlistLabel: string;
+    noWaitlist: string;
+    confirmWaitlistCta: string;
+    removeWaitlistCta: string;
   };
   usersPage: {
     title: string;
@@ -140,6 +233,8 @@ type Dictionary = {
       MONTHLY: string;
       FIXED: string;
     };
+    passwordCreateHint: string;
+    passwordKeepHint: string;
   };
   courses: {
     title: string;
@@ -190,6 +285,10 @@ type Dictionary = {
       updateDescription: string;
       deleteTitle: string;
       deleteDescription: string;
+      deletePolicyTitle: string;
+      deletePolicyDescription: string;
+      deletePolicyKeepCta: string;
+      deletePolicyCancelCta: string;
     };
     validation: {
       nameRequired: string;
@@ -275,7 +374,7 @@ type Dictionary = {
     tabs: {
       general: string;
       contacts: string;
-      smtp: string;
+      notifications: string;
       schedule: string;
     };
     fields: {
@@ -287,9 +386,14 @@ type Dictionary = {
       contactPhone: string;
       smtpHost: string;
       smtpPort: string;
+      smtpAuthEnabled: string;
       smtpUser: string;
-      smtpPassword: string;
       smtpFromEmail: string;
+      smtpPasswordConfigured: string;
+      telegramBotUsername: string;
+      telegramBotTokenConfigured: string;
+      smtpSectionTitle: string;
+      telegramSectionTitle: string;
       openWeekdays: string;
       closedDates: string;
     };
@@ -305,10 +409,77 @@ type Dictionary = {
     actions: {
       save: string;
       saving: string;
+      testEmail: string;
+      testingEmail: string;
+      testTelegram: string;
+      testingTelegram: string;
     };
+    readonlyHint: string;
+    configuredValue: string;
+    missingValue: string;
     logoPreview: string;
     logoPathInvalid: string;
     closedDatesInvalid: string;
+  };
+  manualNotifications: {
+    title: string;
+    subtitle: string;
+    fields: {
+      audience: string;
+      subject: string;
+      body: string;
+    };
+    audienceOptions: {
+      ALL: string;
+      TRAINERS: string;
+      TRAINEES: string;
+    };
+    actions: {
+      send: string;
+      sending: string;
+      retry: string;
+      retrySelected: string;
+      retrying: string;
+    };
+    outbox: {
+      title: string;
+      empty: string;
+      filters: {
+        status: string;
+        channel: string;
+        from: string;
+        to: string;
+        apply: string;
+        reset: string;
+      };
+      channelOptions: {
+        ALL: string;
+        EMAIL: string;
+        TELEGRAM: string;
+        WEBPUSH: string;
+      };
+      statusOptions: {
+        ALL: string;
+        PENDING: string;
+        PROCESSING: string;
+        SENT: string;
+        FAILED: string;
+      };
+      pagination: {
+        prev: string;
+        next: string;
+        pageInfo: string;
+      };
+      columns: {
+        channel: string;
+        recipient: string;
+        subject: string;
+        attempts: string;
+        error: string;
+        createdAt: string;
+        actions: string;
+      };
+    };
   };
 };
 
@@ -320,6 +491,9 @@ const dictionaries: Record<Locale, Dictionary> = {
       signedInAs: "Connesso come",
       logout: "Esci",
       localeLabel: "Lingua",
+      themeLabel: "Tema",
+      themeToLight: "Passa al tema chiaro",
+      themeToDark: "Passa al tema scuro",
       settingsSection: "Settings",
       nav: {
         dashboard: "Dashboard",
@@ -328,9 +502,65 @@ const dictionaries: Record<Locale, Dictionary> = {
         bookings: "Calendario",
         users: "Utenti",
         reports: "Report",
+        profileSettings: "Profilo",
+        manualNotifications: "Notifiche",
         registries: "Registri",
         siteSettings: "Impostazioni sito",
       },
+    },
+    profileSettings: {
+      title: "Impostazioni profilo",
+      subtitle: "Gestisci collegamento Telegram e impostazioni personali.",
+      telegramTitle: "Telegram",
+      telegramDescription: "Collega il tuo account Telegram per ricevere notifiche e usare i comandi bot.",
+      linkedStatus: "Telegram collegato",
+      notLinkedStatus: "Telegram non collegato",
+      linkedChatIdLabel: "Chat ID",
+      linkedUsernameLabel: "Username",
+      generateCodeCta: "Inizia verifica Telegram",
+      codeLabel: "Codice link",
+      codeHint: "Usa questo codice con il comando /link nel bot.",
+      openTelegramCta: "Apri Telegram con comando pronto",
+      qrHint: "Scansiona per aprire Telegram e inviare il comando automaticamente.",
+      noBotConfiguredHint: "Configura TELEGRAM_BOT_USERNAME per abilitare deep link e QR.",
+      commandLabel: "Comando",
+      expiresHint: "Il codice scade dopo 30 minuti.",
+      generating: "Generazione...",
+      accountSecurityTitle: "Sicurezza account",
+      accountSecurityDescription: "Gestisci verifica email, cambio email, password e web push.",
+      currentEmailLabel: "Email attuale",
+      emailVerifiedStatus: "Email verificata",
+      emailNotVerifiedStatus: "Email non verificata",
+      pendingEmailLabel: "Nuova email in attesa di conferma",
+      newEmailLabel: "Nuova email",
+      newEmailPlaceholder: "nuova@email.com",
+      sendEmailChangeCta: "Invia conferma",
+      currentPasswordLabel: "Password corrente",
+      newPasswordLabel: "Nuova password",
+      updatePasswordCta: "Aggiorna password",
+      webPushTitle: "Notifiche web push",
+      webPushDescription: "Ricevi notifiche browser anche quando non hai la pagina aperta.",
+      webPushSupported: "Browser compatibile con web push.",
+      webPushNotSupported: "Web push non supportato da questo browser/dispositivo.",
+      webPushMissingKey: "Chiave pubblica Web Push non configurata.",
+      webPushEnabled: "Web push attivo",
+      webPushDisabled: "Web push disattivo",
+      webPushEnableCta: "Attiva web push",
+      webPushDisableCta: "Disattiva web push",
+      webPushProcessing: "Elaborazione...",
+      webPushTestCta: "Invia test Web Push",
+      notificationPrefsTitle: "Preferenze notifiche",
+      notificationPrefsDescription: "Scegli su quali canali ricevere notifiche automatiche.",
+      notificationEmailLabel: "Email",
+      notificationTelegramLabel: "Telegram",
+      notificationWebPushLabel: "App/Web Push",
+      notificationPrefsSaveCta: "Salva preferenze",
+    },
+    pwaInstall: {
+      title: "Installa NekoGym",
+      description: "Aggiungi l'app alla home per un accesso rapido e notifiche più affidabili.",
+      installCta: "Installa",
+      dismissCta: "Non ora",
     },
     bookings: {
       title: "Calendario",
@@ -354,6 +584,9 @@ const dictionaries: Record<Locale, Dictionary> = {
       bookCta: "Iscriviti",
       unbookCta: "Disiscriviti",
       processing: "Elaborazione...",
+      youAreQueued: "In coda",
+      queuedLabel: "In coda",
+      joinQueueCta: "Mettimi in coda",
     },
     lessonsPage: {
       title: "Lezioni",
@@ -365,6 +598,37 @@ const dictionaries: Record<Locale, Dictionary> = {
       trainerLabel: "Trainer",
       bookedLabel: "Iscritti",
       courseTag: "Corso",
+      updateTrainerCta: "Aggiorna trainer",
+      modifiedTag: "Modificata",
+      modifiedReasonsLabel: "Differenze",
+      modifiedReasonTrainer: "trainer",
+      modifiedReasonTime: "orario/durata",
+      standaloneTitle: "Lezioni standalone",
+      standaloneDescription: "Crea e gestisci lezioni non collegate a un corso.",
+      standaloneDuration: "Durata (min)",
+      standaloneMaxAttendees: "Max posti",
+      standaloneCancellationWindow: "Limite cancellazione (ore)",
+      standaloneLessonType: "Tipo lezione",
+      startsAtLabel: "Inizio",
+      createStandaloneCta: "Crea lezione",
+      updateStandaloneCta: "Salva modifiche",
+      deleteStandaloneCta: "Elimina",
+      manageTitle: "Gestisci lezione",
+      manageDescription: "Modifica dati, trainer e iscritti da questa modale.",
+      manageTriggerLabel: "Gestisci lezione",
+      manageTabMain: "Main",
+      manageTabPeople: "People",
+      processing: "Elaborazione...",
+      closeCta: "Chiudi",
+      attendeesLabel: "Iscritti",
+      noAttendees: "Nessun iscritto.",
+      attendeeSelectLabel: "Utente",
+      addAttendeeCta: "Aggiungi",
+      removeAttendeeCta: "Rimuovi",
+      waitlistLabel: "Coda",
+      noWaitlist: "Nessuno in coda.",
+      confirmWaitlistCta: "Conferma",
+      removeWaitlistCta: "Rimuovi dalla coda",
     },
     usersPage: {
       title: "Utenti",
@@ -432,6 +696,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         MONTHLY: "Mensile",
         FIXED: "Pacchetto fisso",
       },
+      passwordCreateHint: "Password obbligatoria per i nuovi utenti.",
+      passwordKeepHint: "Lascia vuoto per mantenere la password corrente.",
     },
     auth: {
       loginTitle: "Accedi",
@@ -495,6 +761,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         updateDescription: "Vuoi salvare queste modifiche?",
         deleteTitle: "Conferma eliminazione corso",
         deleteDescription: "Eliminare \"{name}\"? Questa azione non puo essere annullata.",
+        deletePolicyTitle: "Lezioni future con iscritti",
+        deletePolicyDescription:
+          "Il corso \"{name}\" ha {count} lezioni future con iscritti. Vuoi mantenerle o cancellarle (con notifica)?",
+        deletePolicyKeepCta: "Tieni lezioni",
+        deletePolicyCancelCta: "Cancella lezioni",
       },
       validation: {
         nameRequired: "Il nome e obbligatorio.",
@@ -576,11 +847,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     siteSettings: {
       title: "Impostazioni sito",
-      subtitle: "Configura nome applicazione, recapiti e parametri SMTP.",
+      subtitle: "Configura nome applicazione, recapiti e calendario apertura.",
       tabs: {
         general: "Generale",
         contacts: "Recapiti",
-        smtp: "SMTP",
+        notifications: "Notifiche",
         schedule: "Aperture e chiusure",
       },
       fields: {
@@ -592,9 +863,14 @@ const dictionaries: Record<Locale, Dictionary> = {
         contactPhone: "Telefono",
         smtpHost: "Host SMTP",
         smtpPort: "Porta SMTP",
+        smtpAuthEnabled: "Usa autenticazione SMTP",
         smtpUser: "Utente SMTP",
-        smtpPassword: "Password SMTP",
         smtpFromEmail: "Email mittente",
+        smtpPasswordConfigured: "Password SMTP configurata",
+        telegramBotUsername: "Username bot Telegram",
+        telegramBotTokenConfigured: "Token bot Telegram configurato",
+        smtpSectionTitle: "Configurazione SMTP (read-only)",
+        telegramSectionTitle: "Configurazione Telegram (read-only)",
         openWeekdays: "Giorni apertura",
         closedDates: "Date chiusura (una per riga)",
       },
@@ -610,10 +886,77 @@ const dictionaries: Record<Locale, Dictionary> = {
       actions: {
         save: "Salva impostazioni",
         saving: "Salvataggio...",
+        testEmail: "Invia email di test",
+        testingEmail: "Invio test...",
+        testTelegram: "Invia test Telegram",
+        testingTelegram: "Invio test Telegram...",
       },
+      readonlyHint: "Questi valori provengono solo da variabili d'ambiente e non sono modificabili da UI.",
+      configuredValue: "Configurato",
+      missingValue: "Non configurato",
       logoPreview: "Anteprima logo",
       logoPathInvalid: "Inserisci un path SVG locale valido (es. /logo-nekogym.svg).",
       closedDatesInvalid: "Usa una data reale per riga nel formato YYYY-MM-DD.",
+    },
+    manualNotifications: {
+      title: "Notifiche manuali",
+      subtitle: "Invia notifiche a tutti gli utenti, solo trainer o solo trainee.",
+      fields: {
+        audience: "Destinatari",
+        subject: "Oggetto",
+        body: "Messaggio",
+      },
+      audienceOptions: {
+        ALL: "Tutti gli utenti",
+        TRAINERS: "Solo trainer",
+        TRAINEES: "Solo trainee",
+      },
+      actions: {
+        send: "Invia notifica",
+        sending: "Invio...",
+        retry: "Riprova",
+        retrySelected: "Riprova selezionati",
+        retrying: "Riprovo...",
+      },
+      outbox: {
+        title: "Outbox errori",
+        empty: "Nessun errore outbox.",
+        filters: {
+          status: "Stato",
+          channel: "Canale",
+          from: "Da data",
+          to: "A data",
+          apply: "Applica filtri",
+          reset: "Reset",
+        },
+        channelOptions: {
+          ALL: "Tutti",
+          EMAIL: "Email",
+          TELEGRAM: "Telegram",
+          WEBPUSH: "Web Push",
+        },
+        statusOptions: {
+          ALL: "Tutti",
+          PENDING: "In coda",
+          PROCESSING: "In lavorazione",
+          SENT: "Inviate",
+          FAILED: "Fallite",
+        },
+        pagination: {
+          prev: "Precedente",
+          next: "Successiva",
+          pageInfo: "Pagina {page}/{totalPages} - Totale {total}",
+        },
+        columns: {
+          channel: "Canale",
+          recipient: "Destinatario",
+          subject: "Oggetto",
+          attempts: "Tentativi",
+          error: "Errore",
+          createdAt: "Creato il",
+          actions: "Azioni",
+        },
+      },
     },
   },
   en: {
@@ -623,6 +966,9 @@ const dictionaries: Record<Locale, Dictionary> = {
       signedInAs: "Signed in as",
       logout: "Log out",
       localeLabel: "Language",
+      themeLabel: "Theme",
+      themeToLight: "Switch to light theme",
+      themeToDark: "Switch to dark theme",
       settingsSection: "Settings",
       nav: {
         dashboard: "Dashboard",
@@ -631,9 +977,65 @@ const dictionaries: Record<Locale, Dictionary> = {
         bookings: "Calendar",
         users: "Users",
         reports: "Reports",
+        profileSettings: "Profile",
+        manualNotifications: "Notifications",
         registries: "Registries",
         siteSettings: "Site settings",
       },
+    },
+    profileSettings: {
+      title: "Profile settings",
+      subtitle: "Manage Telegram link and personal preferences.",
+      telegramTitle: "Telegram",
+      telegramDescription: "Link your Telegram account to receive notifications and use bot commands.",
+      linkedStatus: "Telegram linked",
+      notLinkedStatus: "Telegram not linked",
+      linkedChatIdLabel: "Chat ID",
+      linkedUsernameLabel: "Username",
+      generateCodeCta: "Start Telegram verification",
+      codeLabel: "Link code",
+      codeHint: "Use this code with the /link command in the bot.",
+      openTelegramCta: "Open Telegram with prefilled command",
+      qrHint: "Scan to open Telegram and send the link command automatically.",
+      noBotConfiguredHint: "Set TELEGRAM_BOT_USERNAME to enable deep link and QR.",
+      commandLabel: "Command",
+      expiresHint: "The code expires after 30 minutes.",
+      generating: "Generating...",
+      accountSecurityTitle: "Account security",
+      accountSecurityDescription: "Manage email verification, email change, password and web push.",
+      currentEmailLabel: "Current email",
+      emailVerifiedStatus: "Email verified",
+      emailNotVerifiedStatus: "Email not verified",
+      pendingEmailLabel: "New email pending confirmation",
+      newEmailLabel: "New email",
+      newEmailPlaceholder: "new@email.com",
+      sendEmailChangeCta: "Send confirmation",
+      currentPasswordLabel: "Current password",
+      newPasswordLabel: "New password",
+      updatePasswordCta: "Update password",
+      webPushTitle: "Web push notifications",
+      webPushDescription: "Receive browser notifications even when the page is closed.",
+      webPushSupported: "Browser supports web push.",
+      webPushNotSupported: "Web push is not supported on this browser/device.",
+      webPushMissingKey: "Web Push public key is not configured.",
+      webPushEnabled: "Web push enabled",
+      webPushDisabled: "Web push disabled",
+      webPushEnableCta: "Enable web push",
+      webPushDisableCta: "Disable web push",
+      webPushProcessing: "Processing...",
+      webPushTestCta: "Send Web Push test",
+      notificationPrefsTitle: "Notification preferences",
+      notificationPrefsDescription: "Choose which channels receive automatic notifications.",
+      notificationEmailLabel: "Email",
+      notificationTelegramLabel: "Telegram",
+      notificationWebPushLabel: "App/Web Push",
+      notificationPrefsSaveCta: "Save preferences",
+    },
+    pwaInstall: {
+      title: "Install NekoGym",
+      description: "Add the app to your home screen for faster access and more reliable notifications.",
+      installCta: "Install",
+      dismissCta: "Not now",
     },
     bookings: {
       title: "Calendar",
@@ -657,6 +1059,9 @@ const dictionaries: Record<Locale, Dictionary> = {
       bookCta: "Book",
       unbookCta: "Unbook",
       processing: "Processing...",
+      youAreQueued: "Queued",
+      queuedLabel: "Queued",
+      joinQueueCta: "Join waitlist",
     },
     lessonsPage: {
       title: "Lessons",
@@ -668,6 +1073,37 @@ const dictionaries: Record<Locale, Dictionary> = {
       trainerLabel: "Trainer",
       bookedLabel: "Booked",
       courseTag: "Course",
+      updateTrainerCta: "Update trainer",
+      modifiedTag: "Modified",
+      modifiedReasonsLabel: "Differences",
+      modifiedReasonTrainer: "trainer",
+      modifiedReasonTime: "time/duration",
+      standaloneTitle: "Standalone lessons",
+      standaloneDescription: "Create and manage lessons not linked to a course.",
+      standaloneDuration: "Duration (min)",
+      standaloneMaxAttendees: "Max seats",
+      standaloneCancellationWindow: "Cancellation window (hours)",
+      standaloneLessonType: "Lesson type",
+      startsAtLabel: "Starts at",
+      createStandaloneCta: "Create lesson",
+      updateStandaloneCta: "Save changes",
+      deleteStandaloneCta: "Delete",
+      manageTitle: "Manage lesson",
+      manageDescription: "Update data, trainer and attendees from this modal.",
+      manageTriggerLabel: "Manage lesson",
+      manageTabMain: "Main",
+      manageTabPeople: "People",
+      processing: "Processing...",
+      closeCta: "Close",
+      attendeesLabel: "Attendees",
+      noAttendees: "No attendees.",
+      attendeeSelectLabel: "User",
+      addAttendeeCta: "Add",
+      removeAttendeeCta: "Remove",
+      waitlistLabel: "Waitlist",
+      noWaitlist: "No users in waitlist.",
+      confirmWaitlistCta: "Confirm",
+      removeWaitlistCta: "Remove from waitlist",
     },
     usersPage: {
       title: "Users",
@@ -735,6 +1171,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         MONTHLY: "Monthly",
         FIXED: "Fixed pack",
       },
+      passwordCreateHint: "Password is required for new users.",
+      passwordKeepHint: "Leave empty to keep current password.",
     },
     auth: {
       loginTitle: "Sign in",
@@ -798,6 +1236,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         updateDescription: "Do you want to save these changes?",
         deleteTitle: "Confirm course deletion",
         deleteDescription: "Delete \"{name}\"? This action cannot be undone.",
+        deletePolicyTitle: "Future lessons with attendees",
+        deletePolicyDescription:
+          "Course \"{name}\" has {count} future lessons with attendees. Do you want to keep them or cancel them (with notifications)?",
+        deletePolicyKeepCta: "Keep lessons",
+        deletePolicyCancelCta: "Cancel lessons",
       },
       validation: {
         nameRequired: "Name is required.",
@@ -879,11 +1322,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     siteSettings: {
       title: "Site settings",
-      subtitle: "Configure site name, contacts and SMTP parameters.",
+      subtitle: "Configure site name, contacts and opening schedule.",
       tabs: {
         general: "General",
         contacts: "Contacts",
-        smtp: "SMTP",
+        notifications: "Notifications",
         schedule: "Open days and closures",
       },
       fields: {
@@ -895,9 +1338,14 @@ const dictionaries: Record<Locale, Dictionary> = {
         contactPhone: "Phone",
         smtpHost: "SMTP host",
         smtpPort: "SMTP port",
+        smtpAuthEnabled: "Use SMTP authentication",
         smtpUser: "SMTP user",
-        smtpPassword: "SMTP password",
         smtpFromEmail: "From email",
+        smtpPasswordConfigured: "SMTP password configured",
+        telegramBotUsername: "Telegram bot username",
+        telegramBotTokenConfigured: "Telegram bot token configured",
+        smtpSectionTitle: "SMTP configuration (read-only)",
+        telegramSectionTitle: "Telegram configuration (read-only)",
         openWeekdays: "Open weekdays",
         closedDates: "Closed dates (one per line)",
       },
@@ -913,10 +1361,77 @@ const dictionaries: Record<Locale, Dictionary> = {
       actions: {
         save: "Save settings",
         saving: "Saving...",
+        testEmail: "Send test email",
+        testingEmail: "Sending test...",
+        testTelegram: "Send Telegram test",
+        testingTelegram: "Sending Telegram test...",
       },
+      readonlyHint: "These values are loaded from environment variables only and cannot be edited from UI.",
+      configuredValue: "Configured",
+      missingValue: "Not configured",
       logoPreview: "Logo preview",
       logoPathInvalid: "Use a valid local SVG path (e.g. /logo-nekogym.svg).",
       closedDatesInvalid: "Use one real calendar date per line in YYYY-MM-DD format.",
+    },
+    manualNotifications: {
+      title: "Manual notifications",
+      subtitle: "Send notifications to all users, only trainers or only trainees.",
+      fields: {
+        audience: "Audience",
+        subject: "Subject",
+        body: "Message",
+      },
+      audienceOptions: {
+        ALL: "All users",
+        TRAINERS: "Only trainers",
+        TRAINEES: "Only trainees",
+      },
+      actions: {
+        send: "Send notification",
+        sending: "Sending...",
+        retry: "Retry",
+        retrySelected: "Retry selected",
+        retrying: "Retrying...",
+      },
+      outbox: {
+        title: "Outbox failures",
+        empty: "No outbox failures.",
+        filters: {
+          status: "Status",
+          channel: "Channel",
+          from: "From date",
+          to: "To date",
+          apply: "Apply filters",
+          reset: "Reset",
+        },
+        channelOptions: {
+          ALL: "All",
+          EMAIL: "Email",
+          TELEGRAM: "Telegram",
+          WEBPUSH: "Web Push",
+        },
+        statusOptions: {
+          ALL: "All",
+          PENDING: "Pending",
+          PROCESSING: "Processing",
+          SENT: "Sent",
+          FAILED: "Failed",
+        },
+        pagination: {
+          prev: "Previous",
+          next: "Next",
+          pageInfo: "Page {page}/{totalPages} - Total {total}",
+        },
+        columns: {
+          channel: "Channel",
+          recipient: "Recipient",
+          subject: "Subject",
+          attempts: "Attempts",
+          error: "Error",
+          createdAt: "Created at",
+          actions: "Actions",
+        },
+      },
     },
   },
 };

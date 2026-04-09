@@ -33,11 +33,10 @@ function courseMessages(locale: string) {
       isIt ? "I campi numerici devono essere maggiori di 0." : "Numeric fields must be greater than 0.",
     scheduleRequired: isIt ? "Aggiungi almeno uno slot di schedulazione." : "Add at least one schedule slot.",
     scheduleInvalid: isIt ? "La schedulazione contiene dati non validi." : "Schedule contains invalid data.",
-    trainerRequired: isIt ? "Seleziona un trainer." : "Select a trainer.",
     lessonTypeRequired: isIt ? "Seleziona un tipo lezione." : "Select a lesson type.",
     trainerForbidden:
       isIt ? "Come trainer puoi assegnare solo te stesso." : "As trainer you can only assign yourself.",
-    trainerNotFound: isIt ? "Trainer non trovato." : "Trainer not found.",
+    trainerNotFound: isIt ? "Trainer non valido." : "Invalid trainer.",
     lessonTypeNotFound: isIt ? "Tipo lezione non trovato." : "Lesson type not found.",
     idRequired: isIt ? "Id corso obbligatorio." : "Course id is required.",
     created: isIt ? "Corso creato con successo." : "Course created successfully.",
@@ -55,6 +54,10 @@ function courseMessages(locale: string) {
     lessonTypeCreateFailed: isIt ? "Impossibile creare il tipo lezione." : "Unable to create lesson type.",
     lessonTypeUpdateFailed: isIt ? "Impossibile aggiornare il tipo lezione." : "Unable to update lesson type.",
     lessonTypeDeleteFailed: isIt ? "Impossibile eliminare il tipo lezione." : "Unable to delete lesson type.",
+    lessonTypeInUse:
+      isIt
+        ? "Impossibile eliminare: il tipo lezione e gia usato da corsi o lezioni."
+        : "Cannot delete: lesson type is already used by courses or lessons.",
   };
 }
 
@@ -154,10 +157,6 @@ function validateCourseInput(formData: FormData, locale: string) {
     throw new Error(messages.numericPositive);
   }
 
-  if (!trainerId) {
-    throw new Error(messages.trainerRequired);
-  }
-
   if (!lessonTypeId) {
     throw new Error(messages.lessonTypeRequired);
   }
@@ -169,7 +168,7 @@ function validateCourseInput(formData: FormData, locale: string) {
     description: description || null,
     icon: icon || null,
     trainerName: trainerName || null,
-    trainerId,
+    trainerId: trainerId || null,
     lessonTypeId,
     durationMinutes,
     maxAttendees,
@@ -192,16 +191,21 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
     const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
     const input = validateCourseInput(formData, locale);
 
-    if (currentUser.role === "TRAINER" && input.trainerId !== currentUser.id) {
+    if (currentUser.role === "TRAINER" && input.trainerId && input.trainerId !== currentUser.id) {
       throw new Error(messages.trainerForbidden);
     }
 
     const [trainer, lessonType] = await Promise.all([
-      prisma.user.findUnique({ where: { id: input.trainerId } }),
+      input.trainerId
+        ? prisma.user.findUnique({
+            where: { id: input.trainerId },
+            select: { id: true, name: true, role: true },
+          })
+        : Promise.resolve(null),
       prisma.lessonType.findUnique({ where: { id: input.lessonTypeId } }),
     ]);
 
-    if (!trainer) throw new Error(messages.trainerNotFound);
+    if (trainer && trainer.role !== "TRAINER" && trainer.role !== "ADMIN") throw new Error(messages.trainerNotFound);
     if (!lessonType) throw new Error(messages.lessonTypeNotFound);
 
     const created = await prisma.course.create({
@@ -209,8 +213,8 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
         name: input.name,
         description: input.description,
         icon: null,
-        trainerName: trainer.name,
-        trainerId: trainer.id,
+        trainerName: trainer?.name ?? null,
+        trainerId: trainer?.id ?? null,
         lessonTypeId: lessonType.id,
         durationMinutes: input.durationMinutes,
         maxAttendees: input.maxAttendees,
@@ -252,16 +256,21 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
 
     const input = validateCourseInput(formData, locale);
 
-    if (currentUser.role === "TRAINER" && input.trainerId !== currentUser.id) {
+    if (currentUser.role === "TRAINER" && input.trainerId && input.trainerId !== currentUser.id) {
       throw new Error(messages.trainerForbidden);
     }
 
     const [trainer, lessonType] = await Promise.all([
-      prisma.user.findUnique({ where: { id: input.trainerId } }),
+      input.trainerId
+        ? prisma.user.findUnique({
+            where: { id: input.trainerId },
+            select: { id: true, name: true, role: true },
+          })
+        : Promise.resolve(null),
       prisma.lessonType.findUnique({ where: { id: input.lessonTypeId } }),
     ]);
 
-    if (!trainer) throw new Error(messages.trainerNotFound);
+    if (trainer && trainer.role !== "TRAINER" && trainer.role !== "ADMIN") throw new Error(messages.trainerNotFound);
     if (!lessonType) throw new Error(messages.lessonTypeNotFound);
 
     await prisma.$transaction(async (tx) => {
@@ -273,8 +282,8 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
           name: input.name,
           description: input.description,
           icon: null,
-          trainerName: trainer.name,
-          trainerId: trainer.id,
+          trainerName: trainer?.name ?? null,
+          trainerId: trainer?.id ?? null,
           lessonTypeId: lessonType.id,
           durationMinutes: input.durationMinutes,
           maxAttendees: input.maxAttendees,
@@ -345,6 +354,14 @@ export async function deleteLessonTypeAction(formData: FormData): Promise<Lesson
     const id = getField(formData, "id");
     if (!id) throw new Error(messages.idRequired);
 
+    const [coursesUsingType, lessonsUsingType] = await Promise.all([
+      prisma.course.count({ where: { lessonTypeId: id } }),
+      prisma.lesson.count({ where: { lessonTypeId: id } }),
+    ]);
+    if (coursesUsingType > 0 || lessonsUsingType > 0) {
+      throw new Error(messages.lessonTypeInUse);
+    }
+
     await prisma.lessonType.delete({ where: { id } });
 
     revalidatePath(`/${locale}/courses`);
@@ -401,6 +418,8 @@ export async function deleteCourseAction(formData: FormData): Promise<CourseMuta
   const locale = getLocale(formData);
   const messages = courseMessages(locale);
   const id = getField(formData, "id");
+  const bookedFuturePolicy = getField(formData, "bookedFuturePolicy").toLowerCase();
+  const cancelBookedLessons = bookedFuturePolicy === "cancel";
 
   try {
     await requireAnyRole(["ADMIN", "TRAINER"], locale);
@@ -410,11 +429,23 @@ export async function deleteCourseAction(formData: FormData): Promise<CourseMuta
     }
 
     await prisma.$transaction(async (tx) => {
-      await cancelFutureLessonsForDeletedCourse(tx, id);
-      await tx.course.delete({ where: { id } });
+      const course = await tx.course.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+      if (!course) {
+        throw new Error(messages.idRequired);
+      }
+
+      if (course.deletedAt) {
+        return;
+      }
+
+      await cancelFutureLessonsForDeletedCourse(tx, id, {
+        cancelBookedLessons,
+      });
+      await tx.course.update({ where: { id }, data: { deletedAt: new Date() } });
     });
     revalidatePath(`/${locale}/courses`);
     revalidatePath(`/${locale}/bookings`);
+    revalidatePath(`/${locale}/lessons`);
 
     return { ok: true, message: messages.deleted };
   } catch (error) {

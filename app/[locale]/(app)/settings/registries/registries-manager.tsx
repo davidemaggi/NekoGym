@@ -153,18 +153,18 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
     <section className="space-y-4">
       <header>
         <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-        <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.subtitle}</p>
+        <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
       </header>
 
-      <div className="flex border-b border-zinc-200 dark:border-zinc-800">
+      <div className="flex border-b border-[var(--surface-border)]">
         <button
           type="button"
           onClick={() => setActiveTab("lessonTypes")}
           className={[
             "px-3 py-2 text-sm",
             activeTab === "lessonTypes"
-              ? "border-b-2 border-zinc-900 font-medium dark:border-zinc-100"
-              : "text-zinc-600 dark:text-zinc-300",
+              ? "border-b-2 border-[var(--primary)] font-medium"
+              : "text-[var(--muted-foreground)]",
           ].join(" ")}
         >
           {labels.tabs.lessonTypes}
@@ -175,7 +175,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
         <Card>
           <CardHeader>
             <CardTitle>{labels.lessonTypes.title}</CardTitle>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.lessonTypes.description}</p>
+            <p className="text-sm text-[var(--muted-foreground)]">{labels.lessonTypes.description}</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <form className="space-y-3" onSubmit={onCreateLessonType}>
@@ -197,7 +197,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                   required
                   value={createIcon}
                   onChange={(event) => setCreateIcon(event.target.value)}
-                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
                 >
                   {iconOptions.map((icon) => (
                     <option key={icon} value={icon}>
@@ -206,9 +206,9 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                   ))}
                 </select>
                 {createIcon ? (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-zinc-200 px-2 py-1 dark:border-zinc-800">
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
                     <Image src={createIcon} alt={iconFileName(createIcon)} width={26} height={26} />
-                    <span className="text-xs text-zinc-600 dark:text-zinc-300">{iconFileName(createIcon)}</span>
+                    <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(createIcon)}</span>
                   </div>
                 ) : null}
               </div>
@@ -218,21 +218,21 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
               </Button>
             </form>
 
-            <div className="space-y-2 border-t border-zinc-200 pt-3 dark:border-zinc-800">
+            <div className="space-y-2 border-t border-[var(--surface-border)] pt-3">
               {lessonTypes.length === 0 ? (
-                <p className="text-sm text-zinc-600 dark:text-zinc-300">{labels.lessonTypes.empty}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">{labels.lessonTypes.empty}</p>
               ) : (
                 lessonTypes.map((type) => (
                   <div
                     key={type.id}
-                    className="flex items-center justify-between rounded-md border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                    className="flex items-center justify-between rounded-md border border-[var(--surface-border)] px-3 py-2"
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <Image src={type.iconSvg} alt={type.name} width={20} height={20} />
                         <p className="text-sm font-medium">{type.name}</p>
                       </div>
-                      {type.description ? <p className="text-xs text-zinc-500">{type.description}</p> : null}
+                      {type.description ? <p className="text-xs text-[var(--muted-foreground)]">{type.description}</p> : null}
                     </div>
                     <Button
                       variant="outline"
@@ -285,7 +285,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                   required
                   value={editIcon}
                   onChange={(event) => setEditIcon(event.target.value)}
-                  className="h-10 w-full rounded-md border border-zinc-300 bg-white px-3 text-sm dark:border-zinc-700 dark:bg-zinc-950"
+                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
                 >
                   {[...new Set([editingType.iconSvg, ...iconOptions])].map((icon) => (
                     <option key={icon} value={icon}>
@@ -294,9 +294,9 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                   ))}
                 </select>
                 {editIcon ? (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-zinc-200 px-2 py-1 dark:border-zinc-800">
+                  <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
                     <Image src={editIcon} alt={iconFileName(editIcon)} width={26} height={26} />
-                    <span className="text-xs text-zinc-600 dark:text-zinc-300">{iconFileName(editIcon)}</span>
+                    <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(editIcon)}</span>
                   </div>
                 ) : null}
               </div>

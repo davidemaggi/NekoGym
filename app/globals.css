@@ -1,8 +1,41 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f1e7;
+  --foreground: #4a3a33;
+  --surface: #fff7ee;
+  --surface-border: #e8cdb4;
+  --muted: #eddcc9;
+  --muted-foreground: #6b5344;
+  --primary: #e8b89a;
+  --primary-foreground: #402c24;
+  --primary-hover: #e2aa88;
+  --sidebar-link: #5b4436;
+  --sidebar-link-hover: #efddca;
+  --sidebar-link-active-bg: #e8b89a;
+  --sidebar-link-active-fg: #3f2a22;
+  --role-badge-bg: #eddcc9;
+  --role-badge-fg: #4a3a33;
+}
+
+.dark {
+  --background: #17243d;
+  --foreground: #d9e5ff;
+  --surface: #213252;
+  --surface-border: #38517f;
+  --muted: #2b4268;
+  --muted-foreground: #b9c8ea;
+  --primary: #7d9acb;
+  --primary-foreground: #11203d;
+  --primary-hover: #93add7;
+  --sidebar-link: #d1ddf7;
+  --sidebar-link-hover: #2f4a75;
+  --sidebar-link-active-bg: #7d9acb;
+  --sidebar-link-active-fg: #0f223f;
+  --role-badge-bg: #2c456d;
+  --role-badge-fg: #d9e5ff;
 }
 
 @theme inline {
@@ -12,12 +45,6 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
 
 body {
   background: var(--background);

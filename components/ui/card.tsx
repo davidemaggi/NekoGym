@@ -3,11 +3,11 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 export function Card({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900", className)}>{children}</div>;
+  return <div className={cn("rounded-lg border border-[var(--surface-border)] bg-[var(--surface)]", className)}>{children}</div>;
 }
 
 export function CardHeader({ children }: { children: ReactNode }) {
-  return <div className="border-b border-zinc-200 p-4 dark:border-zinc-800">{children}</div>;
+  return <div className="border-b border-[var(--surface-border)] p-4">{children}</div>;
 }
 
 export function CardTitle({ children }: { children: ReactNode }) {

@@ -8,12 +8,7 @@ export default async function SettingsPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const user = await requireAuth(locale);
-
-  if (user.role === "ADMIN") {
-    redirect(`/${locale}/settings/site`);
-  }
-
-  redirect(`/${locale}/settings/registries`);
+  await requireAuth(locale);
+  redirect(`/${locale}/settings/profile`);
 }
 

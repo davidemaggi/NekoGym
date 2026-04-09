@@ -82,11 +82,6 @@ export type SiteSettingsInput = {
   weeklyResetWeekday: WeeklyResetWeekday;
   openWeekdays: WeeklyResetWeekday[];
   closedDates: string[];
-  smtpHost: string;
-  smtpPort: string;
-  smtpUser: string;
-  smtpPassword: string;
-  smtpFromEmail: string;
   contactAddress: string;
   contactEmail: string;
   contactPhone: string;
@@ -97,7 +92,6 @@ export async function getSiteSettings() {
 }
 
 export async function upsertSiteSettings(input: SiteSettingsInput) {
-  const parsedPort = Number.parseInt(input.smtpPort, 10);
   const safeLogoSvg = sanitizeSiteLogoSvg(input.siteLogoSvg);
   const safeWeeklyResetWeekday = WEEKDAY_VALUES.includes(input.weeklyResetWeekday)
     ? input.weeklyResetWeekday
@@ -113,11 +107,6 @@ export async function upsertSiteSettings(input: SiteSettingsInput) {
       weeklyResetWeekday: safeWeeklyResetWeekday,
       openWeekdaysCsv: safeOpenWeekdaysCsv,
       closedDatesCsv: safeClosedDatesCsv,
-      smtpHost: input.smtpHost || null,
-      smtpPort: Number.isNaN(parsedPort) ? null : parsedPort,
-      smtpUser: input.smtpUser || null,
-      smtpPassword: input.smtpPassword || null,
-      smtpFromEmail: input.smtpFromEmail || null,
       contactAddress: input.contactAddress || null,
       contactEmail: input.contactEmail || null,
       contactPhone: input.contactPhone || null,
@@ -129,11 +118,6 @@ export async function upsertSiteSettings(input: SiteSettingsInput) {
       weeklyResetWeekday: safeWeeklyResetWeekday,
       openWeekdaysCsv: safeOpenWeekdaysCsv,
       closedDatesCsv: safeClosedDatesCsv,
-      smtpHost: input.smtpHost || null,
-      smtpPort: Number.isNaN(parsedPort) ? null : parsedPort,
-      smtpUser: input.smtpUser || null,
-      smtpPassword: input.smtpPassword || null,
-      smtpFromEmail: input.smtpFromEmail || null,
       contactAddress: input.contactAddress || null,
       contactEmail: input.contactEmail || null,
       contactPhone: input.contactPhone || null,

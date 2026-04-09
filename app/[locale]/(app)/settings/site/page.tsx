@@ -1,5 +1,6 @@
 import { requireAnyRole } from "@/lib/authorization";
 import { getDictionary, isLocale } from "@/lib/i18n";
+import { getSmtpEnvConfig, getTelegramEnvConfig } from "@/lib/notifications-config";
 import { DEFAULT_SITE_LOGO_SVG } from "@/lib/site-logo";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv, getSiteSettings } from "@/lib/site-settings";
 
@@ -16,6 +17,8 @@ export default async function SiteSettingsPage({
   const safeLocale = isLocale(locale) ? locale : "it";
   const labels = getDictionary(safeLocale).siteSettings;
   const settings = await getSiteSettings();
+  const smtp = getSmtpEnvConfig();
+  const telegram = getTelegramEnvConfig();
 
   return (
     <SiteSettingsManager
@@ -30,11 +33,16 @@ export default async function SiteSettingsPage({
         contactAddress: settings?.contactAddress ?? "",
         contactEmail: settings?.contactEmail ?? "",
         contactPhone: settings?.contactPhone ?? "",
-        smtpHost: settings?.smtpHost ?? "",
-        smtpPort: settings?.smtpPort ? String(settings.smtpPort) : "",
-        smtpUser: settings?.smtpUser ?? "",
-        smtpPassword: settings?.smtpPassword ?? "",
-        smtpFromEmail: settings?.smtpFromEmail ?? "",
+      }}
+      envValues={{
+        smtpHost: smtp.host,
+        smtpPort: String(smtp.port),
+        smtpAuthEnabled: smtp.authEnabled,
+        smtpUser: smtp.user,
+        smtpPasswordConfigured: smtp.hasPassword,
+        smtpFromEmail: smtp.fromEmail,
+        telegramBotUsername: telegram.botUsername,
+        telegramBotTokenConfigured: telegram.hasBotToken,
       }}
     />
   );

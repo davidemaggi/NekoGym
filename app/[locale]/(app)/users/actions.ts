@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { MembershipStatus, SubscriptionPlanType, UserRole } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
+import { sendEmailVerification } from "@/lib/auth";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 
@@ -39,6 +40,12 @@ function t(locale: string) {
 function getField(formData: FormData, key: string): string {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
+}
+
+function getBooleanField(formData: FormData, key: string): boolean {
+  const value = formData.get(key);
+  if (typeof value !== "string") return false;
+  return value === "true" || value === "on" || value === "1";
 }
 
 function parseNullableInt(value: string): number | null {
@@ -103,6 +110,7 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
     const subscriptionRemaining = parseNullableInt(getField(formData, "subscriptionRemaining"));
     const subscriptionResetAt = parseNullableDate(getField(formData, "subscriptionResetAt"));
     const subscriptionEndsAt = parseEndOfDayDate(getField(formData, "subscriptionEndsAt"));
+    const emailVerified = getBooleanField(formData, "emailVerified");
 
     if (!name || !email || !password) throw new Error(msg.required);
     if (!roles.includes(role)) throw new Error(msg.roleInvalid);
@@ -127,10 +135,12 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
       subscriptionEndsAt,
     });
 
-    await prisma.user.create({
+    const createdUser = await prisma.user.create({
       data: {
         name,
         email,
+        emailVerifiedAt: emailVerified ? new Date() : null,
+        pendingEmail: null,
         passwordHash: hashPassword(password),
         role,
         membershipStatus,
@@ -142,6 +152,8 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
         subscriptionEndsAt: normalized.subscriptionEndsAt,
       },
     });
+
+    await sendEmailVerification({ userId: createdUser.id, locale });
 
     revalidatePath(`/${locale}/users`);
     return { ok: true, message: msg.created };
@@ -172,6 +184,7 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
     const subscriptionRemaining = parseNullableInt(getField(formData, "subscriptionRemaining"));
     const subscriptionResetAt = parseNullableDate(getField(formData, "subscriptionResetAt"));
     const subscriptionEndsAt = parseEndOfDayDate(getField(formData, "subscriptionEndsAt"));
+    const emailVerified = getBooleanField(formData, "emailVerified");
 
     if (!id) throw new Error(msg.idRequired);
     if (!name || !email) throw new Error(msg.required);
@@ -197,11 +210,13 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
       subscriptionEndsAt,
     });
 
-    await prisma.user.update({
+    const updatedUser = await prisma.user.update({
       where: { id },
       data: {
         name,
         email,
+        emailVerifiedAt: emailVerified ? new Date() : null,
+        pendingEmail: null,
         role,
         membershipStatus,
         trialEndsAt,
@@ -213,6 +228,10 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
         ...(password ? { passwordHash: hashPassword(password) } : {}),
       },
     });
+
+    if (!emailVerified) {
+      await sendEmailVerification({ userId: updatedUser.id, locale });
+    }
 
     revalidatePath(`/${locale}/users`);
     return { ok: true, message: msg.updated };

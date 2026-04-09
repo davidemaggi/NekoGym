@@ -16,7 +16,7 @@ export function AlertDialogContent({ children, className }: { children: ReactNod
       <AlertDialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
       <AlertDialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-zinc-200 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-900",
+          "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-lg",
           className
         )}
       >
@@ -35,7 +35,7 @@ export function AlertDialogTitle({ children }: { children: ReactNode }) {
 }
 
 export function AlertDialogDescription({ children }: { children: ReactNode }) {
-  return <AlertDialogPrimitive.Description className="text-sm text-zinc-600 dark:text-zinc-300">{children}</AlertDialogPrimitive.Description>;
+  return <AlertDialogPrimitive.Description className="text-sm text-[var(--muted-foreground)]">{children}</AlertDialogPrimitive.Description>;
 }
 
 export function AlertDialogFooter({ children }: { children: ReactNode }) {
