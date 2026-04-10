@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
+import { parseDateTimeLocalInputToUtc } from "@/lib/date-time";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
@@ -79,7 +80,8 @@ function parsePositiveInt(raw: string): number | null {
 function parseStartsAt(raw: string, locale: string): Date {
   const t = messages(locale);
   if (!raw) throw new Error(t.startsAtRequired);
-  const date = new Date(raw);
+  const date = parseDateTimeLocalInputToUtc(raw);
+  if (!date) throw new Error(t.startsAtRequired);
   if (Number.isNaN(date.getTime())) throw new Error(t.startsAtRequired);
   return date;
 }
@@ -635,6 +637,9 @@ export async function addLessonAttendeeMutationAction(formData: FormData): Promi
         data: {
           lessonId,
           traineeId: attendeeId,
+          status: "CONFIRMED",
+          confirmedAt: new Date(),
+          confirmedById: currentUser.id,
         },
       });
 
@@ -787,6 +792,9 @@ export async function confirmLessonWaitlistEntryMutationAction(formData: FormDat
         data: {
           lessonId,
           traineeId: attendeeId,
+          status: "CONFIRMED",
+          confirmedAt: new Date(),
+          confirmedById: currentUser.id,
         },
       });
       await tx.lessonWaitlistEntry.delete({ where: { id: waitlistEntry.id } });

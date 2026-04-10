@@ -2,6 +2,7 @@
 
 import { requireAuth } from "@/lib/authorization";
 import { changePassword, disableTotp, enableTotp, requestEmailChange, startTotpSetup } from "@/lib/auth";
+import { formatDateTimeForApp } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
 import {
   TELEGRAM_LINK_TOKEN_TTL_MINUTES,
@@ -39,6 +40,10 @@ function getMessages(locale: string) {
     webPushTestFailed: isIt ? "Impossibile inviare il test Web Push." : "Unable to send Web Push test notification.",
     notificationPrefsSaved: isIt ? "Preferenze notifiche salvate." : "Notification preferences saved.",
     notificationPrefsFailed: isIt ? "Impossibile salvare le preferenze notifiche." : "Unable to save notification preferences.",
+    retentionInvalid:
+      isIt
+        ? "Valore conservazione notifiche non valido."
+        : "Invalid notifications retention value.",
   };
 }
 
@@ -151,8 +156,18 @@ export async function sendTestWebPushAction(formData: FormData): Promise<Profile
         subject: locale === "it" ? "Test Web Push" : "Web Push test",
         body:
           locale === "it"
-            ? `Questa e una notifica Web Push di test (${new Date().toLocaleString("it-IT")}).`
-            : `This is a Web Push test notification (${new Date().toLocaleString("en-US")}).`,
+            ? `Questa e una notifica Web Push di test (${formatDateTimeForApp(new Date())}).`
+            : `This is a Web Push test notification (${formatDateTimeForApp(new Date())}).`,
+      },
+    });
+    await prisma.localNotification.create({
+      data: {
+        userId: user.id,
+        subject: locale === "it" ? "Test Web Push" : "Web Push test",
+        body:
+          locale === "it"
+            ? `Questa e una notifica Web Push di test (${formatDateTimeForApp(new Date())}).`
+            : `This is a Web Push test notification (${formatDateTimeForApp(new Date())}).`,
       },
     });
 
@@ -174,6 +189,11 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
     const notifyByEmail = getField(formData, "notifyByEmail") === "true";
     const notifyByTelegram = getField(formData, "notifyByTelegram") === "true";
     const notifyByWebPush = getField(formData, "notifyByWebPush") === "true";
+    const retentionRaw = getField(formData, "notificationsRetentionDays");
+    const retentionDays = Number.parseInt(retentionRaw || "15", 10);
+    if (Number.isNaN(retentionDays) || retentionDays < 1 || retentionDays > 365) {
+      throw new Error(t.retentionInvalid);
+    }
 
     await prisma.user.update({
       where: { id: user.id },
@@ -181,6 +201,7 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
         notifyByEmail,
         notifyByTelegram,
         notifyByWebPush,
+        notificationsRetentionDays: retentionDays,
       },
     });
 
@@ -259,4 +280,3 @@ export async function disableTotpAction(formData: FormData): Promise<ProfileMuta
     };
   }
 }
-

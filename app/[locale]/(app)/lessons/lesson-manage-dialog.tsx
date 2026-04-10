@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Pencil } from "lucide-react";
+import { ListChecks, Pencil, ThumbsDown, ThumbsUp } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -13,6 +13,7 @@ import {
   updateLessonMainMutationAction,
   updateLessonTrainerMutationAction,
 } from "./standalone-create-action";
+import { confirmLessonBookingAction, rejectLessonBookingAction } from "@/app/[locale]/(app)/bookings/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -59,6 +60,11 @@ type LessonManageDialogProps = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    pendingApprovalsLabel: string;
+    noPendingApprovals: string;
+    confirmPendingCta: string;
+    confirmPendingAndGrantAccessCta: string;
+    rejectPendingCta: string;
     waitlistLabel: string;
     noWaitlist: string;
     confirmWaitlistCta: string;
@@ -80,6 +86,7 @@ type LessonManageDialogProps = {
     lessonTypeId: string;
     canManageTrainer: boolean;
     attendees: AttendeeOption[];
+    pendingApprovals: AttendeeOption[];
     waitlist: AttendeeOption[];
   };
   trainerCandidates: CandidateOption[];
@@ -295,6 +302,41 @@ export function LessonManageDialog({
     });
   }
 
+  function handleConfirmPending(attendeeId: string, grantOpenAccess: boolean) {
+    const formData = new FormData();
+    formData.set("locale", locale);
+    formData.set("lessonId", lesson.id);
+    formData.set("traineeId", attendeeId);
+    if (grantOpenAccess) formData.set("grantOpenAccess", "1");
+
+    startTransition(async () => {
+      const result = await confirmLessonBookingAction(formData);
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
+  function handleRejectPending(attendeeId: string) {
+    const formData = new FormData();
+    formData.set("locale", locale);
+    formData.set("lessonId", lesson.id);
+    formData.set("traineeId", attendeeId);
+
+    startTransition(async () => {
+      const result = await rejectLessonBookingAction(formData);
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
   return (
     <Dialog open={resolvedOpen} onOpenChange={setDialogOpen}>
       {showDefaultTrigger ? (
@@ -477,6 +519,58 @@ export function LessonManageDialog({
                   {labels.addAttendeeCta}
                 </Button>
               </div>
+            </div>
+
+            <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+              <p className="text-sm font-semibold">{labels.pendingApprovalsLabel}</p>
+              {lesson.pendingApprovals.length === 0 ? (
+                <p className="text-xs text-[var(--muted-foreground)]">{labels.noPendingApprovals}</p>
+              ) : (
+                <div className="space-y-2">
+                  {lesson.pendingApprovals.map((pendingUser) => (
+                    <div key={`pending-${lesson.id}-${pendingUser.id}`} className="flex items-center justify-between gap-2 rounded border border-[var(--surface-border)] px-2 py-1 text-xs">
+                      <span className="truncate">
+                        {pendingUser.name}{pendingUser.email ? ` (${pendingUser.email})` : ""}
+                      </span>
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 w-8 bg-sky-100 p-0 text-sky-800 hover:bg-sky-200 dark:bg-sky-900/40 dark:text-sky-200 dark:hover:bg-sky-900/60"
+                          onClick={() => handleConfirmPending(pendingUser.id, true)}
+                          disabled={isPending}
+                          title={labels.confirmPendingAndGrantAccessCta}
+                          aria-label={labels.confirmPendingAndGrantAccessCta}
+                        >
+                          <ListChecks className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 w-8 bg-emerald-100 p-0 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
+                          onClick={() => handleConfirmPending(pendingUser.id, false)}
+                          disabled={isPending}
+                          title={labels.confirmPendingCta}
+                          aria-label={labels.confirmPendingCta}
+                        >
+                          <ThumbsUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-8 w-8 bg-rose-100 p-0 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900/60"
+                          onClick={() => handleRejectPending(pendingUser.id)}
+                          disabled={isPending}
+                          title={labels.rejectPendingCta}
+                          aria-label={labels.rejectPendingCta}
+                        >
+                          <ThumbsDown className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">

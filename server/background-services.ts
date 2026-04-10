@@ -1,4 +1,5 @@
 import { startDailyLessonsReconcileJob } from "@/server/jobs/daily-lessons-reconcile";
+import { startLocalNotificationsRetentionJob } from "@/server/jobs/local-notifications-retention";
 import { startLessonsNoticeWindowJob } from "@/server/jobs/lessons-notice-window";
 import { startOutboxWorker } from "@/server/outbox/worker";
 import { startTelegramBot } from "@/server/telegram/bootstrap";
@@ -12,6 +13,7 @@ export function startBackgroundServices(log: Logger): StopFn {
 
   stops.push(startDailyLessonsReconcileJob(log));
   stops.push(startLessonsNoticeWindowJob(log));
+  stops.push(startLocalNotificationsRetentionJob(log));
   stops.push(startOutboxWorker(log));
   stops.push(startTelegramBot(log));
 
@@ -25,4 +27,3 @@ export function startBackgroundServices(log: Logger): StopFn {
     }
   };
 }
-

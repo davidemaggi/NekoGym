@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import type { Prisma } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
+import { parseDateTimeLocalInputToUtc } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
@@ -264,7 +265,8 @@ async function enqueueStandaloneLessonNotification(
 function parseStartsAt(raw: string, locale: string): Date {
   const t = messages(locale);
   if (!raw) throw new Error(t.startsAtRequired);
-  const date = new Date(raw);
+  const date = parseDateTimeLocalInputToUtc(raw);
+  if (!date) throw new Error(t.startsAtRequired);
   if (Number.isNaN(date.getTime())) throw new Error(t.startsAtRequired);
   return date;
 }
@@ -850,6 +852,5 @@ export async function removeLessonAttendeeAction(formData: FormData): Promise<vo
 
   redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
-
 
 

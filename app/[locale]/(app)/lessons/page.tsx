@@ -3,7 +3,7 @@ import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { prisma } from "@/lib/prisma";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { AlertTriangle, RotateCcw, Trash2, Users } from "lucide-react";
 
 import {
   deleteStandaloneLessonAction,
@@ -148,7 +148,9 @@ export default async function LessonsPage({
       trainer: { select: { id: true, name: true } },
       lessonType: { select: { id: true, name: true, iconSvg: true, colorHex: true } },
       bookings: {
-        include: {
+        select: {
+          traineeId: true,
+          status: true,
           trainee: {
             select: { id: true, name: true, email: true },
           },
@@ -166,6 +168,24 @@ export default async function LessonsPage({
     },
     orderBy: { startsAt: "asc" },
   });
+
+  const lessonTypeIds = Array.from(new Set(lessons.map((lesson) => lesson.lessonTypeId).filter((value): value is string => Boolean(value))));
+  const accessRows = lessonTypeIds.length > 0
+    ? await prisma.userLessonTypeAccess.findMany({
+        where: {
+          userId: currentUser.id,
+          lessonTypeId: { in: lessonTypeIds },
+        },
+        select: { lessonTypeId: true, mode: true },
+      })
+    : [];
+  const accessByTypeId = new Map(accessRows.map((row) => [row.lessonTypeId, row.mode]));
+
+  function effectiveAccessMode(lessonTypeId: string | null): "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED" {
+    if (!lessonTypeId) return "ALLOWED";
+    if (currentUser.role !== "TRAINEE") return "ALLOWED";
+    return accessByTypeId.get(lessonTypeId) ?? "REQUIRES_CONFIRMATION";
+  }
 
   const grouped = new Map<string, typeof lessons>();
   for (const lesson of lessons) {
@@ -281,13 +301,18 @@ export default async function LessonsPage({
                 (() => {
                   const isPastOrNow = lesson.startsAt <= now;
                   const isDeleted = Boolean(lesson.deletedAt);
-                  const isBookedByCurrentUser = lesson.bookings.some((booking) => booking.trainee.id === currentUser.id);
+                  const currentUserBooking = lesson.bookings.find((booking) => booking.trainee.id === currentUser.id) ?? null;
+                  const isBookedByCurrentUser = Boolean(currentUserBooking);
+                  const isPendingByCurrentUser = currentUserBooking?.status === "PENDING";
                   const isQueuedByCurrentUser = lesson.waitlistEntries.some((entry) => entry.trainee.id === currentUser.id);
+                  const pendingApprovalsCount = lesson.bookings.filter((booking) => booking.status === "PENDING").length;
+                  const isAccessDenied = effectiveAccessMode(lesson.lessonTypeId) === "DENIED";
                   const cancellationDeadline = new Date(lesson.startsAt.getTime() - lesson.cancellationWindowHours * 60 * 60 * 1000);
                   const canBook =
                     !isDeleted &&
                     lesson.status === "SCHEDULED" &&
                     lesson.startsAt > now &&
+                    !isAccessDenied &&
                     !isBookedByCurrentUser &&
                     !isQueuedByCurrentUser;
                   const canUnbook = !isDeleted && isBookedByCurrentUser && now <= cancellationDeadline;
@@ -296,6 +321,7 @@ export default async function LessonsPage({
                   key={lesson.id}
                   className={[
                     "rounded-md border p-2 text-sm",
+                    isAccessDenied ? "opacity-50 saturate-0" : "",
                     lessonDifferenceReasons({
                       isCustomized: lesson.isCustomized,
                       startsAt: lesson.startsAt,
@@ -357,20 +383,33 @@ export default async function LessonsPage({
                     {timeFmt.format(lesson.startsAt)} - {timeFmt.format(lesson.endsAt)} · {lesson.status}
                   </p>
                   <p className="text-xs text-[var(--muted-foreground)]">
-                    {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} · {labels.bookedLabel}: {lesson._count.bookings}/{lesson.maxAttendees}
+                    {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} ·{" "}
+                    <span className="inline-flex items-center gap-1">
+                      {currentUser.role === "ADMIN" && pendingApprovalsCount > 0 ? (
+                        <AlertTriangle
+                          className="h-3.5 w-3.5 text-red-600 dark:text-red-400"
+                          title={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}
+                        />
+                      ) : (
+                        <Users className="h-3.5 w-3.5" />
+                      )}
+                      {labels.bookedLabel}: {lesson._count.bookings}/{lesson.maxAttendees}
+                    </span>
                   </p>
                   {lesson.description ? <p className="text-xs text-[var(--muted-foreground)]">{lesson.description}</p> : null}
                   <div className="mt-2 inline-flex gap-2">
-                    {!isQueuedByCurrentUser ? (
+                    {isAccessDenied ? null : !isQueuedByCurrentUser ? (
                       <BookingBadgeToggle
                         locale={locale}
                         lessonId={lesson.id}
                         isBooked={isBookedByCurrentUser}
+                        isPendingApproval={isPendingByCurrentUser}
                         canBook={canBook}
                         canUnbook={canUnbook}
                         labels={{
                           bookCta: bookingLabels.bookCta,
                           bookedCta: bookingLabels.youAreBooked,
+                          pendingCta: bookingLabels.awaitingConfirmation,
                           processing: bookingLabels.processing,
                         }}
                       />
@@ -391,7 +430,12 @@ export default async function LessonsPage({
                         trainerId: lesson.trainer?.id ?? "",
                         lessonTypeId: lesson.lessonTypeId ?? "",
                         canManageTrainer: currentUser.role === "ADMIN" && !isPastOrNow && !isDeleted,
-                        attendees: lesson.bookings.map((booking) => ({
+                        attendees: lesson.bookings.filter((booking) => booking.status === "CONFIRMED").map((booking) => ({
+                          id: booking.trainee.id,
+                          name: booking.trainee.name,
+                          email: booking.trainee.email,
+                        })),
+                        pendingApprovals: lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => ({
                           id: booking.trainee.id,
                           name: booking.trainee.name,
                           email: booking.trainee.email,
@@ -425,6 +469,11 @@ export default async function LessonsPage({
                         attendeeSelectLabel: labels.attendeeSelectLabel,
                         addAttendeeCta: labels.addAttendeeCta,
                         removeAttendeeCta: labels.removeAttendeeCta,
+                        pendingApprovalsLabel: labels.pendingApprovalsLabel,
+                        noPendingApprovals: labels.noPendingApprovals,
+                        confirmPendingCta: labels.confirmPendingCta,
+                        confirmPendingAndGrantAccessCta: labels.confirmPendingAndGrantAccessCta,
+                        rejectPendingCta: labels.rejectPendingCta,
                         waitlistLabel: labels.waitlistLabel,
                         noWaitlist: labels.noWaitlist,
                         confirmWaitlistCta: labels.confirmWaitlistCta,

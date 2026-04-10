@@ -36,6 +36,7 @@ type UserItem = {
   subscriptionRemaining: number | null;
   subscriptionResetAt: string | null;
   subscriptionEndsAt: string | null;
+  lessonTypeAccesses: Array<{ lessonTypeId: string; mode: "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED" }>;
 };
 
 type FormPayload = {
@@ -53,11 +54,13 @@ type FormPayload = {
   subscriptionRemaining: string;
   subscriptionResetAt: string;
   subscriptionEndsAt: string;
+  lessonTypeAccesses: Record<string, "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED">;
 };
 
 type UsersManagerProps = {
   locale: string;
   users: UserItem[];
+  lessonTypes: Array<{ id: string; name: string }>;
   labels: {
     title: string;
     description: string;
@@ -93,11 +96,13 @@ type UsersManagerProps = {
       subscriptionRemaining: string;
       subscriptionResetAt: string;
       subscriptionEndsAt: string;
+      lessonTypeAccess: string;
     };
     tabs: {
       profile: string;
       membership: string;
       subscription: string;
+      access: string;
     };
     actions: {
       save: string;
@@ -118,6 +123,11 @@ type UsersManagerProps = {
     roleOptions: Record<UserItem["role"], string>;
     membershipOptions: Record<UserItem["membershipStatus"], string>;
     subscriptionOptions: Record<UserItem["subscriptionType"], string>;
+    lessonTypeAccessOptions: {
+      DENIED: string;
+      REQUIRES_CONFIRMATION: string;
+      ALLOWED: string;
+    };
     passwordCreateHint: string;
     passwordKeepHint: string;
   };
@@ -144,6 +154,9 @@ function toFormData(payload: FormPayload): FormData {
   formData.set("subscriptionRemaining", payload.subscriptionRemaining);
   formData.set("subscriptionResetAt", payload.subscriptionResetAt);
   formData.set("subscriptionEndsAt", payload.subscriptionEndsAt);
+  for (const [lessonTypeId, mode] of Object.entries(payload.lessonTypeAccesses)) {
+    formData.set(`lessonTypeAccess:${lessonTypeId}`, mode);
+  }
   return formData;
 }
 
@@ -164,7 +177,7 @@ function dateTimeInputValue(value: string | null): string {
   return `${y}-${m}-${d}T${hh}:${mm}`;
 }
 
-export function UsersManager({ locale, users, labels }: UsersManagerProps) {
+export function UsersManager({ locale, users, lessonTypes, labels }: UsersManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
@@ -201,6 +214,12 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
       subscriptionRemaining: String(formData.get("subscriptionRemaining") ?? ""),
       subscriptionResetAt: String(formData.get("subscriptionResetAt") ?? ""),
       subscriptionEndsAt: String(formData.get("subscriptionEndsAt") ?? ""),
+      lessonTypeAccesses: Object.fromEntries(
+        lessonTypes.map((lessonType) => [
+          lessonType.id,
+          String(formData.get(`lessonTypeAccess:${lessonType.id}`) ?? "REQUIRES_CONFIRMATION") as FormPayload["lessonTypeAccesses"][string],
+        ])
+      ),
     };
 
     setConfirmation({ kind: "create", payload });
@@ -225,6 +244,12 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
       subscriptionRemaining: String(formData.get("subscriptionRemaining") ?? ""),
       subscriptionResetAt: String(formData.get("subscriptionResetAt") ?? ""),
       subscriptionEndsAt: String(formData.get("subscriptionEndsAt") ?? ""),
+      lessonTypeAccesses: Object.fromEntries(
+        lessonTypes.map((lessonType) => [
+          lessonType.id,
+          String(formData.get(`lessonTypeAccess:${lessonType.id}`) ?? "REQUIRES_CONFIRMATION") as FormPayload["lessonTypeAccesses"][string],
+        ])
+      ),
     };
 
     setConfirmation({ kind: "update", payload });
@@ -281,7 +306,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
             </DialogHeader>
 
             <form className="space-y-3" onSubmit={askCreateConfirmation}>
-              <UserFormFields labels={labels} />
+              <UserFormFields labels={labels} lessonTypes={lessonTypes} />
               <DialogFooter>
                 <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
                   {labels.actions.cancel}
@@ -392,6 +417,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
             <form className="space-y-3" onSubmit={(event) => askUpdateConfirmation(event, editUser.id)}>
               <UserFormFields
                 labels={labels}
+                lessonTypes={lessonTypes}
                 defaults={{
                   name: editUser.name,
                   email: editUser.email,
@@ -404,6 +430,7 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                   subscriptionRemaining: editUser.subscriptionRemaining ? String(editUser.subscriptionRemaining) : "",
                   subscriptionResetAt: dateTimeInputValue(editUser.subscriptionResetAt),
                   subscriptionEndsAt: dateInputValue(editUser.subscriptionEndsAt),
+                  lessonTypeAccesses: Object.fromEntries(editUser.lessonTypeAccesses.map((entry) => [entry.lessonTypeId, entry.mode])),
                 }}
               />
               <DialogFooter>
@@ -464,9 +491,11 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
 
 function UserFormFields({
   labels,
+  lessonTypes,
   defaults,
 }: {
   labels: UsersManagerProps["labels"];
+  lessonTypes: UsersManagerProps["lessonTypes"];
   defaults?: {
     name: string;
     email: string;
@@ -479,10 +508,13 @@ function UserFormFields({
     subscriptionRemaining: string;
     subscriptionResetAt: string;
     subscriptionEndsAt: string;
+    lessonTypeAccesses: Record<string, "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED">;
   };
 }) {
   const [subscriptionType, setSubscriptionType] = useState<UserItem["subscriptionType"]>(defaults?.subscriptionType ?? "NONE");
-  const [activeTab, setActiveTab] = useState<"profile" | "membership" | "subscription">("profile");
+  const [activeTab, setActiveTab] = useState<"profile" | "membership" | "subscription" | "access">("profile");
+  const panelClass = (tab: "profile" | "membership" | "subscription" | "access") =>
+    activeTab === tab ? "space-y-3" : "hidden";
 
   return (
     <>
@@ -523,10 +555,21 @@ function UserFormFields({
         >
           {labels.tabs.subscription}
         </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("access")}
+          className={[
+            "rounded px-3 py-1.5 text-xs font-medium",
+            activeTab === "access"
+              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+          ].join(" ")}
+        >
+          {labels.tabs.access}
+        </button>
       </div>
 
-      {activeTab === "profile" ? (
-        <>
+      <div className={panelClass("profile")}>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="name">{labels.fields.name}</Label>
@@ -577,10 +620,9 @@ function UserFormFields({
               className="h-4 w-4 rounded border-[var(--surface-border)]"
             />
           </div>
-        </>
-      ) : null}
+      </div>
 
-      {activeTab === "membership" ? (
+      <div className={panelClass("membership")}>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <Label htmlFor="membershipStatus">{labels.fields.membershipStatus}</Label>
@@ -599,10 +641,9 @@ function UserFormFields({
             <Input id="trialEndsAt" name="trialEndsAt" type="date" defaultValue={defaults?.trialEndsAt ?? ""} />
           </div>
         </div>
-      ) : null}
+      </div>
 
-      {activeTab === "subscription" ? (
-        <>
+      <div className={panelClass("subscription")}>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label htmlFor="subscriptionType">{labels.fields.subscriptionType}</Label>
@@ -666,8 +707,32 @@ function UserFormFields({
               disabled={subscriptionType === "NONE"}
             />
           </div>
-        </>
-      ) : null}
+      </div>
+
+      <div className={panelClass("access")}>
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <p className="text-sm font-medium">{labels.fields.lessonTypeAccess}</p>
+          {lessonTypes.length === 0 ? (
+            <p className="text-xs text-[var(--muted-foreground)]">-</p>
+          ) : (
+            lessonTypes.map((lessonType) => (
+              <div key={`access-${lessonType.id}`} className="grid grid-cols-[1fr_auto] items-center gap-3">
+                <Label htmlFor={`lessonTypeAccess-${lessonType.id}`}>{lessonType.name}</Label>
+                <select
+                  id={`lessonTypeAccess-${lessonType.id}`}
+                  name={`lessonTypeAccess:${lessonType.id}`}
+                  defaultValue={defaults?.lessonTypeAccesses?.[lessonType.id] ?? "REQUIRES_CONFIRMATION"}
+                  className="h-10 min-w-52 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                >
+                  <option value="REQUIRES_CONFIRMATION">{labels.lessonTypeAccessOptions.REQUIRES_CONFIRMATION}</option>
+                  <option value="ALLOWED">{labels.lessonTypeAccessOptions.ALLOWED}</option>
+                  <option value="DENIED">{labels.lessonTypeAccessOptions.DENIED}</option>
+                </select>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </>
   );
 }

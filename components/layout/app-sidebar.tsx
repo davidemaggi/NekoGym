@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   BookOpen,
+  Bell,
   CalendarDays,
   ChevronDown,
   ClipboardList,
@@ -26,6 +27,7 @@ import { withLocalePath } from "@/lib/i18n";
 import { getMenuItemsForRole } from "@/lib/navigation";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { LocalNotificationsLive } from "@/components/layout/local-notifications-live";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -64,6 +66,7 @@ type AppSidebarProps = {
       | "bookings"
       | "users"
       | "reports"
+      | "myNotifications"
       | "registries"
       | "siteSettings"
       | "manualNotifications"
@@ -103,6 +106,7 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
     bookings: CalendarDays,
     users: Users,
     reports: BarChart3,
+    myNotifications: Bell,
     profileSettings: UserCog,
     siteSettings: Settings2,
     manualNotifications: Megaphone,
@@ -202,7 +206,14 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
                     }}
                   >
                     <Icon size={16} />
-                    {!isDesktopCollapsed ? labels.nav[item.key] : null}
+                    {!isDesktopCollapsed ? (
+                      <span className="inline-flex min-w-0 flex-1 items-center gap-2">
+                        <span className="truncate">{labels.nav[item.key]}</span>
+                        {item.key === "myNotifications" ? <LocalNotificationsLive /> : null}
+                      </span>
+                    ) : item.key === "myNotifications" ? (
+                      <LocalNotificationsLive />
+                    ) : null}
                   </Link>
                 </SidebarMenuItem>
               );
@@ -376,4 +387,3 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
     </>
   );
 }
-

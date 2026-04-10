@@ -23,9 +23,20 @@ export async function enqueueNotificationForUsers(
 ) {
   if (users.length === 0) return 0;
 
+  const uniqueUsers = Array.from(new Map(users.map((user) => [user.id, user])).values());
+  if (uniqueUsers.length === 0) return 0;
+
+  await tx.localNotification.createMany({
+    data: uniqueUsers.map((user) => ({
+      userId: user.id,
+      subject: input.subject,
+      body: input.body,
+    })),
+  });
+
   const eligibleUsers = await tx.user.findMany({
     where: {
-      id: { in: users.map((user) => user.id) },
+      id: { in: uniqueUsers.map((user) => user.id) },
       emailVerifiedAt: { not: null },
     },
     select: {
@@ -36,7 +47,7 @@ export async function enqueueNotificationForUsers(
     },
   });
   const eligibleById = new Map(eligibleUsers.map((user) => [user.id, user]));
-  const filteredUsers = users.filter((user) => eligibleById.has(user.id));
+  const filteredUsers = uniqueUsers.filter((user) => eligibleById.has(user.id));
   if (filteredUsers.length === 0) return 0;
 
   const pushUsers = await tx.webPushSubscription.findMany({
@@ -105,4 +116,3 @@ export async function enqueueEmailForUser(
   const result = await tx.notificationOutbox.createMany({ data: [row] });
   return result.count;
 }
-

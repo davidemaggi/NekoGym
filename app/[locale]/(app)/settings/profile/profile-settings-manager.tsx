@@ -87,6 +87,9 @@ type ProfileSettingsManagerProps = {
     notificationTelegramLabel: string;
     notificationWebPushLabel: string;
     notificationPrefsSaveCta: string;
+    notificationLocalAlwaysOnLabel: string;
+    notificationsRetentionDaysLabel: string;
+    notificationsRetentionDaysHint: string;
   };
   initialIdentity: {
     email: string;
@@ -98,6 +101,7 @@ type ProfileSettingsManagerProps = {
     notifyByEmail: boolean;
     notifyByTelegram: boolean;
     notifyByWebPush: boolean;
+    notificationsRetentionDays: number;
   };
   initialTelegram: {
     chatId: string | null;
@@ -298,9 +302,11 @@ function NotificationsTabContent(props: {
   notifyByEmail: boolean;
   notifyByTelegram: boolean;
   notifyByWebPush: boolean;
+  notificationsRetentionDays: number;
   onToggleNotifyByEmail: (value: boolean) => void;
   onToggleNotifyByTelegram: (value: boolean) => void;
   onToggleNotifyByWebPush: (value: boolean) => void;
+  onChangeRetentionDays: (value: number) => void;
   onEnableWebPush: () => void;
   onDisableWebPush: () => void;
   onSendWebPushTest: () => void;
@@ -347,6 +353,26 @@ function NotificationsTabContent(props: {
             <Button type="button" onClick={props.onSendWebPushTest} disabled={props.isPushPending || !props.hasPushSubscription}>
               {props.isPushPending ? props.labels.webPushProcessing : props.labels.webPushTestCta}
             </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <p className="text-sm font-medium">{props.labels.notificationLocalAlwaysOnLabel}</p>
+          <p className="text-xs text-[var(--muted-foreground)]">{props.labels.notificationsRetentionDaysHint}</p>
+          <div className="max-w-xs space-y-1">
+            <Label htmlFor="notificationsRetentionDays">{props.labels.notificationsRetentionDaysLabel}</Label>
+            <Input
+              id="notificationsRetentionDays"
+              type="number"
+              min={1}
+              max={365}
+              value={String(props.notificationsRetentionDays)}
+              onChange={(event) => {
+                const parsed = Number.parseInt(event.target.value || "1", 10);
+                const next = Number.isNaN(parsed) ? 1 : Math.max(1, Math.min(365, parsed));
+                props.onChangeRetentionDays(next);
+              }}
+            />
           </div>
         </div>
 
@@ -469,6 +495,7 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
   const [notifyByEmail, setNotifyByEmail] = useState(initialIdentity.notifyByEmail);
   const [notifyByTelegram, setNotifyByTelegram] = useState(initialIdentity.notifyByTelegram);
   const [notifyByWebPush, setNotifyByWebPush] = useState(initialIdentity.notifyByWebPush);
+  const [notificationsRetentionDays, setNotificationsRetentionDays] = useState(initialIdentity.notificationsRetentionDays);
   const [activeTab, setActiveTab] = useState<ActiveProfileTab>("security");
   const webPushDiagnostics = useMemo(() => {
     if (typeof window === "undefined") return null;
@@ -762,6 +789,7 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
     formData.set("notifyByEmail", notifyByEmail ? "true" : "false");
     formData.set("notifyByTelegram", notifyByTelegram ? "true" : "false");
     formData.set("notifyByWebPush", notifyByWebPush ? "true" : "false");
+    formData.set("notificationsRetentionDays", String(notificationsRetentionDays));
 
     startIdentityTransition(async () => {
       const result = await updateNotificationPreferencesAction(formData);
@@ -821,9 +849,11 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
           notifyByEmail={notifyByEmail}
           notifyByTelegram={notifyByTelegram}
           notifyByWebPush={notifyByWebPush}
+          notificationsRetentionDays={notificationsRetentionDays}
           onToggleNotifyByEmail={setNotifyByEmail}
           onToggleNotifyByTelegram={setNotifyByTelegram}
           onToggleNotifyByWebPush={setNotifyByWebPush}
+          onChangeRetentionDays={setNotificationsRetentionDays}
           onEnableWebPush={handleEnableWebPush}
           onDisableWebPush={handleDisableWebPush}
           onSendWebPushTest={handleSendWebPushTest}
@@ -844,7 +874,6 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
     </section>
   );
 }
-
 
 
 

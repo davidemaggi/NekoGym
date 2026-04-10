@@ -38,6 +38,7 @@ export default async function ProfileSettingsPage({
       notifyByEmail: true,
       notifyByTelegram: true,
       notifyByWebPush: true,
+      notificationsRetentionDays: true,
     },
   });
 
@@ -59,6 +60,7 @@ export default async function ProfileSettingsPage({
         notifyByEmail: fullUser?.notifyByEmail ?? true,
         notifyByTelegram: fullUser?.notifyByTelegram ?? true,
         notifyByWebPush: fullUser?.notifyByWebPush ?? true,
+        notificationsRetentionDays: fullUser?.notificationsRetentionDays ?? 15,
       }}
       initialTelegram={{
         chatId: fullUser?.telegramChatId ?? null,
@@ -69,4 +71,3 @@ export default async function ProfileSettingsPage({
     />
   );
 }
-

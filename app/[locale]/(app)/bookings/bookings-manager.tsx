@@ -1,12 +1,8 @@
 "use client";
 
-import { type CSSProperties, useMemo, useState, useTransition } from "react";
-import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { type CSSProperties, useMemo, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Hourglass, Pencil, Plus } from "lucide-react";
-
-import { bookLessonAction, unbookLessonAction } from "@/app/[locale]/(app)/bookings/actions";
+import { AlertTriangle, Clock3, Hourglass, Pencil, Plus, UserRound, Users } from "lucide-react";
 import { LessonManageDialog } from "@/app/[locale]/(app)/lessons/lesson-manage-dialog";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
 import { BookingBadgeToggle } from "@/components/bookings/booking-badge-toggle";
@@ -27,9 +23,12 @@ type LessonCalendarItem = {
   bookedCount: number;
   availableSeats: number;
   isBookedByCurrentUser: boolean;
+  isPendingByCurrentUser: boolean;
   isQueuedByCurrentUser: boolean;
+  isAccessDenied: boolean;
   canViewWaitlist: boolean;
   queueLength: number;
+  pendingApprovalsCount: number;
   canBook: boolean;
   canUnbook: boolean;
   canManageLesson: boolean;
@@ -43,6 +42,7 @@ type LessonCalendarItem = {
   trainerId: string;
   trainerName: string | null;
   attendees: Array<{ id: string; name: string; email: string }>;
+  pendingApprovals: Array<{ id: string; name: string; email: string }>;
   waitlist: Array<{ id: string; name: string; email: string }>;
 };
 
@@ -61,6 +61,8 @@ type BookingsManagerProps = {
     seatsLabel: string;
     bookedLabel: string;
     youAreBooked: string;
+    awaitingConfirmation: string;
+    accessDenied: string;
     courseTag: string;
     detailsCta: string;
     detailsTitle: string;
@@ -97,6 +99,11 @@ type BookingsManagerProps = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    pendingApprovalsLabel: string;
+    noPendingApprovals: string;
+    confirmPendingCta: string;
+    confirmPendingAndGrantAccessCta: string;
+    rejectPendingCta: string;
     waitlistLabel: string;
     noWaitlist: string;
     confirmWaitlistCta: string;
@@ -121,6 +128,7 @@ type BookingsManagerProps = {
   attendeeCandidates: Array<{ id: string; name: string; email: string }>;
   openWeekdays: Weekday[];
   closedDates: string[];
+  isAdmin: boolean;
 };
 
 function formatDateTime(value: string, locale: string): string {
@@ -212,16 +220,6 @@ function lessonCardStyle(lesson: LessonCalendarItem, isSelected: boolean): CSSPr
   };
 }
 
-function LessonStatusIcon({ lesson }: { lesson: LessonCalendarItem }) {
-  if (lesson.isBookedByCurrentUser) {
-    return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />;
-  }
-  if (lesson.isQueuedByCurrentUser) {
-    return <Hourglass className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" aria-hidden="true" />;
-  }
-  return null;
-}
-
 export function BookingsManager({
   locale,
   labels,
@@ -238,9 +236,8 @@ export function BookingsManager({
   attendeeCandidates,
   openWeekdays,
   closedDates,
+  isAdmin,
 }: BookingsManagerProps) {
-  const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
   const [manageLessonId, setManageLessonId] = useState<string | null>(null);
 
@@ -285,40 +282,6 @@ export function BookingsManager({
     const weekday = WEEKDAY_BY_INDEX[date.getDay()];
     const dateKey = localDateKeyFromDate(date);
     return !openWeekdaySet.has(weekday) || closedDateSet.has(dateKey);
-  }
-
-  function handleBook(lessonId: string) {
-    const formData = new FormData();
-    formData.set("lessonId", lessonId);
-    formData.set("locale", locale);
-
-    startTransition(async () => {
-      const result = await bookLessonAction(formData);
-      if (result.ok) {
-        toast.success(result.message);
-        setSelectedLessonId(null);
-        router.refresh();
-      } else {
-        toast.error(result.message);
-      }
-    });
-  }
-
-  function handleUnbook(lessonId: string) {
-    const formData = new FormData();
-    formData.set("lessonId", lessonId);
-    formData.set("locale", locale);
-
-    startTransition(async () => {
-      const result = await unbookLessonAction(formData);
-      if (result.ok) {
-        toast.success(result.message);
-        setSelectedLessonId(null);
-        router.refresh();
-      } else {
-        toast.error(result.message);
-      }
-    });
   }
 
   return (
@@ -380,82 +343,111 @@ export function BookingsManager({
                           closeCta: labels.closeCta,
                         }}
                         trigger={
-                          <Button
+                          <button
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-7 gap-1 px-2 text-[10px]"
+                            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-transparent p-0 text-zinc-900 hover:bg-black/10 dark:text-zinc-100 dark:hover:bg-white/10"
                             aria-label={`${lessonCreateLabels.createStandaloneCta} - ${formatDayLabel(day.date, locale)}`}
                             title={lessonCreateLabels.createStandaloneCta}
                           >
-                            <Plus className="h-3.5 w-3.5" />
-                            <span>{lessonCreateLabels.createStandaloneCta}</span>
-                          </Button>
+                            <Plus className="h-5 w-5 shrink-0 stroke-[2.5]" />
+                          </button>
                         }
                       />
                     ) : null}
                   </div>
                   <div className="space-y-1">
-                    {day.items.map((lesson) => (
-                      <div
-                        key={`mobile-${lesson.id}`}
-                        role="button"
-                        tabIndex={0}
-                        className={[
-                          "w-full cursor-pointer rounded px-2 py-1 text-left text-xs transition hover:brightness-95",
-                          selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
-                          !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
-                        ].join(" ")}
-                        style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
-                        onClick={() => setSelectedLessonId(lesson.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedLessonId(lesson.id);
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-1 font-medium">
-                          {lesson.lessonTypeIcon ? (
-                            <LessonTypeIcon
-                              iconPath={lesson.lessonTypeIcon}
-                              colorHex={lesson.lessonTypeColor}
-                              size={12}
-                              title={lesson.lessonTypeName ?? undefined}
-                            />
-                          ) : null}
-                          <LessonStatusIcon lesson={lesson} />
-                          <span>{formatTime(lesson.startsAt, locale)} · {lesson.title ?? lesson.courseName}</span>
+                    {day.items.map((lesson) => {
+                      const durationMinutes = Math.max(
+                        1,
+                        Math.round((new Date(lesson.endsAt).getTime() - new Date(lesson.startsAt).getTime()) / 60000)
+                      );
+                      const timeTooltip = `${labels.startsAtLabel}: ${formatTime(lesson.startsAt, locale)} · ${labels.endsAtLabel}: ${formatTime(lesson.endsAt, locale)}`;
+                      const bookedTooltip = isAdmin
+                        ? `${labels.bookedLabel}: ${lesson.occupancy} · ${labels.queuedLabel}: ${lesson.queueLength} · ${lessonCreateLabels.pendingApprovalsLabel}: ${lesson.pendingApprovalsCount}`
+                        : undefined;
+
+                      return (
+                        <div
+                          key={`mobile-${lesson.id}`}
+                          role="button"
+                          tabIndex={0}
+                          className={[
+                            "w-full cursor-pointer rounded px-2 py-1 text-left text-xs transition hover:brightness-95",
+                            selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
+                            lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
+                            !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
+                          ].join(" ")}
+                          style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
+                          onClick={() => setSelectedLessonId(lesson.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedLessonId(lesson.id);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            {lesson.lessonTypeIcon ? (
+                              <LessonTypeIcon
+                                iconPath={lesson.lessonTypeIcon}
+                                colorHex={lesson.lessonTypeColor}
+                                size={22}
+                                title={lesson.lessonTypeName ?? undefined}
+                              />
+                            ) : null}
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
+                            </div>
+                          </div>
+                          <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
+                            <span className="inline-flex items-center gap-1" title={timeTooltip}>
+                              <Clock3 className="h-3.5 w-3.5" />
+                              {formatTime(lesson.startsAt, locale)}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Hourglass className="h-3.5 w-3.5" />
+                              {durationMinutes} min
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
+                            <span className="inline-flex items-center gap-1">
+                              <UserRound className="h-3.5 w-3.5" />
+                              {lesson.trainerName ?? "-"}
+                            </span>
+                            <span title={bookedTooltip} className="inline-flex items-center gap-1">
+                              {isAdmin && lesson.pendingApprovalsCount > 0 ? (
+                                <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                              ) : (
+                                <Users className="h-3.5 w-3.5" />
+                              )}
+                              {labels.bookedLabel}: {lesson.occupancy}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-end">
+                            {lesson.isAccessDenied ? (
+                              <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
+                            ) : lesson.isQueuedByCurrentUser ? (
+                              <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                            ) : (
+                              <BookingBadgeToggle
+                                locale={locale}
+                                lessonId={lesson.id}
+                                isBooked={lesson.isBookedByCurrentUser}
+                                isPendingApproval={lesson.isPendingByCurrentUser}
+                                canBook={lesson.canBook}
+                                canUnbook={lesson.canUnbook}
+                                labels={{
+                                  bookCta: labels.bookCta,
+                                  bookedCta: labels.youAreBooked,
+                                  pendingCta: labels.awaitingConfirmation,
+                                  processing: labels.processing,
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[var(--muted-foreground)]">{labels.bookedLabel}: {lesson.occupancy}</p>
-                        {lesson.canViewWaitlist ? (
-                          <p className="text-[var(--muted-foreground)]">{labels.queuedLabel}: {lesson.queueLength}</p>
-                        ) : null}
-                        {lesson.isCourseLesson ? (
-                          <Badge variant="info" className="mt-0.5 text-[10px]">
-                            {labels.courseTag}
-                          </Badge>
-                        ) : null}
-                        <div className="mt-1">
-                          {lesson.isQueuedByCurrentUser ? (
-                            <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
-                          ) : (
-                            <BookingBadgeToggle
-                              locale={locale}
-                              lessonId={lesson.id}
-                              isBooked={lesson.isBookedByCurrentUser}
-                              canBook={lesson.canBook}
-                              canUnbook={lesson.canUnbook}
-                              labels={{
-                                bookCta: labels.bookCta,
-                                bookedCta: labels.youAreBooked,
-                                processing: labels.processing,
-                              }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -508,82 +500,111 @@ export function BookingsManager({
                           closeCta: labels.closeCta,
                         }}
                         trigger={
-                          <Button
+                          <button
                             type="button"
-                            variant="outline"
-                            size="sm"
-                            className="h-6 gap-1 px-1.5 text-[10px]"
+                            className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-transparent p-0 text-zinc-900 hover:bg-black/10 dark:text-zinc-100 dark:hover:bg-white/10"
                             aria-label={`${lessonCreateLabels.createStandaloneCta} - ${formatDayLabel(day.date, locale)}`}
                             title={lessonCreateLabels.createStandaloneCta}
                           >
-                            <Plus className="h-3 w-3" />
-                            <span>{lessonCreateLabels.createStandaloneCta}</span>
-                          </Button>
+                            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" />
+                          </button>
                         }
                       />
                     ) : null}
                   </div>
                   <div className="space-y-1">
-                    {day.items.map((lesson) => (
-                      <div
-                        key={lesson.id}
-                        role="button"
-                        tabIndex={0}
-                        className={[
-                          "w-full cursor-pointer rounded px-2 py-1 text-left text-[11px] transition hover:brightness-95",
-                          selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
-                          !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
-                        ].join(" ")}
-                        style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
-                        onClick={() => setSelectedLessonId(lesson.id)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            setSelectedLessonId(lesson.id);
-                          }
-                        }}
-                      >
-                        <div className="flex items-center gap-1 font-medium">
-                          {lesson.lessonTypeIcon ? (
-                            <LessonTypeIcon
-                              iconPath={lesson.lessonTypeIcon}
-                              colorHex={lesson.lessonTypeColor}
-                              size={12}
-                              title={lesson.lessonTypeName ?? undefined}
-                            />
-                          ) : null}
-                          <LessonStatusIcon lesson={lesson} />
-                          <span>{formatTime(lesson.startsAt, locale)} · {lesson.title ?? lesson.courseName}</span>
+                    {day.items.map((lesson) => {
+                      const durationMinutes = Math.max(
+                        1,
+                        Math.round((new Date(lesson.endsAt).getTime() - new Date(lesson.startsAt).getTime()) / 60000)
+                      );
+                      const timeTooltip = `${labels.startsAtLabel}: ${formatTime(lesson.startsAt, locale)} · ${labels.endsAtLabel}: ${formatTime(lesson.endsAt, locale)}`;
+                      const bookedTooltip = isAdmin
+                        ? `${labels.bookedLabel}: ${lesson.occupancy} · ${labels.queuedLabel}: ${lesson.queueLength} · ${lessonCreateLabels.pendingApprovalsLabel}: ${lesson.pendingApprovalsCount}`
+                        : undefined;
+
+                      return (
+                        <div
+                          key={lesson.id}
+                          role="button"
+                          tabIndex={0}
+                          className={[
+                            "w-full cursor-pointer rounded px-2 py-1 text-left text-[11px] transition hover:brightness-95",
+                            selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
+                            lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
+                            !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
+                          ].join(" ")}
+                          style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
+                          onClick={() => setSelectedLessonId(lesson.id)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              setSelectedLessonId(lesson.id);
+                            }
+                          }}
+                        >
+                          <div className="flex items-start gap-2">
+                            {lesson.lessonTypeIcon ? (
+                              <LessonTypeIcon
+                                iconPath={lesson.lessonTypeIcon}
+                                colorHex={lesson.lessonTypeColor}
+                                size={20}
+                                title={lesson.lessonTypeName ?? undefined}
+                              />
+                            ) : null}
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
+                            </div>
+                          </div>
+                          <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
+                            <span className="inline-flex items-center gap-1" title={timeTooltip}>
+                              <Clock3 className="h-3.5 w-3.5" />
+                              {formatTime(lesson.startsAt, locale)}
+                            </span>
+                            <span className="inline-flex items-center gap-1">
+                              <Hourglass className="h-3.5 w-3.5" />
+                              {durationMinutes} min
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
+                            <span className="inline-flex items-center gap-1">
+                              <UserRound className="h-3.5 w-3.5" />
+                              {lesson.trainerName ?? "-"}
+                            </span>
+                            <span title={bookedTooltip} className="inline-flex items-center gap-1">
+                              {isAdmin && lesson.pendingApprovalsCount > 0 ? (
+                                <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                              ) : (
+                                <Users className="h-3.5 w-3.5" />
+                              )}
+                              {labels.bookedLabel}: {lesson.occupancy}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center justify-end">
+                            {lesson.isAccessDenied ? (
+                              <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
+                            ) : lesson.isQueuedByCurrentUser ? (
+                              <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                            ) : (
+                              <BookingBadgeToggle
+                                locale={locale}
+                                lessonId={lesson.id}
+                                isBooked={lesson.isBookedByCurrentUser}
+                                isPendingApproval={lesson.isPendingByCurrentUser}
+                                canBook={lesson.canBook}
+                                canUnbook={lesson.canUnbook}
+                                labels={{
+                                  bookCta: labels.bookCta,
+                                  bookedCta: labels.youAreBooked,
+                                  pendingCta: labels.awaitingConfirmation,
+                                  processing: labels.processing,
+                                }}
+                              />
+                            )}
+                          </div>
                         </div>
-                        <p className="text-[var(--muted-foreground)]">{labels.bookedLabel}: {lesson.occupancy}</p>
-                        {lesson.canViewWaitlist ? (
-                          <p className="text-[var(--muted-foreground)]">{labels.queuedLabel}: {lesson.queueLength}</p>
-                        ) : null}
-                        {lesson.isCourseLesson ? (
-                          <Badge variant="info" className="mt-0.5 text-[10px]">
-                            {labels.courseTag}
-                          </Badge>
-                        ) : null}
-                        <div className="mt-1">
-                          {lesson.isQueuedByCurrentUser ? (
-                            <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
-                          ) : (
-                            <BookingBadgeToggle
-                              locale={locale}
-                              lessonId={lesson.id}
-                              isBooked={lesson.isBookedByCurrentUser}
-                              canBook={lesson.canBook}
-                              canUnbook={lesson.canUnbook}
-                              labels={{
-                                bookCta: labels.bookCta,
-                                bookedCta: labels.youAreBooked,
-                                processing: labels.processing,
-                              }}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ))}
@@ -682,33 +703,30 @@ export function BookingsManager({
                           <span>{lessonCreateLabels.manageTriggerLabel}</span>
                         </Button>
                       ) : null}
-                      {selectedLesson.isBookedByCurrentUser ? (
-                        <div className="inline-flex items-center gap-2">
-                          <Badge variant="success" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
-                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
-                            {labels.youAreBooked}
-                          </Badge>
-                          <Button
-                            variant="outline"
-                            onClick={() => handleUnbook(selectedLesson.id)}
-                            disabled={!selectedLesson.canUnbook || isPending}
-                          >
-                            {isPending ? labels.processing : labels.unbookCta}
-                          </Button>
-                        </div>
+                      {selectedLesson.isAccessDenied ? (
+                        <Badge variant="neutral" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
+                          {labels.accessDenied}
+                        </Badge>
                       ) : selectedLesson.isQueuedByCurrentUser ? (
                         <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
                           <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
                           {labels.youAreQueued}
                         </Badge>
                       ) : (
-                        <Button onClick={() => handleBook(selectedLesson.id)} disabled={!selectedLesson.canBook || isPending}>
-                          {isPending
-                            ? labels.processing
-                            : selectedLesson.availableSeats > 0
-                              ? labels.bookCta
-                              : labels.joinQueueCta}
-                        </Button>
+                        <BookingBadgeToggle
+                          locale={locale}
+                          lessonId={selectedLesson.id}
+                          isBooked={selectedLesson.isBookedByCurrentUser}
+                          isPendingApproval={selectedLesson.isPendingByCurrentUser}
+                          canBook={selectedLesson.canBook}
+                          canUnbook={selectedLesson.canUnbook}
+                          labels={{
+                            bookCta: labels.bookCta,
+                            bookedCta: labels.youAreBooked,
+                            pendingCta: labels.awaitingConfirmation,
+                            processing: labels.processing,
+                          }}
+                        />
                       )}
                     </DialogFooter>
                   </>
@@ -740,6 +758,7 @@ export function BookingsManager({
                   lessonTypeId: manageLesson.lessonTypeId,
                   canManageTrainer: canUpdateTrainer,
                   attendees: manageLesson.attendees,
+                  pendingApprovals: manageLesson.pendingApprovals,
                   waitlist: manageLesson.waitlist,
                 }}
                 trainerCandidates={trainerCandidates}
@@ -767,6 +786,11 @@ export function BookingsManager({
                   attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
                   addAttendeeCta: lessonCreateLabels.addAttendeeCta,
                   removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
+                  pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
+                  noPendingApprovals: lessonCreateLabels.noPendingApprovals,
+                  confirmPendingCta: lessonCreateLabels.confirmPendingCta,
+                  confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
+                  rejectPendingCta: lessonCreateLabels.rejectPendingCta,
                   waitlistLabel: lessonCreateLabels.waitlistLabel,
                   noWaitlist: lessonCreateLabels.noWaitlist,
                   confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,

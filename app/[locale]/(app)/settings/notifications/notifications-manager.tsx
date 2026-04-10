@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { formatDateTimeForApp } from "@/lib/date-time";
 
 type NotificationsManagerProps = {
   locale: string;
@@ -364,7 +365,7 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
                       <td className="py-2 pr-2">{item.subject ?? "-"}</td>
                       <td className="py-2 pr-2">{item.attempts}</td>
                       <td className="py-2 pr-2">{item.lastError ?? "-"}</td>
-                      <td className="py-2 pr-2">{new Date(item.createdAt).toLocaleString()}</td>
+                      <td className="py-2 pr-2">{formatDateTimeForApp(item.createdAt)}</td>
                       <td className="py-2 text-right">
                         <Button type="button" size="sm" variant="outline" disabled={isRetryPending} onClick={() => retrySingle(item.id)}>
                           {isRetryPending ? labels.actions.retrying : labels.actions.retry}
@@ -400,4 +401,3 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
     </section>
   );
 }
-

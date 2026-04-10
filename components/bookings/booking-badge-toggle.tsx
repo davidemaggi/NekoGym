@@ -10,11 +10,13 @@ type BookingBadgeToggleProps = {
   locale: string;
   lessonId: string;
   isBooked: boolean;
+  isPendingApproval?: boolean;
   canBook: boolean;
   canUnbook: boolean;
   labels: {
     bookCta: string;
     bookedCta: string;
+    pendingCta: string;
     processing: string;
   };
   className?: string;
@@ -24,6 +26,7 @@ export function BookingBadgeToggle({
   locale,
   lessonId,
   isBooked,
+  isPendingApproval = false,
   canBook,
   canUnbook,
   labels,
@@ -64,13 +67,15 @@ export function BookingBadgeToggle({
       className={[
         "inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium transition",
         isBooked
-          ? "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
+          ? isPendingApproval
+            ? "bg-amber-100 text-amber-900 hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-200 dark:hover:bg-amber-900/60"
+            : "bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
           : "border border-[var(--surface-border)] bg-transparent text-[var(--foreground)] hover:bg-[var(--muted)]",
         disabled ? "cursor-not-allowed opacity-60" : "",
         className,
       ].join(" ")}
     >
-      {isPending ? labels.processing : isBooked ? labels.bookedCta : labels.bookCta}
+      {isPending ? labels.processing : isBooked ? (isPendingApproval ? labels.pendingCta : labels.bookedCta) : labels.bookCta}
     </button>
   );
 }

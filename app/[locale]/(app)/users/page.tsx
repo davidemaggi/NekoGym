@@ -29,21 +29,32 @@ export default async function UsersPage({
       subscriptionRemaining: true,
       subscriptionResetAt: true,
       subscriptionEndsAt: true,
+      lessonTypeAccesses: {
+        select: {
+          lessonTypeId: true,
+          mode: true,
+        },
+      },
     },
+  });
+  const lessonTypes = await prisma.lessonType.findMany({
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
   });
 
   return (
     <UsersManager
       locale={locale}
       labels={labels}
+      lessonTypes={lessonTypes}
       users={users.map((user) => ({
         ...user,
         emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
         trialEndsAt: user.trialEndsAt ? user.trialEndsAt.toISOString() : null,
         subscriptionResetAt: user.subscriptionResetAt ? user.subscriptionResetAt.toISOString() : null,
         subscriptionEndsAt: user.subscriptionEndsAt ? user.subscriptionEndsAt.toISOString() : null,
+        lessonTypeAccesses: user.lessonTypeAccesses,
       }))}
     />
   );
 }
-

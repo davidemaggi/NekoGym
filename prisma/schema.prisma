@@ -39,6 +39,17 @@ enum LessonStatus {
   CANCELLED
 }
 
+enum LessonBookingStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum LessonTypeAccessMode {
+  DENIED
+  REQUIRES_CONFIRMATION
+  ALLOWED
+}
+
 enum NotificationChannel {
   EMAIL
   TELEGRAM
@@ -75,6 +86,8 @@ model User {
   notifyByEmail         Boolean              @default(true)
   notifyByTelegram      Boolean              @default(true)
   notifyByWebPush       Boolean              @default(true)
+  notificationsLastSeenAt DateTime?
+  notificationsRetentionDays Int             @default(15)
   totpEnabled           Boolean              @default(false)
   totpSecret            String?
   membershipStatus      MembershipStatus     @default(INACTIVE)
@@ -95,6 +108,9 @@ model User {
   notificationOutbox    NotificationOutbox[]
   authTokens            AuthToken[]
   webPushSubscriptions  WebPushSubscription[]
+  lessonTypeAccesses    UserLessonTypeAccess[]
+  confirmedBookings     LessonBooking[]       @relation("LessonBookingConfirmedBy")
+  localNotifications    LocalNotification[]
 }
 
 model NotificationOutbox {
@@ -115,6 +131,17 @@ model NotificationOutbox {
   user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, availableAt, createdAt])
+  @@index([userId, createdAt])
+}
+
+model LocalNotification {
+  id        String   @id @default(cuid())
+  userId    String
+  subject   String?
+  body      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId, createdAt])
 }
 
@@ -207,6 +234,7 @@ model LessonType {
   updatedAt   DateTime @updatedAt
   courses     Course[]
   lessons     Lesson[]
+  userAccesses UserLessonTypeAccess[]
 }
 
 model Lesson {
@@ -244,15 +272,35 @@ model Lesson {
 }
 
 model LessonBooking {
-  id        String   @id @default(cuid())
-  lessonId  String
-  traineeId String
-  createdAt DateTime @default(now())
-  lesson    Lesson   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  trainee   User     @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  id            String             @id @default(cuid())
+  lessonId      String
+  traineeId     String
+  status        LessonBookingStatus @default(CONFIRMED)
+  confirmedAt   DateTime?
+  confirmedById String?
+  createdAt     DateTime           @default(now())
+  lesson        Lesson             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  trainee       User               @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  confirmedBy   User?              @relation("LessonBookingConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
 
   @@unique([lessonId, traineeId])
   @@index([traineeId])
+  @@index([status])
+  @@index([confirmedById])
+}
+
+model UserLessonTypeAccess {
+  id          String               @id @default(cuid())
+  userId      String
+  lessonTypeId String
+  mode        LessonTypeAccessMode @default(REQUIRES_CONFIRMATION)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonType  LessonType           @relation(fields: [lessonTypeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonTypeId])
+  @@index([lessonTypeId])
 }
 
 model LessonWaitlistEntry {

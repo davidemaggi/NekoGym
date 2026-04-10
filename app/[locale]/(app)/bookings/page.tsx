@@ -72,6 +72,8 @@ export default async function BookingsPage({
       lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: {
         select: {
+          traineeId: true,
+          status: true,
           trainee: {
             select: { id: true, name: true, email: true },
           },
@@ -94,13 +96,35 @@ export default async function BookingsPage({
     orderBy: { startsAt: "asc" },
   });
 
+  const lessonTypeIds = Array.from(new Set(lessons.map((lesson) => lesson.lessonTypeId).filter((value): value is string => Boolean(value))));
+  const accessRows = lessonTypeIds.length > 0
+    ? await prisma.userLessonTypeAccess.findMany({
+        where: {
+          userId: currentUser.id,
+          lessonTypeId: { in: lessonTypeIds },
+        },
+        select: { lessonTypeId: true, mode: true },
+      })
+    : [];
+  const accessByTypeId = new Map(accessRows.map((row) => [row.lessonTypeId, row.mode]));
+
+  function effectiveAccessMode(lessonTypeId: string | null): "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED" {
+    if (!lessonTypeId) return "ALLOWED";
+    if (currentUser.role !== "TRAINEE") return "ALLOWED";
+    return accessByTypeId.get(lessonTypeId) ?? "REQUIRES_CONFIRMATION";
+  }
+
   const items = lessons.map((lesson) => {
     const bookedCount = lesson._count.bookings;
+    const pendingApprovalsCount = lesson.bookings.filter((booking) => booking.status === "PENDING").length;
     const availableSeats = Math.max(0, lesson.maxAttendees - bookedCount);
-    const isBookedByCurrentUser = lesson.bookings.some((booking) => booking.trainee.id === currentUser.id);
+    const currentUserBooking = lesson.bookings.find((booking) => booking.trainee.id === currentUser.id) ?? null;
+    const isBookedByCurrentUser = Boolean(currentUserBooking);
+    const isPendingByCurrentUser = currentUserBooking?.status === "PENDING";
     const isQueuedByCurrentUser = lesson.waitlistEntries.some((entry) => entry.traineeId === currentUser.id);
+    const isAccessDenied = effectiveAccessMode(lesson.lessonTypeId) === "DENIED";
     const cancellationDeadline = new Date(lesson.startsAt.getTime() - lesson.cancellationWindowHours * 60 * 60 * 1000);
-    const canBook = !isBookedByCurrentUser && !isQueuedByCurrentUser && lesson.startsAt > new Date();
+    const canBook = !isAccessDenied && !isBookedByCurrentUser && !isQueuedByCurrentUser && lesson.startsAt > new Date();
     const canUnbook = isBookedByCurrentUser && new Date() <= cancellationDeadline;
     const canManageLesson =
       currentUser.role === "ADMIN" ||
@@ -118,9 +142,12 @@ export default async function BookingsPage({
       bookedCount,
       availableSeats,
       isBookedByCurrentUser,
+      isPendingByCurrentUser,
       isQueuedByCurrentUser,
+      isAccessDenied,
       canViewWaitlist,
       queueLength: lesson._count.waitlistEntries,
+      pendingApprovalsCount,
       canBook,
       canUnbook,
       canManageLesson,
@@ -136,7 +163,14 @@ export default async function BookingsPage({
       trainerId: lesson.trainer?.id ?? "",
       trainerName: lesson.trainer?.name ?? null,
       attendees: canManageLesson
-        ? lesson.bookings.map((booking) => ({
+        ? lesson.bookings.filter((booking) => booking.status === "CONFIRMED").map((booking) => ({
+            id: booking.trainee.id,
+            name: booking.trainee.name,
+            email: booking.trainee.email,
+          }))
+        : [],
+      pendingApprovals: canManageLesson
+        ? lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => ({
             id: booking.trainee.id,
             name: booking.trainee.name,
             email: booking.trainee.email,
@@ -192,6 +226,7 @@ export default async function BookingsPage({
       attendeeCandidates={attendeeCandidates}
       openWeekdays={openWeekdays}
       closedDates={closedDates}
+      isAdmin={currentUser.role === "ADMIN"}
     />
   );
 }

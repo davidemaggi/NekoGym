@@ -26,6 +26,7 @@ type Dictionary = {
       bookings: string;
       users: string;
       reports: string;
+      myNotifications: string;
       profileSettings: string;
       manualNotifications: string;
       registries: string;
@@ -94,7 +95,10 @@ type Dictionary = {
     notificationEmailLabel: string;
     notificationTelegramLabel: string;
     notificationWebPushLabel: string;
+    notificationLocalAlwaysOnLabel: string;
     notificationPrefsSaveCta: string;
+    notificationsRetentionDaysLabel: string;
+    notificationsRetentionDaysHint: string;
   };
   pwaInstall: {
     title: string;
@@ -124,6 +128,8 @@ type Dictionary = {
     seatsLabel: string;
     bookedLabel: string;
     youAreBooked: string;
+    awaitingConfirmation: string;
+    accessDenied: string;
     courseTag: string;
     detailsCta: string;
     detailsTitle: string;
@@ -185,6 +191,11 @@ type Dictionary = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    pendingApprovalsLabel: string;
+    noPendingApprovals: string;
+    confirmPendingCta: string;
+    confirmPendingAndGrantAccessCta: string;
+    rejectPendingCta: string;
     waitlistLabel: string;
     noWaitlist: string;
     confirmWaitlistCta: string;
@@ -225,11 +236,13 @@ type Dictionary = {
       subscriptionRemaining: string;
       subscriptionResetAt: string;
       subscriptionEndsAt: string;
+      lessonTypeAccess: string;
     };
     tabs: {
       profile: string;
       membership: string;
       subscription: string;
+      access: string;
     };
     actions: {
       save: string;
@@ -261,6 +274,11 @@ type Dictionary = {
       WEEKLY: string;
       MONTHLY: string;
       FIXED: string;
+    };
+    lessonTypeAccessOptions: {
+      DENIED: string;
+      REQUIRES_CONFIRMATION: string;
+      ALLOWED: string;
     };
     passwordCreateHint: string;
     passwordKeepHint: string;
@@ -361,6 +379,17 @@ type Dictionary = {
         activeCourses: string;
         todayLessons: string;
         bookings: string;
+        pendingApprovals: string;
+      };
+      pending: {
+        openCta: string;
+        dialogTitle: string;
+        dialogDescription: string;
+        empty: string;
+        approveCta: string;
+        approveAndUnlockCta: string;
+        rejectCta: string;
+        closeCta: string;
       };
     };
     lessons: {
@@ -378,6 +407,20 @@ type Dictionary = {
     reports: {
       title: string;
       description: string;
+    };
+    myNotifications: {
+      title: string;
+      description: string;
+      empty: string;
+      deleteOneCta: string;
+      deleteAllCta: string;
+      confirmDeleteAllTitle: string;
+      confirmDeleteAllDescription: string;
+      confirmDeleteAllConfirmCta: string;
+      confirmDeleteAllCancelCta: string;
+      pageLabel: string;
+      unreadBadge: string;
+      closeCta: string;
     };
   };
   registries: {
@@ -539,6 +582,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         bookings: "Calendario",
         users: "Utenti",
         reports: "Report",
+        myNotifications: "Le mie notifiche",
         profileSettings: "Profilo",
         manualNotifications: "Notifiche",
         registries: "Registri",
@@ -607,7 +651,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       notificationEmailLabel: "Email",
       notificationTelegramLabel: "Telegram",
       notificationWebPushLabel: "App/Web Push",
+      notificationLocalAlwaysOnLabel: "Notifiche locali (sempre attive)",
       notificationPrefsSaveCta: "Salva preferenze",
+      notificationsRetentionDaysLabel: "Conservazione notifiche locali (giorni)",
+      notificationsRetentionDaysHint: "Le notifiche locali piu vecchie saranno cancellate automaticamente dal server.",
     },
     pwaInstall: {
       title: "Installa NekoGym",
@@ -624,6 +671,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       seatsLabel: "Posti residui",
       bookedLabel: "Iscritti",
       youAreBooked: "Gia iscritto",
+      awaitingConfirmation: "In attesa conferma",
+      accessDenied: "Accesso non consentito",
       courseTag: "Corso",
       detailsCta: "Dettagli",
       detailsTitle: "Dettaglio lezione",
@@ -685,6 +734,11 @@ const dictionaries: Record<Locale, Dictionary> = {
       attendeeSelectLabel: "Utente",
       addAttendeeCta: "Aggiungi",
       removeAttendeeCta: "Rimuovi",
+      pendingApprovalsLabel: "In attesa di conferma",
+      noPendingApprovals: "Nessuna iscrizione in attesa.",
+      confirmPendingCta: "Conferma",
+      confirmPendingAndGrantAccessCta: "Conferma + accesso libero",
+      rejectPendingCta: "Non confermare",
       waitlistLabel: "Coda",
       noWaitlist: "Nessuno in coda.",
       confirmWaitlistCta: "Conferma",
@@ -725,11 +779,13 @@ const dictionaries: Record<Locale, Dictionary> = {
         subscriptionRemaining: "Lezioni residue",
         subscriptionResetAt: "Reset piano",
         subscriptionEndsAt: "Fine subscription",
+        lessonTypeAccess: "Accesso per tipo lezione",
       },
       tabs: {
         profile: "Profilo",
         membership: "Membership",
         subscription: "Subscription",
+        access: "Accessi",
       },
       actions: {
         save: "Salva",
@@ -761,6 +817,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         WEEKLY: "Settimanale",
         MONTHLY: "Mensile",
         FIXED: "Pacchetto fisso",
+      },
+      lessonTypeAccessOptions: {
+        DENIED: "Negato",
+        REQUIRES_CONFIRMATION: "Richiede conferma",
+        ALLOWED: "Libero accesso",
       },
       passwordCreateHint: "Password obbligatoria per i nuovi utenti.",
       passwordKeepHint: "Lascia vuoto per mantenere la password corrente.",
@@ -875,6 +936,17 @@ const dictionaries: Record<Locale, Dictionary> = {
           activeCourses: "Corsi attivi",
           todayLessons: "Lezioni oggi",
           bookings: "Prenotazioni",
+          pendingApprovals: "Conferme in attesa",
+        },
+        pending: {
+          openCta: "Apri conferme",
+          dialogTitle: "Conferme pendenti",
+          dialogDescription: "Approva o rifiuta richieste di iscrizione in attesa.",
+          empty: "Nessuna richiesta in attesa.",
+          approveCta: "Conferma",
+          approveAndUnlockCta: "Conferma e non chiedere piu",
+          rejectCta: "Non confermare",
+          closeCta: "Chiudi",
         },
       },
       lessons: {
@@ -892,6 +964,20 @@ const dictionaries: Record<Locale, Dictionary> = {
       reports: {
         title: "Report",
         description: "Qui potrai analizzare frequenze, popolarita dei corsi e metriche.",
+      },
+      myNotifications: {
+        title: "Le mie notifiche",
+        description: "Storico notifiche locali ricevute su tutti i dispositivi.",
+        empty: "Nessuna notifica disponibile.",
+        deleteOneCta: "Elimina",
+        deleteAllCta: "Elimina tutte",
+        confirmDeleteAllTitle: "Eliminare tutte le notifiche?",
+        confirmDeleteAllDescription: "Questa azione rimuovera definitivamente tutte le notifiche locali.",
+        confirmDeleteAllConfirmCta: "Conferma",
+        confirmDeleteAllCancelCta: "Annulla",
+        pageLabel: "Pagina {page} di {totalPages}",
+        unreadBadge: "Nuova",
+        closeCta: "Chiudi",
       },
     },
     registries: {
@@ -1051,6 +1137,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         bookings: "Calendar",
         users: "Users",
         reports: "Reports",
+        myNotifications: "My notifications",
         profileSettings: "Profile",
         manualNotifications: "Notifications",
         registries: "Registries",
@@ -1119,7 +1206,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       notificationEmailLabel: "Email",
       notificationTelegramLabel: "Telegram",
       notificationWebPushLabel: "App/Web Push",
+      notificationLocalAlwaysOnLabel: "Local notifications (always on)",
       notificationPrefsSaveCta: "Save preferences",
+      notificationsRetentionDaysLabel: "Local notifications retention (days)",
+      notificationsRetentionDaysHint: "Older local notifications are automatically deleted by the server.",
     },
     pwaInstall: {
       title: "Install NekoGym",
@@ -1136,6 +1226,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       seatsLabel: "Seats left",
       bookedLabel: "Booked",
       youAreBooked: "Already booked",
+      awaitingConfirmation: "Awaiting confirmation",
+      accessDenied: "Access denied",
       courseTag: "Course",
       detailsCta: "Details",
       detailsTitle: "Lesson details",
@@ -1197,6 +1289,11 @@ const dictionaries: Record<Locale, Dictionary> = {
       attendeeSelectLabel: "User",
       addAttendeeCta: "Add",
       removeAttendeeCta: "Remove",
+      pendingApprovalsLabel: "Pending approvals",
+      noPendingApprovals: "No pending booking requests.",
+      confirmPendingCta: "Confirm",
+      confirmPendingAndGrantAccessCta: "Confirm + grant access",
+      rejectPendingCta: "Reject",
       waitlistLabel: "Waitlist",
       noWaitlist: "No users in waitlist.",
       confirmWaitlistCta: "Confirm",
@@ -1237,11 +1334,13 @@ const dictionaries: Record<Locale, Dictionary> = {
         subscriptionRemaining: "Remaining lessons",
         subscriptionResetAt: "Plan reset",
         subscriptionEndsAt: "Subscription end",
+        lessonTypeAccess: "Lesson type access",
       },
       tabs: {
         profile: "Profile",
         membership: "Membership",
         subscription: "Subscription",
+        access: "Access",
       },
       actions: {
         save: "Save",
@@ -1273,6 +1372,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         WEEKLY: "Weekly",
         MONTHLY: "Monthly",
         FIXED: "Fixed pack",
+      },
+      lessonTypeAccessOptions: {
+        DENIED: "Denied",
+        REQUIRES_CONFIRMATION: "Requires confirmation",
+        ALLOWED: "Open access",
       },
       passwordCreateHint: "Password is required for new users.",
       passwordKeepHint: "Leave empty to keep current password.",
@@ -1387,6 +1491,17 @@ const dictionaries: Record<Locale, Dictionary> = {
           activeCourses: "Active courses",
           todayLessons: "Today's lessons",
           bookings: "Bookings",
+          pendingApprovals: "Pending approvals",
+        },
+        pending: {
+          openCta: "Open approvals",
+          dialogTitle: "Pending approvals",
+          dialogDescription: "Approve or reject pending booking requests.",
+          empty: "No pending requests.",
+          approveCta: "Approve",
+          approveAndUnlockCta: "Approve and unlock",
+          rejectCta: "Reject",
+          closeCta: "Close",
         },
       },
       lessons: {
@@ -1404,6 +1519,20 @@ const dictionaries: Record<Locale, Dictionary> = {
       reports: {
         title: "Reports",
         description: "Here you can analyze attendance, course popularity and metrics.",
+      },
+      myNotifications: {
+        title: "My notifications",
+        description: "Local notification history across all your devices.",
+        empty: "No notifications available.",
+        deleteOneCta: "Delete",
+        deleteAllCta: "Delete all",
+        confirmDeleteAllTitle: "Delete all notifications?",
+        confirmDeleteAllDescription: "This action will permanently remove all local notifications.",
+        confirmDeleteAllConfirmCta: "Confirm",
+        confirmDeleteAllCancelCta: "Cancel",
+        pageLabel: "Page {page} of {totalPages}",
+        unreadBadge: "New",
+        closeCta: "Close",
       },
     },
     registries: {
