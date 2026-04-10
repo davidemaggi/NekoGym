@@ -56,6 +56,9 @@ enum AuthTokenType {
   EMAIL_VERIFICATION
   EMAIL_CHANGE
   PASSWORD_RESET
+  LOGIN_OTP
+  LOGIN_MAGIC_LINK
+  LOGIN_2FA_CHALLENGE
 }
 
 model User {
@@ -72,6 +75,8 @@ model User {
   notifyByEmail         Boolean              @default(true)
   notifyByTelegram      Boolean              @default(true)
   notifyByWebPush       Boolean              @default(true)
+  totpEnabled           Boolean              @default(false)
+  totpSecret            String?
   membershipStatus      MembershipStatus     @default(INACTIVE)
   trialEndsAt           DateTime?
   subscriptionType      SubscriptionPlanType @default(NONE)
@@ -197,6 +202,7 @@ model LessonType {
   name        String   @unique
   description String?
   iconSvg     String
+  colorHex    String   @default("#2563EB")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   courses     Course[]
@@ -205,9 +211,12 @@ model LessonType {
 
 model Lesson {
   id                      String          @id @default(cuid())
+  title                   String?
+  description             String?
   startsAt                DateTime
   endsAt                  DateTime
   status                  LessonStatus    @default(SCHEDULED)
+  deletedAt               DateTime?
   maxAttendees            Int
   cancellationWindowHours Int             @default(24)
   sourceWeekday           Weekday?
@@ -225,12 +234,13 @@ model Lesson {
   bookings                LessonBooking[]
   waitlistEntries         LessonWaitlistEntry[]
 
-  @@unique([courseId, startsAt])
   @@index([courseId])
+  @@index([courseId, startsAt])
   @@index([lessonTypeId])
   @@index([trainerId])
   @@index([startsAt])
   @@index([status])
+  @@index([deletedAt])
 }
 
 model LessonBooking {

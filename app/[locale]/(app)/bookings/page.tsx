@@ -1,7 +1,9 @@
 import { requireAuth } from "@/lib/authorization";
 import { getDictionary, isLocale } from "@/lib/i18n";
-import { getLessonTypeIconOptions, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
+import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
+import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { prisma } from "@/lib/prisma";
+import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
 import { BookingsManager } from "@/app/[locale]/(app)/bookings/bookings-manager";
 
@@ -46,6 +48,12 @@ export default async function BookingsPage({
   const labels = dictionary.bookings;
 
   const iconOptions = await getLessonTypeIconOptions();
+  const siteSettings = await prisma.siteSettings.findUnique({
+    where: { id: 1 },
+    select: { openWeekdaysCsv: true, closedDatesCsv: true },
+  });
+  const openWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
+  const closedDates = parseClosedDatesCsv(siteSettings?.closedDatesCsv);
   const selectedMonth = parseMonthInput(month);
   const rangeStart = new Date(selectedMonth.year, selectedMonth.month, 1, 0, 0, 0, 0);
   const rangeEnd = new Date(selectedMonth.year, selectedMonth.month + 1, 1, 0, 0, 0, 0);
@@ -55,12 +63,13 @@ export default async function BookingsPage({
   const lessons = await prisma.lesson.findMany({
     where: {
       status: "SCHEDULED",
+      deletedAt: null,
       startsAt: { gte: rangeStart, lt: rangeEnd },
     },
     include: {
       course: { select: { id: true, name: true } },
       trainer: { select: { id: true, name: true } },
-      lessonType: { select: { name: true, iconSvg: true } },
+      lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: {
         select: {
           trainee: {
@@ -100,6 +109,8 @@ export default async function BookingsPage({
 
     return {
       id: lesson.id,
+      title: lesson.title ?? null,
+      description: lesson.description ?? null,
       startsAt: lesson.startsAt.toISOString(),
       endsAt: lesson.endsAt.toISOString(),
       maxAttendees: lesson.maxAttendees,
@@ -121,6 +132,7 @@ export default async function BookingsPage({
       lessonTypeIcon: lesson.lessonType
         ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)
         : null,
+      lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
       trainerId: lesson.trainer?.id ?? "",
       trainerName: lesson.trainer?.name ?? null,
       attendees: canManageLesson
@@ -178,6 +190,8 @@ export default async function BookingsPage({
       trainerCandidates={trainerCandidates}
       lessonTypeCandidates={lessonTypeCandidates}
       attendeeCandidates={attendeeCandidates}
+      openWeekdays={openWeekdays}
+      closedDates={closedDates}
     />
   );
 }

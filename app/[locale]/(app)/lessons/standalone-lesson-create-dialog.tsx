@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -9,11 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type CandidateOption = {
   id: string;
   name: string;
 };
+
+type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+const WEEKDAY_BY_INDEX: Weekday[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const DEFAULT_OPEN_WEEKDAYS: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
 type StandaloneLessonDialogProps = {
   locale: string;
@@ -27,6 +33,8 @@ type StandaloneLessonDialogProps = {
     standaloneMaxAttendees: string;
     standaloneCancellationWindow: string;
     standaloneLessonType: string;
+    lessonTitleLabel: string;
+    lessonDescriptionLabel: string;
     submitCta: string;
     processing: string;
     closeCta: string;
@@ -40,7 +48,11 @@ type StandaloneLessonDialogProps = {
   defaultMaxAttendees?: number;
   defaultCancellationWindowHours?: number;
   defaultLessonTypeId?: string;
+  defaultTitle?: string;
+  defaultDescription?: string;
   trigger?: ReactNode;
+  openWeekdays?: Weekday[];
+  closedDates?: string[];
 };
 
 function toDateTimeLocalValue(date: Date): string {
@@ -64,7 +76,11 @@ export function StandaloneLessonCreateDialog({
   defaultMaxAttendees,
   defaultCancellationWindowHours,
   defaultLessonTypeId,
+  defaultTitle,
+  defaultDescription,
   trigger,
+  openWeekdays,
+  closedDates,
 }: StandaloneLessonDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -77,6 +93,40 @@ export function StandaloneLessonCreateDialog({
     nextHour.setHours(nextHour.getHours() + 1);
     return toDateTimeLocalValue(nextHour);
   }, [defaultStartsAt]);
+  const openWeekdaySet = useMemo(
+    () => new Set<Weekday>((openWeekdays && openWeekdays.length > 0) ? openWeekdays : DEFAULT_OPEN_WEEKDAYS),
+    [openWeekdays]
+  );
+  const closedDateSet = useMemo(() => new Set(closedDates ?? []), [closedDates]);
+
+  function validateScheduleDate(input: HTMLInputElement): boolean {
+    const raw = input.value;
+    if (!raw) {
+      input.setCustomValidity("");
+      return true;
+    }
+
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) {
+      input.setCustomValidity("");
+      return true;
+    }
+
+    const weekday = WEEKDAY_BY_INDEX[date.getDay()];
+    const dateKey = toDateTimeLocalValue(date).slice(0, 10);
+    const isClosed = !openWeekdaySet.has(weekday) || closedDateSet.has(dateKey);
+    if (isClosed) {
+      input.setCustomValidity(
+        locale === "it"
+          ? "Giorno di chiusura palestra: scegli una data di apertura."
+          : "Gym is closed on this date. Please choose an open date."
+      );
+      return false;
+    }
+
+    input.setCustomValidity("");
+    return true;
+  }
 
   function handleSubmit(formData: FormData) {
     formData.set("locale", locale);
@@ -100,7 +150,14 @@ export function StandaloneLessonCreateDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>{trigger ?? <Button>{labels.triggerCta}</Button>}</DialogTrigger>
+      <DialogTrigger asChild>
+        {trigger ?? (
+          <Button>
+            <Plus className="h-4 w-4" />
+            <span>{labels.triggerCta}</span>
+          </Button>
+        )}
+      </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{labels.title}</DialogTitle>
@@ -111,6 +168,19 @@ export function StandaloneLessonCreateDialog({
           <input type="hidden" name="locale" value={locale} />
           {lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
           <div className="space-y-1">
+            <Label htmlFor={lessonId ? `lessonTitle-${lessonId}` : "lessonTitle-create"}>{labels.lessonTitleLabel}</Label>
+            <Input id={lessonId ? `lessonTitle-${lessonId}` : "lessonTitle-create"} name="title" defaultValue={defaultTitle ?? ""} />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor={lessonId ? `lessonDescription-${lessonId}` : "lessonDescription-create"}>{labels.lessonDescriptionLabel}</Label>
+            <Textarea
+              id={lessonId ? `lessonDescription-${lessonId}` : "lessonDescription-create"}
+              name="description"
+              defaultValue={defaultDescription ?? ""}
+              rows={3}
+            />
+          </div>
+          <div className="space-y-1">
             <Label htmlFor={lessonId ? `startsAt-${lessonId}` : "startsAt-create"}>{labels.startsAtLabel}</Label>
             <Input
               id={lessonId ? `startsAt-${lessonId}` : "startsAt-create"}
@@ -118,6 +188,8 @@ export function StandaloneLessonCreateDialog({
               name="startsAt"
               required
               defaultValue={startsAtDefault}
+              onChange={(event) => validateScheduleDate(event.currentTarget)}
+              onInvalid={(event) => validateScheduleDate(event.currentTarget)}
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -203,5 +275,4 @@ export function StandaloneLessonCreateDialog({
     </Dialog>
   );
 }
-
 

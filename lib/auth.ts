@@ -1,10 +1,11 @@
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 
 import type { AuthTokenType, Prisma, UserRole as PrismaUserRole } from "@prisma/client";
 import { cookies } from "next/headers";
 
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
+import { buildTotpOtpauthUri, generateTotpSecret, verifyTotpCode } from "@/lib/totp";
 import { enqueueEmailForUser } from "@/server/outbox/queue";
 
 export type UserRole = PrismaUserRole;
@@ -22,6 +23,66 @@ const SESSION_DAYS = 30;
 const VERIFY_EMAIL_TTL_MINUTES = 24 * 60;
 const RESET_PASSWORD_TTL_MINUTES = 60;
 const EMAIL_CHANGE_TTL_MINUTES = 24 * 60;
+const LOGIN_OTP_TTL_MINUTES = 10;
+const LOGIN_MAGIC_LINK_TTL_MINUTES = 20;
+const LOGIN_2FA_CHALLENGE_TTL_MINUTES = 10;
+const TOTP_ISSUER = "NekoGym";
+const OTP_REQUEST_WINDOW_MS_DEFAULT = 10 * 60 * 1000;
+const OTP_REQUEST_MAX_PER_USER_DEFAULT = 5;
+const OTP_REQUEST_MAX_PER_IP_DEFAULT = 20;
+const OTP_VERIFY_WINDOW_MS_DEFAULT = 10 * 60 * 1000;
+const OTP_VERIFY_MAX_FAILURES_PER_USER_DEFAULT = 8;
+const OTP_VERIFY_MAX_FAILURES_PER_IP_DEFAULT = 25;
+
+function parsePositiveIntEnv(input: string | undefined, fallback: number, min: number, max: number) {
+  if (!input) return fallback;
+  const parsed = Number.parseInt(input, 10);
+  if (!Number.isFinite(parsed) || parsed < min || parsed > max) {
+    return fallback;
+  }
+
+  return parsed;
+}
+
+const OTP_REQUEST_WINDOW_MS = parsePositiveIntEnv(
+  process.env.AUTH_OTP_REQUEST_WINDOW_MS,
+  OTP_REQUEST_WINDOW_MS_DEFAULT,
+  10_000,
+  24 * 60 * 60 * 1000
+);
+const OTP_REQUEST_MAX_PER_USER = parsePositiveIntEnv(
+  process.env.AUTH_OTP_REQUEST_MAX_PER_USER,
+  OTP_REQUEST_MAX_PER_USER_DEFAULT,
+  1,
+  500
+);
+const OTP_REQUEST_MAX_PER_IP = parsePositiveIntEnv(
+  process.env.AUTH_OTP_REQUEST_MAX_PER_IP,
+  OTP_REQUEST_MAX_PER_IP_DEFAULT,
+  1,
+  2_000
+);
+const OTP_VERIFY_WINDOW_MS = parsePositiveIntEnv(
+  process.env.AUTH_OTP_VERIFY_WINDOW_MS,
+  OTP_VERIFY_WINDOW_MS_DEFAULT,
+  10_000,
+  24 * 60 * 60 * 1000
+);
+const OTP_VERIFY_MAX_FAILURES_PER_USER = parsePositiveIntEnv(
+  process.env.AUTH_OTP_VERIFY_MAX_FAILURES_PER_USER,
+  OTP_VERIFY_MAX_FAILURES_PER_USER_DEFAULT,
+  1,
+  1_000
+);
+const OTP_VERIFY_MAX_FAILURES_PER_IP = parsePositiveIntEnv(
+  process.env.AUTH_OTP_VERIFY_MAX_FAILURES_PER_IP,
+  OTP_VERIFY_MAX_FAILURES_PER_IP_DEFAULT,
+  1,
+  5_000
+);
+
+const otpRequestIpRateLimit = new Map<string, { count: number; expiresAt: number }>();
+const otpVerifyFailureRateLimit = new Map<string, { count: number; expiresAt: number }>();
 
 function buildSessionExpiry() {
   return new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
@@ -37,6 +98,50 @@ function newOneTimeToken() {
 
 function hashOneTimeToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function hashLoginCode(code: string) {
+  return createHash("sha256").update(`login:${code}`).digest("hex");
+}
+
+function hashIp(input: string) {
+  return createHash("sha256").update(`ip:${input}`).digest("hex");
+}
+
+function sanitizeClientIp(raw?: string | null) {
+  const value = (raw ?? "").trim();
+  if (!value) return null;
+  // x-forwarded-for can include a chain: keep first hop.
+  return value.split(",")[0]?.trim() || null;
+}
+
+function consumeLocalRateLimit(
+  store: Map<string, { count: number; expiresAt: number }>,
+  key: string,
+  max: number,
+  windowMs: number
+) {
+  const now = Date.now();
+  const current = store.get(key);
+  if (!current || current.expiresAt <= now) {
+    store.set(key, { count: 1, expiresAt: now + windowMs });
+    return true;
+  }
+
+  if (current.count >= max) {
+    return false;
+  }
+
+  store.set(key, { ...current, count: current.count + 1 });
+  return true;
+}
+
+function clearLocalRateLimit(store: Map<string, { count: number; expiresAt: number }>, key: string) {
+  store.delete(key);
+}
+
+function generateSixDigitCode() {
+  return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
 function appBaseUrl() {
@@ -143,12 +248,75 @@ function authMessages(locale: string) {
       isIt
         ? `Ciao,\n\nper impostare una nuova password clicca questo link:\n${link}\n\nIl link scade in 60 minuti.`
         : `Hello,\n\nto set a new password click this link:\n${link}\n\nThe link expires in 60 minutes.`,
+    loginOtpSubject: isIt ? "Codice accesso NekoGym" : "NekoGym sign-in code",
+    loginOtpEmailBody: (code: string) =>
+      isIt
+        ? `Ciao,\n\nusa questo codice per accedere: ${code}\n\nIl codice scade in ${LOGIN_OTP_TTL_MINUTES} minuti.`
+        : `Hello,\n\nuse this code to sign in: ${code}\n\nThe code expires in ${LOGIN_OTP_TTL_MINUTES} minutes.`,
+    loginOtpTelegramBody: (code: string) =>
+      isIt
+        ? `NekoGym: codice accesso ${code}. Scade in ${LOGIN_OTP_TTL_MINUTES} min.`
+        : `NekoGym: sign-in code ${code}. Expires in ${LOGIN_OTP_TTL_MINUTES} min.`,
+    loginOtpWebPushBody: (code: string) =>
+      isIt
+        ? `Codice accesso NekoGym: ${code}`
+        : `NekoGym sign-in code: ${code}`,
+    magicLinkSubject: isIt ? "Magic link accesso NekoGym" : "NekoGym magic sign-in link",
+    magicLinkBody: (link: string) =>
+      isIt
+        ? `Ciao,\n\nclicca questo link per accedere:\n${link}\n\nIl link scade in ${LOGIN_MAGIC_LINK_TTL_MINUTES} minuti.`
+        : `Hello,\n\nclick this link to sign in:\n${link}\n\nThe link expires in ${LOGIN_MAGIC_LINK_TTL_MINUTES} minutes.`,
     emailNotVerified: isIt ? "Email non confermata." : "Email is not verified.",
     tokenInvalid: isIt ? "Link non valido o scaduto." : "Invalid or expired link.",
     emailAlreadyUsed: isIt ? "Email gia in uso." : "Email already in use.",
     passwordTooShort: isIt ? "Password troppo corta." : "Password too short.",
     currentPasswordInvalid: isIt ? "Password corrente non valida." : "Current password is invalid.",
+    loginCodeInvalid: isIt ? "Codice non valido o scaduto." : "Invalid or expired code.",
+    loginCodeRateLimited: isIt ? "Troppi tentativi. Riprova tra qualche minuto." : "Too many attempts. Please try again in a few minutes.",
+    twoFactorNotConfigured: isIt ? "2FA non configurata." : "Two-factor authentication is not configured.",
   };
+}
+
+function isUsableLoginToken(token: { consumedAt: Date | null; expiresAt: Date }) {
+  return !token.consumedAt && token.expiresAt > new Date();
+}
+
+type LoginTargetUser = {
+  id: string;
+  email: string;
+  name: string;
+  emailVerifiedAt: Date | null;
+  passwordHash: string;
+  totpEnabled: boolean;
+  totpSecret: string | null;
+  telegramChatId: string | null;
+  notifyByTelegram: boolean;
+  notifyByWebPush: boolean;
+};
+
+function safeEqualString(a: string, b: string) {
+  const aBuf = Buffer.from(a);
+  const bBuf = Buffer.from(b);
+  if (aBuf.length !== bBuf.length) return false;
+  return timingSafeEqual(aBuf, bBuf);
+}
+
+async function getLoginTargetUserByEmail(email: string): Promise<LoginTargetUser | null> {
+  return prisma.user.findUnique({
+    where: { email },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      emailVerifiedAt: true,
+      passwordHash: true,
+      totpEnabled: true,
+      totpSecret: true,
+      telegramChatId: true,
+      notifyByTelegram: true,
+      notifyByWebPush: true,
+    },
+  });
 }
 
 export async function sendEmailVerification(input: { userId: string; locale: string }) {
@@ -375,6 +543,366 @@ export async function loginUser(input: { email: string; password: string; locale
 
   await createSession(user.id);
   return user;
+}
+
+export async function loginWithPassword(input: { email: string; password: string; locale: string }) {
+  const msg = authMessages(input.locale);
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const user = await getLoginTargetUserByEmail(normalizedEmail);
+
+  if (!user || !verifyPassword(input.password, user.passwordHash)) {
+    throw new Error("Invalid credentials.");
+  }
+
+  if (!user.emailVerifiedAt) {
+    throw new Error(msg.emailNotVerified);
+  }
+
+  if (user.totpEnabled) {
+    const challengeToken = await prisma.$transaction(async (tx) => {
+      return createAuthToken({
+        tx,
+        userId: user.id,
+        type: "LOGIN_2FA_CHALLENGE",
+        ttlMinutes: LOGIN_2FA_CHALLENGE_TTL_MINUTES,
+      });
+    });
+
+    return {
+      requiresTwoFactor: true as const,
+      challengeToken,
+    };
+  }
+
+  await createSession(user.id);
+  return {
+    requiresTwoFactor: false as const,
+  };
+}
+
+export async function completePasswordLoginWithTotp(input: {
+  locale: string;
+  challengeToken: string;
+  code: string;
+}) {
+  const msg = authMessages(input.locale);
+  const hashedToken = hashOneTimeToken(input.challengeToken);
+
+  const challenge = await prisma.authToken.findUnique({
+    where: { tokenHash: hashedToken },
+    include: {
+      user: {
+        select: {
+          id: true,
+          emailVerifiedAt: true,
+          totpEnabled: true,
+          totpSecret: true,
+        },
+      },
+    },
+  });
+
+  if (!challenge || challenge.type !== "LOGIN_2FA_CHALLENGE" || !isUsableLoginToken(challenge)) {
+    throw new Error(msg.tokenInvalid);
+  }
+
+  if (!challenge.user.emailVerifiedAt) {
+    throw new Error(msg.emailNotVerified);
+  }
+
+  if (!challenge.user.totpEnabled || !challenge.user.totpSecret) {
+    throw new Error(msg.twoFactorNotConfigured);
+  }
+
+  if (!verifyTotpCode({ secret: challenge.user.totpSecret, code: input.code })) {
+    throw new Error(msg.loginCodeInvalid);
+  }
+
+  const consumed = await prisma.authToken.updateMany({
+    where: {
+      id: challenge.id,
+      consumedAt: null,
+    },
+    data: {
+      consumedAt: new Date(),
+    },
+  });
+
+  if (consumed.count === 0) {
+    throw new Error(msg.tokenInvalid);
+  }
+
+  await createSession(challenge.user.id);
+}
+
+export async function requestLoginOtp(input: { locale: string; email: string; clientIp?: string }) {
+  const msg = authMessages(input.locale);
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const user = await getLoginTargetUserByEmail(normalizedEmail);
+
+  if (!user || !user.emailVerifiedAt) {
+    return null;
+  }
+
+  const clientIp = sanitizeClientIp(input.clientIp);
+  if (clientIp && !consumeLocalRateLimit(otpRequestIpRateLimit, `request:${hashIp(clientIp)}`, OTP_REQUEST_MAX_PER_IP, OTP_REQUEST_WINDOW_MS)) {
+    throw new Error(msg.loginCodeRateLimited);
+  }
+
+  const recentRequestsByUser = await prisma.authToken.count({
+    where: {
+      userId: user.id,
+      type: "LOGIN_OTP",
+      createdAt: { gt: new Date(Date.now() - OTP_REQUEST_WINDOW_MS) },
+    },
+  });
+
+  if (recentRequestsByUser >= OTP_REQUEST_MAX_PER_USER) {
+    throw new Error(msg.loginCodeRateLimited);
+  }
+
+  const code = generateSixDigitCode();
+
+  return prisma.$transaction(async (tx) => {
+    const challengeToken = await createAuthToken({
+      tx,
+      userId: user.id,
+      type: "LOGIN_OTP",
+      ttlMinutes: LOGIN_OTP_TTL_MINUTES,
+      targetEmail: hashLoginCode(code),
+    });
+
+    await enqueueEmailForUser(tx, {
+      userId: user.id,
+      subject: msg.loginOtpSubject,
+      body: msg.loginOtpEmailBody(code),
+      allowUnverifiedEmail: true,
+    });
+
+    const extraRows: Prisma.NotificationOutboxCreateManyInput[] = [];
+
+    if (user.telegramChatId) {
+      extraRows.push({
+        userId: user.id,
+        channel: "TELEGRAM",
+        subject: msg.loginOtpSubject,
+        body: msg.loginOtpTelegramBody(code),
+      });
+    }
+
+    const hasPushSubscription = await tx.webPushSubscription.findFirst({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (hasPushSubscription) {
+      extraRows.push({
+        userId: user.id,
+        channel: "WEBPUSH",
+        subject: msg.loginOtpSubject,
+        body: msg.loginOtpWebPushBody(code),
+      });
+    }
+
+    if (extraRows.length > 0) {
+      await tx.notificationOutbox.createMany({ data: extraRows });
+    }
+
+    return challengeToken;
+  });
+}
+
+export async function verifyLoginOtp(input: {
+  locale: string;
+  challengeToken: string;
+  code: string;
+  clientIp?: string;
+}) {
+  const msg = authMessages(input.locale);
+  const cleanCode = input.code.trim();
+
+  const clientIp = sanitizeClientIp(input.clientIp);
+  const ipKey = clientIp ? `verify:ip:${hashIp(clientIp)}` : null;
+
+  if (!/^\d{6}$/.test(cleanCode)) {
+    if (ipKey) {
+      consumeLocalRateLimit(otpVerifyFailureRateLimit, ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS);
+    }
+    throw new Error(msg.loginCodeInvalid);
+  }
+
+  const hashedToken = hashOneTimeToken(input.challengeToken);
+  const token = await prisma.authToken.findUnique({
+    where: { tokenHash: hashedToken },
+    include: { user: { select: { id: true, emailVerifiedAt: true } } },
+  });
+
+  if (!token || token.type !== "LOGIN_OTP" || !isUsableLoginToken(token)) {
+    if (ipKey) {
+      consumeLocalRateLimit(otpVerifyFailureRateLimit, ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS);
+    }
+    throw new Error(msg.loginCodeInvalid);
+  }
+
+  const userKey = `verify:user:${token.userId}`;
+  if (!consumeLocalRateLimit(otpVerifyFailureRateLimit, userKey, OTP_VERIFY_MAX_FAILURES_PER_USER, OTP_VERIFY_WINDOW_MS)) {
+    throw new Error(msg.loginCodeRateLimited);
+  }
+
+  if (ipKey && !consumeLocalRateLimit(otpVerifyFailureRateLimit, ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS)) {
+    throw new Error(msg.loginCodeRateLimited);
+  }
+
+  if (!token.targetEmail || !safeEqualString(token.targetEmail, hashLoginCode(cleanCode))) {
+    throw new Error(msg.loginCodeInvalid);
+  }
+
+  if (!token.user.emailVerifiedAt) {
+    throw new Error(msg.emailNotVerified);
+  }
+
+  const consumed = await prisma.authToken.updateMany({
+    where: {
+      id: token.id,
+      consumedAt: null,
+    },
+    data: {
+      consumedAt: new Date(),
+    },
+  });
+
+  if (consumed.count === 0) {
+    throw new Error(msg.loginCodeInvalid);
+  }
+
+  clearLocalRateLimit(otpVerifyFailureRateLimit, userKey);
+  if (ipKey) {
+    clearLocalRateLimit(otpVerifyFailureRateLimit, ipKey);
+  }
+
+  await createSession(token.user.id);
+}
+
+export async function requestMagicLoginLink(input: { locale: string; email: string }) {
+  const msg = authMessages(input.locale);
+  const normalizedEmail = input.email.trim().toLowerCase();
+  const user = await getLoginTargetUserByEmail(normalizedEmail);
+
+  if (!user || !user.emailVerifiedAt) {
+    return;
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const token = await createAuthToken({
+      tx,
+      userId: user.id,
+      type: "LOGIN_MAGIC_LINK",
+      ttlMinutes: LOGIN_MAGIC_LINK_TTL_MINUTES,
+    });
+    const link = buildLocalizedUrl(input.locale, `/magic-link?token=${encodeURIComponent(token)}`);
+
+    await enqueueEmailForUser(tx, {
+      userId: user.id,
+      subject: msg.magicLinkSubject,
+      body: msg.magicLinkBody(link),
+      allowUnverifiedEmail: true,
+    });
+  });
+}
+
+export async function loginWithMagicLinkToken(input: { locale: string; token: string }) {
+  const msg = authMessages(input.locale);
+  const hashed = hashOneTimeToken(input.token);
+
+  const token = await prisma.authToken.findUnique({
+    where: { tokenHash: hashed },
+    include: {
+      user: {
+        select: {
+          id: true,
+          emailVerifiedAt: true,
+        },
+      },
+    },
+  });
+
+  if (!token || token.type !== "LOGIN_MAGIC_LINK" || !isUsableLoginToken(token)) {
+    throw new Error(msg.tokenInvalid);
+  }
+
+  if (!token.user.emailVerifiedAt) {
+    throw new Error(msg.emailNotVerified);
+  }
+
+  const consumed = await prisma.authToken.updateMany({
+    where: {
+      id: token.id,
+      consumedAt: null,
+    },
+    data: {
+      consumedAt: new Date(),
+    },
+  });
+
+  if (consumed.count === 0) {
+    throw new Error(msg.tokenInvalid);
+  }
+
+  await createSession(token.user.id);
+}
+
+export async function startTotpSetup(input: { userId: string; accountName: string; issuer?: string }) {
+  const secret = generateTotpSecret();
+  const otpauthUri = buildTotpOtpauthUri({
+    secret,
+    accountName: input.accountName,
+    issuer: input.issuer ?? TOTP_ISSUER,
+  });
+
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: {
+      totpSecret: secret,
+      totpEnabled: false,
+    },
+  });
+
+  return { secret, otpauthUri };
+}
+
+export async function enableTotp(input: { userId: string; code: string; locale: string }) {
+  const msg = authMessages(input.locale);
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: {
+      totpSecret: true,
+    },
+  });
+
+  if (!user?.totpSecret) {
+    throw new Error(msg.twoFactorNotConfigured);
+  }
+
+  if (!verifyTotpCode({ secret: user.totpSecret, code: input.code })) {
+    throw new Error(msg.loginCodeInvalid);
+  }
+
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: {
+      totpEnabled: true,
+    },
+  });
+}
+
+export async function disableTotp(userId: string) {
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      totpEnabled: false,
+      totpSecret: null,
+    },
+  });
 }
 
 export async function logoutCurrentUser() {

@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import type { Weekday } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
-import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons";
+import { sanitizeLessonTypeColor } from "@/lib/lesson-type-icons";
+import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { cancelFutureLessonsForDeletedCourse, reconcileFutureLessonsForCourse } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
 
@@ -42,12 +43,16 @@ function courseMessages(locale: string) {
     created: isIt ? "Corso creato con successo." : "Course created successfully.",
     updated: isIt ? "Corso aggiornato con successo." : "Course updated successfully.",
     deleted: isIt ? "Corso eliminato con successo." : "Course deleted successfully.",
+    restored: isIt ? "Corso ripristinato con successo." : "Course restored successfully.",
     createFailed: isIt ? "Impossibile creare il corso." : "Unable to create course.",
     updateFailed: isIt ? "Impossibile aggiornare il corso." : "Unable to update course.",
     deleteFailed: isIt ? "Impossibile eliminare il corso." : "Unable to delete course.",
+    restoreFailed: isIt ? "Impossibile ripristinare il corso." : "Unable to restore course.",
     lessonTypeNameRequired: isIt ? "Il nome del tipo lezione e obbligatorio." : "Lesson type name is required.",
     lessonTypeIconRequired: isIt ? "L'icona SVG e obbligatoria." : "SVG icon is required.",
     lessonTypeIconInvalid: isIt ? "L'icona selezionata non e valida." : "Selected icon is not valid.",
+    lessonTypeColorRequired: isIt ? "Il colore del tipo lezione e obbligatorio." : "Lesson type color is required.",
+    lessonTypeColorInvalid: isIt ? "Il colore selezionato non e valido." : "Selected color is not valid.",
     lessonTypeCreated: isIt ? "Tipo lezione creato con successo." : "Lesson type created successfully.",
     lessonTypeUpdated: isIt ? "Tipo lezione aggiornato con successo." : "Lesson type updated successfully.",
     lessonTypeDeleted: isIt ? "Tipo lezione eliminato con successo." : "Lesson type deleted successfully.",
@@ -319,18 +324,23 @@ export async function createLessonTypeAction(formData: FormData): Promise<Lesson
     const name = getField(formData, "name");
     const description = getField(formData, "description");
     const iconSvg = getField(formData, "iconSvg");
+    const colorHexRaw = getField(formData, "colorHex");
 
     if (!name) throw new Error(messages.lessonTypeNameRequired);
     if (!iconSvg) throw new Error(messages.lessonTypeIconRequired);
+    if (!colorHexRaw) throw new Error(messages.lessonTypeColorRequired);
 
     const iconOptions = await getLessonTypeIconOptions();
     if (!iconOptions.includes(iconSvg)) throw new Error(messages.lessonTypeIconInvalid);
+    const colorHex = sanitizeLessonTypeColor(colorHexRaw, "");
+    if (!colorHex) throw new Error(messages.lessonTypeColorInvalid);
 
     await prisma.lessonType.create({
       data: {
         name,
         description: description || null,
         iconSvg,
+        colorHex,
       },
     });
 
@@ -386,13 +396,17 @@ export async function updateLessonTypeAction(formData: FormData): Promise<Lesson
     const name = getField(formData, "name");
     const description = getField(formData, "description");
     const iconSvg = getField(formData, "iconSvg");
+    const colorHexRaw = getField(formData, "colorHex");
 
     if (!id) throw new Error(messages.idRequired);
     if (!name) throw new Error(messages.lessonTypeNameRequired);
     if (!iconSvg) throw new Error(messages.lessonTypeIconRequired);
+    if (!colorHexRaw) throw new Error(messages.lessonTypeColorRequired);
 
     const iconOptions = await getLessonTypeIconOptions();
     if (!iconOptions.includes(iconSvg)) throw new Error(messages.lessonTypeIconInvalid);
+    const colorHex = sanitizeLessonTypeColor(colorHexRaw, "");
+    if (!colorHex) throw new Error(messages.lessonTypeColorInvalid);
 
     await prisma.lessonType.update({
       where: { id },
@@ -400,6 +414,7 @@ export async function updateLessonTypeAction(formData: FormData): Promise<Lesson
         name,
         description: description || null,
         iconSvg,
+        colorHex,
       },
     });
 
@@ -452,6 +467,45 @@ export async function deleteCourseAction(formData: FormData): Promise<CourseMuta
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.deleteFailed,
+    };
+  }
+}
+
+export async function restoreCourseAction(formData: FormData): Promise<CourseMutationResult> {
+  const locale = getLocale(formData);
+  const messages = courseMessages(locale);
+  const id = getField(formData, "id");
+
+  try {
+    await requireAnyRole(["ADMIN", "TRAINER"], locale);
+
+    if (!id) {
+      throw new Error(messages.idRequired);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      const course = await tx.course.findUnique({ where: { id }, select: { id: true, deletedAt: true } });
+      if (!course) {
+        throw new Error(messages.idRequired);
+      }
+
+      if (!course.deletedAt) {
+        return;
+      }
+
+      await tx.course.update({ where: { id }, data: { deletedAt: null } });
+      await reconcileFutureLessonsForCourse(tx, id);
+    });
+
+    revalidatePath(`/${locale}/courses`);
+    revalidatePath(`/${locale}/bookings`);
+    revalidatePath(`/${locale}/lessons`);
+
+    return { ok: true, message: messages.restored };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : messages.restoreFailed,
     };
   }
 }

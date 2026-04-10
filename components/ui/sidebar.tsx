@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, LiHTMLAttributes, ReactNode, UlHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, HTMLAttributes, LiHTMLAttributes, ReactNode } from "react";
 
 type SidebarProps = {
   children: ReactNode;
@@ -17,7 +17,7 @@ type SidebarMenuButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 type SidebarMenuListProps = {
   children: ReactNode;
   className?: string;
-} & UlHTMLAttributes<HTMLUListElement>;
+} & HTMLAttributes<HTMLUListElement>;
 
 type SidebarMenuItemProps = {
   children: ReactNode;

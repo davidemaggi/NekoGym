@@ -37,6 +37,12 @@ function messages(locale: string) {
     standaloneUpdated: isIt ? "Lezione aggiornata." : "Lesson updated.",
     standaloneDeleted: isIt ? "Lezione eliminata." : "Lesson deleted.",
     standaloneCancelled: isIt ? "Lezione annullata perche aveva iscritti." : "Lesson cancelled because it had attendees.",
+    lessonRestored: isIt ? "Lezione ripristinata." : "Lesson restored.",
+    lessonRestoreFailed: isIt ? "Impossibile ripristinare la lezione." : "Unable to restore lesson.",
+    restoreBlockedByCourse:
+      isIt
+        ? "Impossibile ripristinare: il corso collegato e cancellato."
+        : "Cannot restore: linked course is deleted.",
     standaloneOnly: isIt ? "Puoi modificare solo lezioni non collegate a un corso." : "Only standalone lessons can be changed.",
     startsAtRequired: isIt ? "Data/ora inizio obbligatoria." : "Start date/time is required.",
     numericInvalid: isIt ? "Campi numerici non validi." : "Numeric fields are invalid.",
@@ -73,6 +79,10 @@ async function loadManagedLessonOrThrow(input: {
 
   if (!lesson) {
     throw new Error(t.lessonRequired);
+  }
+
+  if (lesson.deletedAt) {
+    throw new Error(t.lessonUnavailable);
   }
 
   if (input.currentUser.role === "TRAINER" && lesson.trainerId !== input.currentUser.id) {
@@ -261,20 +271,35 @@ function parseStartsAt(raw: string, locale: string): Date {
 
 function redirectWithFlash(input: {
   locale: string;
-  week: string;
+  month?: string;
+  week?: string;
+  showDeleted?: string;
   message: string;
   type: "success" | "error";
 }) {
   const params = new URLSearchParams();
-  if (input.week) params.set("week", input.week);
+  if (input.month) {
+    params.set("month", input.month);
+  } else if (input.week) {
+    // Backward compatibility with old weekly pagination URLs.
+    params.set("week", input.week);
+  }
+  if (input.showDeleted === "1") params.set("showDeleted", "1");
   params.set("flash", input.message);
   params.set("flashType", input.type);
   redirect(`/${input.locale}/lessons?${params.toString()}`);
 }
 
+function readNavigationCursor(formData: FormData): { month: string; week: string } {
+  return {
+    month: getField(formData, "month"),
+    week: getField(formData, "week"),
+  };
+}
+
 export async function updateLessonTrainerAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
-  const week = getField(formData, "week");
+  const { month, week } = readNavigationCursor(formData);
   const lessonId = getField(formData, "lessonId");
   const trainerIdRaw = getField(formData, "trainerId");
   const trainerId = trainerIdRaw || null;
@@ -346,12 +371,12 @@ export async function updateLessonTrainerAction(formData: FormData): Promise<voi
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, week, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
 
 export async function createStandaloneLessonAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
-  const week = getField(formData, "week");
+  const { month, week } = readNavigationCursor(formData);
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
   let flashMessage = t.standaloneCreated;
@@ -363,12 +388,14 @@ export async function createStandaloneLessonAction(formData: FormData): Promise<
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, week, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
 
 function inputFromFormData(formData: FormData, locale: string) {
   return {
     locale,
+    titleRaw: getField(formData, "title"),
+    descriptionRaw: getField(formData, "description"),
     startsAtRaw: getField(formData, "startsAt"),
     durationMinutesRaw: getField(formData, "durationMinutes"),
     maxAttendeesRaw: getField(formData, "maxAttendees"),
@@ -380,6 +407,8 @@ function inputFromFormData(formData: FormData, locale: string) {
 
 async function createStandaloneLesson(input: {
   locale: string;
+  titleRaw: string;
+  descriptionRaw: string;
   startsAtRaw: string;
   durationMinutesRaw: string;
   maxAttendeesRaw: string;
@@ -392,6 +421,8 @@ async function createStandaloneLesson(input: {
   const user = await requireAnyRole(["ADMIN", "TRAINER"], locale);
 
   const startsAt = parseStartsAt(input.startsAtRaw, locale);
+  const title = input.titleRaw || null;
+  const description = input.descriptionRaw || null;
   const durationMinutes = parsePositiveInt(input.durationMinutesRaw);
   const maxAttendees = parsePositiveInt(input.maxAttendeesRaw);
   const cancellationWindowHours = parsePositiveInt(input.cancellationWindowHoursRaw);
@@ -409,6 +440,8 @@ async function createStandaloneLesson(input: {
     const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
     await tx.lesson.create({
       data: {
+        title,
+        description,
         startsAt,
         endsAt,
         maxAttendees,
@@ -443,7 +476,7 @@ export async function createStandaloneLessonMutationAction(formData: FormData): 
 
 export async function updateStandaloneLessonAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
-  const week = getField(formData, "week");
+  const { month, week } = readNavigationCursor(formData);
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
   let flashMessage = t.standaloneUpdated;
@@ -459,6 +492,8 @@ export async function updateStandaloneLessonAction(formData: FormData): Promise<
     const cancellationWindowHours = parsePositiveInt(getField(formData, "cancellationWindowHours"));
     const trainerId = getField(formData, "trainerId") || null;
     const lessonTypeId = getField(formData, "lessonTypeId") || null;
+    const title = getField(formData, "title") || null;
+    const description = getField(formData, "description") || null;
 
     if (!durationMinutes || !maxAttendees || !cancellationWindowHours) {
       throw new Error(t.numericInvalid);
@@ -469,10 +504,12 @@ export async function updateStandaloneLessonAction(formData: FormData): Promise<
         where: { id: lessonId },
         include: {
           bookings: { select: { id: true } },
+          course: { select: { name: true } },
         },
       });
 
       if (!lesson) throw new Error(t.lessonRequired);
+      if (lesson.deletedAt) throw new Error(t.lessonUnavailable);
       if (lesson.courseId) throw new Error(t.standaloneOnly);
       if (isPastOrNow(lesson.startsAt)) throw new Error(t.pastLocked);
 
@@ -481,6 +518,8 @@ export async function updateStandaloneLessonAction(formData: FormData): Promise<
 
       const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
       const hasMeaningfulChange =
+        lesson.title !== title ||
+        lesson.description !== description ||
         lesson.startsAt.getTime() !== startsAt.getTime() ||
         lesson.endsAt.getTime() !== endsAt.getTime() ||
         lesson.trainerId !== trainerId;
@@ -488,6 +527,8 @@ export async function updateStandaloneLessonAction(formData: FormData): Promise<
       await tx.lesson.update({
         where: { id: lessonId },
         data: {
+          title,
+          description,
           startsAt,
           endsAt,
           maxAttendees,
@@ -521,18 +562,19 @@ export async function updateStandaloneLessonAction(formData: FormData): Promise<
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, week, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
 
 export async function deleteStandaloneLessonAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
-  const week = getField(formData, "week");
+  const { month, week } = readNavigationCursor(formData);
+  const showDeleted = getField(formData, "showDeleted");
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
   let flashMessage = t.standaloneDeleted;
 
   try {
-    await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
     const lessonId = getField(formData, "lessonId");
     if (!lessonId) throw new Error(t.lessonRequired);
 
@@ -541,25 +583,33 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
         where: { id: lessonId },
         include: {
           bookings: { select: { id: true } },
+          course: { select: { name: true } },
         },
       });
 
       if (!lesson) throw new Error(t.lessonRequired);
-      if (lesson.courseId) throw new Error(t.standaloneOnly);
+      if (lesson.deletedAt) return;
+      if (currentUser.role === "TRAINER" && lesson.trainerId !== currentUser.id) {
+        throw new Error(t.staffForbidden);
+      }
+
       const shouldNotify = !isPastOrNow(lesson.startsAt);
 
-      if (lesson.bookings.length > 0) {
-        await tx.lesson.update({
-          where: { id: lessonId },
-          data: { status: "CANCELLED" },
-        });
+      await tx.lesson.update({
+        where: { id: lessonId },
+        data: {
+          status: "CANCELLED",
+          deletedAt: new Date(),
+        },
+      });
 
+      if (lesson.bookings.length > 0) {
         if (shouldNotify) {
           await enqueueStandaloneLessonNotification(tx, {
             locale,
             lessonId,
             startsAt: lesson.startsAt,
-            courseName: null,
+            courseName: lesson.course?.name ?? null,
             trainerId: lesson.trainerId,
             subject: locale === "it" ? "Lezione annullata" : "Lesson cancelled",
             body:
@@ -570,8 +620,6 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
         }
 
         flashMessage = t.standaloneCancelled;
-      } else {
-        await tx.lesson.delete({ where: { id: lessonId } });
       }
     });
 
@@ -583,12 +631,65 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, week, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, showDeleted, message: flashMessage, type: flashType });
+}
+
+export async function restoreLessonAction(formData: FormData): Promise<void> {
+  const locale = getField(formData, "locale") || "it";
+  const { month, week } = readNavigationCursor(formData);
+  const showDeleted = getField(formData, "showDeleted");
+  const lessonId = getField(formData, "lessonId");
+  const t = messages(locale);
+  let flashType: "success" | "error" = "success";
+  let flashMessage = t.lessonRestored;
+
+  try {
+    const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    if (!lessonId) throw new Error(t.lessonRequired);
+
+    await prisma.$transaction(async (tx) => {
+      const lesson = await tx.lesson.findUnique({
+        where: { id: lessonId },
+        include: {
+          course: { select: { deletedAt: true } },
+        },
+      });
+
+      if (!lesson) throw new Error(t.lessonRequired);
+      if (currentUser.role === "TRAINER" && lesson.trainerId !== currentUser.id) {
+        throw new Error(t.staffForbidden);
+      }
+
+      if (!lesson.deletedAt) {
+        return;
+      }
+
+      if (lesson.course?.deletedAt) {
+        throw new Error(t.restoreBlockedByCourse);
+      }
+
+      await tx.lesson.update({
+        where: { id: lessonId },
+        data: {
+          deletedAt: null,
+          status: lesson.startsAt > new Date() ? "SCHEDULED" : lesson.status,
+        },
+      });
+    });
+
+    revalidatePath(`/${locale}/lessons`);
+    revalidatePath(`/${locale}/bookings`);
+  } catch (error) {
+    flashType = "error";
+    flashMessage = error instanceof Error ? error.message : t.lessonRestoreFailed;
+  }
+
+  redirectWithFlash({ locale, month, week, showDeleted, message: flashMessage, type: flashType });
 }
 
 export async function addLessonAttendeeAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
-  const week = getField(formData, "week");
+  const { month, week } = readNavigationCursor(formData);
   const lessonId = getField(formData, "lessonId");
   const attendeeId = getField(formData, "attendeeId");
   const t = messages(locale);
@@ -633,6 +734,7 @@ export async function addLessonAttendeeAction(formData: FormData): Promise<void>
               courseId: lesson.courseId,
               startsAt: { gte: startOfDay, lt: endOfDay },
               status: "SCHEDULED",
+              deletedAt: null,
             },
           },
         });
@@ -666,12 +768,12 @@ export async function addLessonAttendeeAction(formData: FormData): Promise<void>
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, week, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
 
 export async function removeLessonAttendeeAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
-  const week = getField(formData, "week");
+  const { month, week } = readNavigationCursor(formData);
   const lessonId = getField(formData, "lessonId");
   const attendeeId = getField(formData, "attendeeId");
   const t = messages(locale);
@@ -731,7 +833,10 @@ export async function removeLessonAttendeeAction(formData: FormData): Promise<vo
         const msUntilStart = lesson.startsAt.getTime() - Date.now();
         const noticeMs = lesson.cancellationWindowHours * 60 * 60 * 1000;
         if (remainingBookings === 0 && lesson.startsAt > new Date() && msUntilStart <= noticeMs) {
-          await tx.lesson.update({ where: { id: lessonId }, data: { status: "CANCELLED" } });
+          await tx.lesson.update({
+            where: { id: lessonId },
+            data: { status: "CANCELLED", deletedAt: new Date() },
+          });
         }
       }
     });
@@ -743,9 +848,8 @@ export async function removeLessonAttendeeAction(formData: FormData): Promise<vo
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, week, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
-
 
 
 

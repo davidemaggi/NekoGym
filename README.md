@@ -117,6 +117,12 @@ Environment variables:
 - `WEB_PUSH_VAPID_SUBJECT` (e.g. `mailto:admin@example.com`)
 - `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`
 - `WEB_PUSH_VAPID_PRIVATE_KEY`
+- `AUTH_OTP_REQUEST_WINDOW_MS` (default `600000`)
+- `AUTH_OTP_REQUEST_MAX_PER_USER` (default `5`)
+- `AUTH_OTP_REQUEST_MAX_PER_IP` (default `20`)
+- `AUTH_OTP_VERIFY_WINDOW_MS` (default `600000`)
+- `AUTH_OTP_VERIFY_MAX_FAILURES_PER_USER` (default `8`)
+- `AUTH_OTP_VERIFY_MAX_FAILURES_PER_IP` (default `25`)
 
 Generate VAPID keys:
 

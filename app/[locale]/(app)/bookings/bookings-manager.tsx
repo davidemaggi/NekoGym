@@ -1,21 +1,25 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { type CSSProperties, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Pencil } from "lucide-react";
+import { CheckCircle2, Hourglass, Pencil, Plus } from "lucide-react";
 
 import { bookLessonAction, unbookLessonAction } from "@/app/[locale]/(app)/bookings/actions";
 import { LessonManageDialog } from "@/app/[locale]/(app)/lessons/lesson-manage-dialog";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
+import { BookingBadgeToggle } from "@/components/bookings/booking-badge-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { hexToRgba } from "@/lib/lesson-type-icons";
 
 type LessonCalendarItem = {
   id: string;
+  title: string | null;
+  description: string | null;
   startsAt: string;
   endsAt: string;
   maxAttendees: number;
@@ -35,11 +39,16 @@ type LessonCalendarItem = {
   lessonTypeName: string | null;
   lessonTypeId: string;
   lessonTypeIcon: string | null;
+  lessonTypeColor: string | null;
   trainerId: string;
   trainerName: string | null;
   attendees: Array<{ id: string; name: string; email: string }>;
   waitlist: Array<{ id: string; name: string; email: string }>;
 };
+
+type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+const WEEKDAY_BY_INDEX: Weekday[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+const DEFAULT_OPEN_WEEKDAYS: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
 type BookingsManagerProps = {
   locale: string;
@@ -78,6 +87,8 @@ type BookingsManagerProps = {
     standaloneMaxAttendees: string;
     standaloneCancellationWindow: string;
     standaloneLessonType: string;
+    lessonTitleLabel: string;
+    lessonDescriptionLabel: string;
     createStandaloneCta: string;
     updateStandaloneCta: string;
     updateTrainerCta: string;
@@ -108,6 +119,8 @@ type BookingsManagerProps = {
   trainerCandidates: Array<{ id: string; name: string }>;
   lessonTypeCandidates: Array<{ id: string; name: string }>;
   attendeeCandidates: Array<{ id: string; name: string; email: string }>;
+  openWeekdays: Weekday[];
+  closedDates: string[];
 };
 
 function formatDateTime(value: string, locale: string): string {
@@ -191,6 +204,24 @@ function toDateTimeLocalFromIso(value: string): string {
   return toDateTimeLocalValue(new Date(value));
 }
 
+function lessonCardStyle(lesson: LessonCalendarItem, isSelected: boolean): CSSProperties | undefined {
+  if (!lesson.lessonTypeColor) return undefined;
+  return {
+    backgroundColor: hexToRgba(lesson.lessonTypeColor, isSelected ? 0.24 : 0.16),
+    border: `1px solid ${hexToRgba(lesson.lessonTypeColor, isSelected ? 0.9 : 0.55)}`,
+  };
+}
+
+function LessonStatusIcon({ lesson }: { lesson: LessonCalendarItem }) {
+  if (lesson.isBookedByCurrentUser) {
+    return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />;
+  }
+  if (lesson.isQueuedByCurrentUser) {
+    return <Hourglass className="h-3.5 w-3.5 text-amber-500 dark:text-amber-400" aria-hidden="true" />;
+  }
+  return null;
+}
+
 export function BookingsManager({
   locale,
   labels,
@@ -205,6 +236,8 @@ export function BookingsManager({
   trainerCandidates,
   lessonTypeCandidates,
   attendeeCandidates,
+  openWeekdays,
+  closedDates,
 }: BookingsManagerProps) {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -242,6 +275,17 @@ export function BookingsManager({
 
   const todayKey = localDateKeyFromDate(new Date());
   const mobileDays = calendarDays.filter((day) => day.isCurrentMonth && day.items.length > 0);
+  const openWeekdaySet = useMemo(
+    () => new Set<Weekday>(openWeekdays.length > 0 ? openWeekdays : DEFAULT_OPEN_WEEKDAYS),
+    [openWeekdays]
+  );
+  const closedDateSet = useMemo(() => new Set(closedDates), [closedDates]);
+
+  function isClosedDay(date: Date): boolean {
+    const weekday = WEEKDAY_BY_INDEX[date.getDay()];
+    const dateKey = localDateKeyFromDate(date);
+    return !openWeekdaySet.has(weekday) || closedDateSet.has(dateKey);
+  }
 
   function handleBook(lessonId: string) {
     const formData = new FormData();
@@ -310,11 +354,13 @@ export function BookingsManager({
                 <div key={`mobile-${day.key}`} className="rounded-md border border-[var(--surface-border)] p-2">
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <p className="text-xs font-semibold capitalize">{formatDayLabel(day.date, locale)}</p>
-                    {canCreateStandaloneLesson ? (
+                    {canCreateStandaloneLesson && !isClosedDay(day.date) ? (
                       <StandaloneLessonCreateDialog
                         locale={locale}
                         trainerCandidates={trainerCandidates}
                         lessonTypeCandidates={lessonTypeCandidates}
+                        openWeekdays={openWeekdays}
+                        closedDates={closedDates}
                         defaultTrainerId={defaultTrainerId}
                         defaultStartsAt={defaultStartsAtForDay(day.date)}
                         labels={{
@@ -326,38 +372,61 @@ export function BookingsManager({
                           standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
                           standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
                           standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-                                  startsAtLabel: labels.startsAtLabel,
+                          lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
+                          lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
+                          startsAtLabel: labels.startsAtLabel,
                           submitCta: lessonCreateLabels.createStandaloneCta,
                           processing: labels.processing,
                           closeCta: labels.closeCta,
                         }}
                         trigger={
-                          <button
+                          <Button
                             type="button"
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-[var(--surface-border)] text-sm font-semibold text-[var(--foreground)] hover:bg-[var(--muted)]"
+                            variant="outline"
+                            size="sm"
+                            className="h-7 gap-1 px-2 text-[10px]"
                             aria-label={`${lessonCreateLabels.createStandaloneCta} - ${formatDayLabel(day.date, locale)}`}
                             title={lessonCreateLabels.createStandaloneCta}
                           >
-                            +
-                          </button>
+                            <Plus className="h-3.5 w-3.5" />
+                            <span>{lessonCreateLabels.createStandaloneCta}</span>
+                          </Button>
                         }
                       />
                     ) : null}
                   </div>
                   <div className="space-y-1">
                     {day.items.map((lesson) => (
-                      <button
+                      <div
                         key={`mobile-${lesson.id}`}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         className={[
-                          "w-full rounded px-2 py-1 text-left text-xs",
-                          lesson.isBookedByCurrentUser
-                            ? "border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-900/50"
-                            : "bg-[var(--muted)] hover:brightness-95",
+                          "w-full cursor-pointer rounded px-2 py-1 text-left text-xs transition hover:brightness-95",
+                          selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
+                          !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
                         ].join(" ")}
+                        style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
                         onClick={() => setSelectedLessonId(lesson.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedLessonId(lesson.id);
+                          }
+                        }}
                       >
-                        <p className="font-medium">{formatTime(lesson.startsAt, locale)} · {lesson.courseName}</p>
+                        <div className="flex items-center gap-1 font-medium">
+                          {lesson.lessonTypeIcon ? (
+                            <LessonTypeIcon
+                              iconPath={lesson.lessonTypeIcon}
+                              colorHex={lesson.lessonTypeColor}
+                              size={12}
+                              title={lesson.lessonTypeName ?? undefined}
+                            />
+                          ) : null}
+                          <LessonStatusIcon lesson={lesson} />
+                          <span>{formatTime(lesson.startsAt, locale)} · {lesson.title ?? lesson.courseName}</span>
+                        </div>
                         <p className="text-[var(--muted-foreground)]">{labels.bookedLabel}: {lesson.occupancy}</p>
                         {lesson.canViewWaitlist ? (
                           <p className="text-[var(--muted-foreground)]">{labels.queuedLabel}: {lesson.queueLength}</p>
@@ -367,13 +436,25 @@ export function BookingsManager({
                             {labels.courseTag}
                           </Badge>
                         ) : null}
-                        {lesson.isBookedByCurrentUser ? (
-                          <Badge variant="success" className="mt-0.5 text-[10px]">{labels.youAreBooked}</Badge>
-                        ) : null}
-                        {lesson.isQueuedByCurrentUser ? (
-                          <Badge variant="warning" className="mt-0.5 text-[10px]">{labels.youAreQueued}</Badge>
-                        ) : null}
-                      </button>
+                        <div className="mt-1">
+                          {lesson.isQueuedByCurrentUser ? (
+                            <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                          ) : (
+                            <BookingBadgeToggle
+                              locale={locale}
+                              lessonId={lesson.id}
+                              isBooked={lesson.isBookedByCurrentUser}
+                              canBook={lesson.canBook}
+                              canUnbook={lesson.canUnbook}
+                              labels={{
+                                bookCta: labels.bookCta,
+                                bookedCta: labels.youAreBooked,
+                                processing: labels.processing,
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -401,11 +482,13 @@ export function BookingsManager({
                 >
                   <div className="mb-2 flex items-center justify-between gap-1">
                     <p className="text-xs font-semibold">{day.date.getDate()}</p>
-                    {canCreateStandaloneLesson && day.isCurrentMonth ? (
+                    {canCreateStandaloneLesson && day.isCurrentMonth && !isClosedDay(day.date) ? (
                       <StandaloneLessonCreateDialog
                         locale={locale}
                         trainerCandidates={trainerCandidates}
                         lessonTypeCandidates={lessonTypeCandidates}
+                        openWeekdays={openWeekdays}
+                        closedDates={closedDates}
                         defaultTrainerId={defaultTrainerId}
                         defaultStartsAt={defaultStartsAtForDay(day.date)}
                         labels={{
@@ -417,38 +500,61 @@ export function BookingsManager({
                           standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
                           standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
                           standaloneLessonType: lessonCreateLabels.standaloneLessonType,
+                          lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
+                          lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
                           startsAtLabel: labels.startsAtLabel,
                           submitCta: lessonCreateLabels.createStandaloneCta,
                           processing: labels.processing,
                           closeCta: labels.closeCta,
                         }}
                         trigger={
-                          <button
+                          <Button
                             type="button"
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-md border border-[var(--surface-border)] text-xs font-semibold text-[var(--foreground)] hover:bg-[var(--muted)]"
+                            variant="outline"
+                            size="sm"
+                            className="h-6 gap-1 px-1.5 text-[10px]"
                             aria-label={`${lessonCreateLabels.createStandaloneCta} - ${formatDayLabel(day.date, locale)}`}
                             title={lessonCreateLabels.createStandaloneCta}
                           >
-                            +
-                          </button>
+                            <Plus className="h-3 w-3" />
+                            <span>{lessonCreateLabels.createStandaloneCta}</span>
+                          </Button>
                         }
                       />
                     ) : null}
                   </div>
                   <div className="space-y-1">
                     {day.items.map((lesson) => (
-                      <button
+                      <div
                         key={lesson.id}
-                        type="button"
+                        role="button"
+                        tabIndex={0}
                         className={[
-                          "w-full rounded px-2 py-1 text-left text-[11px]",
-                          lesson.isBookedByCurrentUser
-                            ? "border border-emerald-300 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-900/50"
-                            : "bg-[var(--muted)] hover:brightness-95",
+                          "w-full cursor-pointer rounded px-2 py-1 text-left text-[11px] transition hover:brightness-95",
+                          selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
+                          !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
                         ].join(" ")}
+                        style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
                         onClick={() => setSelectedLessonId(lesson.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setSelectedLessonId(lesson.id);
+                          }
+                        }}
                       >
-                        <p className="font-medium">{formatTime(lesson.startsAt, locale)} · {lesson.courseName}</p>
+                        <div className="flex items-center gap-1 font-medium">
+                          {lesson.lessonTypeIcon ? (
+                            <LessonTypeIcon
+                              iconPath={lesson.lessonTypeIcon}
+                              colorHex={lesson.lessonTypeColor}
+                              size={12}
+                              title={lesson.lessonTypeName ?? undefined}
+                            />
+                          ) : null}
+                          <LessonStatusIcon lesson={lesson} />
+                          <span>{formatTime(lesson.startsAt, locale)} · {lesson.title ?? lesson.courseName}</span>
+                        </div>
                         <p className="text-[var(--muted-foreground)]">{labels.bookedLabel}: {lesson.occupancy}</p>
                         {lesson.canViewWaitlist ? (
                           <p className="text-[var(--muted-foreground)]">{labels.queuedLabel}: {lesson.queueLength}</p>
@@ -458,13 +564,25 @@ export function BookingsManager({
                             {labels.courseTag}
                           </Badge>
                         ) : null}
-                        {lesson.isBookedByCurrentUser ? (
-                          <Badge variant="success" className="mt-0.5 text-[10px]">{labels.youAreBooked}</Badge>
-                        ) : null}
-                        {lesson.isQueuedByCurrentUser ? (
-                          <Badge variant="warning" className="mt-0.5 text-[10px]">{labels.youAreQueued}</Badge>
-                        ) : null}
-                      </button>
+                        <div className="mt-1">
+                          {lesson.isQueuedByCurrentUser ? (
+                            <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                          ) : (
+                            <BookingBadgeToggle
+                              locale={locale}
+                              lessonId={lesson.id}
+                              isBooked={lesson.isBookedByCurrentUser}
+                              canBook={lesson.canBook}
+                              canUnbook={lesson.canUnbook}
+                              labels={{
+                                bookCta: labels.bookCta,
+                                bookedCta: labels.youAreBooked,
+                                processing: labels.processing,
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -477,19 +595,50 @@ export function BookingsManager({
                 {selectedLesson ? (
                   <>
                     <DialogHeader>
-                      <DialogTitle>{labels.detailsTitle}</DialogTitle>
-                      <DialogDescription>{labels.detailsDescription}</DialogDescription>
+                      <div className="flex items-start gap-3">
+                        {selectedLesson.lessonTypeIcon ? (
+                          <span
+                            className="inline-flex h-16 w-16 items-center justify-center rounded-xl"
+                            style={{
+                              backgroundColor: selectedLesson.lessonTypeColor
+                                ? hexToRgba(selectedLesson.lessonTypeColor, 0.18)
+                                : undefined,
+                              border: selectedLesson.lessonTypeColor
+                                ? `1px solid ${hexToRgba(selectedLesson.lessonTypeColor, 0.5)}`
+                                : undefined,
+                            }}
+                          >
+                            <LessonTypeIcon
+                              iconPath={selectedLesson.lessonTypeIcon}
+                              colorHex={selectedLesson.lessonTypeColor}
+                              size={44}
+                              title={selectedLesson.lessonTypeName ?? undefined}
+                            />
+                          </span>
+                        ) : null}
+                        <div className="space-y-1">
+                          <DialogTitle className="text-xl">{selectedLesson.title ?? selectedLesson.courseName}</DialogTitle>
+                          <DialogDescription>{labels.detailsDescription}</DialogDescription>
+                        </div>
+                      </div>
                     </DialogHeader>
 
                     <div
-                      className={[
-                        "space-y-2 rounded-md p-2 text-sm",
-                        selectedLesson.isBookedByCurrentUser
-                          ? "border border-emerald-300 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/30"
-                          : "",
-                      ].join(" ")}
+                      className="space-y-2 rounded-md p-2 text-sm"
+                      style={
+                        selectedLesson.lessonTypeColor
+                          ? {
+                              backgroundColor: hexToRgba(selectedLesson.lessonTypeColor, 0.14),
+                              border: `1px solid ${hexToRgba(selectedLesson.lessonTypeColor, 0.45)}`,
+                            }
+                          : undefined
+                      }
                     >
-                      <p className="font-semibold">{selectedLesson.courseName}</p>
+                      {selectedLesson.description ? (
+                        <p className="text-xs text-[var(--muted-foreground)]">
+                          {lessonCreateLabels.lessonDescriptionLabel}: {selectedLesson.description}
+                        </p>
+                      ) : null}
                       <p>{labels.startsAtLabel}: {formatDateTime(selectedLesson.startsAt, locale)}</p>
                       <p>{labels.endsAtLabel}: {formatDateTime(selectedLesson.endsAt, locale)}</p>
                       <p>{labels.trainerLabel}: {selectedLesson.trainerName ?? "-"}</p>
@@ -502,7 +651,12 @@ export function BookingsManager({
                       ) : null}
                       <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
                         {selectedLesson.lessonTypeIcon ? (
-                          <Image src={selectedLesson.lessonTypeIcon} alt={selectedLesson.lessonTypeName ?? "lesson type"} width={16} height={16} />
+                          <LessonTypeIcon
+                            iconPath={selectedLesson.lessonTypeIcon}
+                            colorHex={selectedLesson.lessonTypeColor}
+                            size={16}
+                            title={selectedLesson.lessonTypeName ?? undefined}
+                          />
                         ) : null}
                         <span>{selectedLesson.lessonTypeName ?? "-"}</span>
                       </div>
@@ -513,9 +667,10 @@ export function BookingsManager({
                         {labels.closeCta}
                       </Button>
                       {selectedLesson.canManageLesson ? (
-                        <button
+                        <Button
                           type="button"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-[var(--surface-border)] text-[var(--foreground)] hover:bg-[var(--muted)]"
+                          variant="outline"
+                          className="gap-1"
                           aria-label={lessonCreateLabels.manageTriggerLabel}
                           title={lessonCreateLabels.manageTriggerLabel}
                           onClick={() => {
@@ -524,11 +679,13 @@ export function BookingsManager({
                           }}
                         >
                           <Pencil className="h-4 w-4" />
-                        </button>
+                          <span>{lessonCreateLabels.manageTriggerLabel}</span>
+                        </Button>
                       ) : null}
                       {selectedLesson.isBookedByCurrentUser ? (
                         <div className="inline-flex items-center gap-2">
-                          <Badge variant="success" className="px-3 py-2 text-xs">
+                          <Badge variant="success" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
+                            <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
                             {labels.youAreBooked}
                           </Badge>
                           <Button
@@ -540,7 +697,8 @@ export function BookingsManager({
                           </Button>
                         </div>
                       ) : selectedLesson.isQueuedByCurrentUser ? (
-                        <Badge variant="warning" className="px-3 py-2 text-xs">
+                        <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
+                          <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
                           {labels.youAreQueued}
                         </Badge>
                       ) : (
@@ -561,13 +719,16 @@ export function BookingsManager({
             {manageLesson ? (
               <LessonManageDialog
                 open
-                onOpenChange={(nextOpen) => {
+                showDefaultTrigger={false}
+                onOpenChangeAction={(nextOpen) => {
                   if (!nextOpen) setManageLessonId(null);
                 }}
                 locale={locale}
                 lesson={{
                   id: manageLesson.id,
                   canEditMain: !manageLesson.isCourseLesson,
+                  title: manageLesson.title ?? "",
+                  description: manageLesson.description ?? "",
                   startsAt: toDateTimeLocalFromIso(manageLesson.startsAt),
                   durationMinutes: Math.max(
                     1,
@@ -584,6 +745,8 @@ export function BookingsManager({
                 trainerCandidates={trainerCandidates}
                 lessonTypeCandidates={lessonTypeCandidates}
                 attendeeCandidates={attendeeCandidates}
+                openWeekdays={openWeekdays}
+                closedDates={closedDates}
                 labels={{
                   title: lessonCreateLabels.manageTitle,
                   description: lessonCreateLabels.manageDescription,
@@ -595,6 +758,8 @@ export function BookingsManager({
                   standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
                   standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
                   standaloneLessonType: lessonCreateLabels.standaloneLessonType,
+                  lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
+                  lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
                   updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
                   updateTrainerCta: lessonCreateLabels.updateTrainerCta,
                   attendeesLabel: lessonCreateLabels.attendeesLabel,
@@ -608,6 +773,7 @@ export function BookingsManager({
                   removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
                   processing: lessonCreateLabels.processing,
                   closeCta: lessonCreateLabels.closeCta,
+                  manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
                 }}
               />
             ) : null}
@@ -617,5 +783,3 @@ export function BookingsManager({
     </section>
   );
 }
-
-

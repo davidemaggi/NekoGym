@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import { createUserAction, deleteUserAction, updateUserAction } from "@/app/[locale]/(app)/users/actions";
 import {
@@ -83,6 +84,7 @@ type UsersManagerProps = {
       name: string;
       email: string;
       password: string;
+      emailVerified: string;
       role: string;
       membershipStatus: string;
       trialEndsAt: string;
@@ -91,6 +93,11 @@ type UsersManagerProps = {
       subscriptionRemaining: string;
       subscriptionResetAt: string;
       subscriptionEndsAt: string;
+    };
+    tabs: {
+      profile: string;
+      membership: string;
+      subscription: string;
     };
     actions: {
       save: string;
@@ -262,7 +269,10 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
-            <Button>{labels.createCta}</Button>
+            <Button>
+              <Plus className="h-4 w-4" />
+              <span>{labels.createCta}</span>
+            </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -277,7 +287,8 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                   {labels.actions.cancel}
                 </Button>
                 <Button type="submit" disabled={isPending}>
-                  {isPending ? labels.actions.processing : labels.actions.reviewCreate}
+                  <Plus className="h-4 w-4" />
+                  <span>{isPending ? labels.actions.processing : labels.actions.reviewCreate}</span>
                 </Button>
               </DialogFooter>
             </form>
@@ -345,7 +356,8 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                       <td className="py-3 text-right">
                         <div className="inline-flex gap-2">
                           <Button variant="outline" size="sm" onClick={() => setEditUser(user)}>
-                            {labels.actions.edit}
+                            <Pencil className="h-4 w-4" />
+                            <span>{labels.actions.edit}</span>
                           </Button>
                           <Button
                             variant="destructive"
@@ -355,7 +367,8 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                               setConfirmation({ kind: "delete", payload: { id: user.id, name: user.name } });
                             }}
                           >
-                            {labels.actions.delete}
+                            <Trash2 className="h-4 w-4" />
+                            <span>{labels.actions.delete}</span>
                           </Button>
                         </div>
                       </td>
@@ -398,7 +411,8 @@ export function UsersManager({ locale, users, labels }: UsersManagerProps) {
                   {labels.actions.cancel}
                 </Button>
                 <Button type="submit" disabled={isPending}>
-                  {isPending ? labels.actions.processing : labels.actions.reviewUpdate}
+                  <Pencil className="h-4 w-4" />
+                  <span>{isPending ? labels.actions.processing : labels.actions.reviewUpdate}</span>
                 </Button>
               </DialogFooter>
             </form>
@@ -468,143 +482,192 @@ function UserFormFields({
   };
 }) {
   const [subscriptionType, setSubscriptionType] = useState<UserItem["subscriptionType"]>(defaults?.subscriptionType ?? "NONE");
+  const [activeTab, setActiveTab] = useState<"profile" | "membership" | "subscription">("profile");
 
   return (
     <>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="name">{labels.fields.name}</Label>
-          <Input id="name" name="name" required defaultValue={defaults?.name ?? ""} />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="email">{labels.fields.email}</Label>
-          <Input id="email" name="email" type="email" required defaultValue={defaults?.email ?? ""} />
-        </div>
+      <div className="inline-flex rounded-md border border-[var(--surface-border)] p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab("profile")}
+          className={[
+            "rounded px-3 py-1.5 text-xs font-medium",
+            activeTab === "profile"
+              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+          ].join(" ")}
+        >
+          {labels.tabs.profile}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("membership")}
+          className={[
+            "rounded px-3 py-1.5 text-xs font-medium",
+            activeTab === "membership"
+              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+          ].join(" ")}
+        >
+          {labels.tabs.membership}
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("subscription")}
+          className={[
+            "rounded px-3 py-1.5 text-xs font-medium",
+            activeTab === "subscription"
+              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+          ].join(" ")}
+        >
+          {labels.tabs.subscription}
+        </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="password">{labels.fields.password}</Label>
-          <Input
-            id="password"
-            name="password"
-            type="password"
-            required={!defaults}
-            placeholder={defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
-          />
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
-          </p>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="role">{labels.fields.role}</Label>
-          <select
-            id="role"
-            name="role"
-            defaultValue={defaults?.role ?? "TRAINEE"}
-            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
-          >
-            <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
-            <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
-            <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
-          </select>
-        </div>
-      </div>
+      {activeTab === "profile" ? (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="name">{labels.fields.name}</Label>
+              <Input id="name" name="name" required defaultValue={defaults?.name ?? ""} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="email">{labels.fields.email}</Label>
+              <Input id="email" name="email" type="email" required defaultValue={defaults?.email ?? ""} />
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="emailVerified">Email verified</Label>
-          <input
-            id="emailVerified"
-            name="emailVerified"
-            type="checkbox"
-            defaultChecked={defaults?.emailVerified ?? false}
-            className="h-4 w-4 rounded border-[var(--surface-border)]"
-          />
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="membershipStatus">{labels.fields.membershipStatus}</Label>
-          <select
-            id="membershipStatus"
-            name="membershipStatus"
-            defaultValue={defaults?.membershipStatus ?? "INACTIVE"}
-            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
-          >
-            <option value="ACTIVE">{labels.membershipOptions.ACTIVE}</option>
-            <option value="INACTIVE">{labels.membershipOptions.INACTIVE}</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="trialEndsAt">{labels.fields.trialEndsAt}</Label>
-          <Input id="trialEndsAt" name="trialEndsAt" type="date" defaultValue={defaults?.trialEndsAt ?? ""} />
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="password">{labels.fields.password}</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                required={!defaults}
+                placeholder={defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
+              />
+              <p className="text-xs text-[var(--muted-foreground)]">
+                {defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="role">{labels.fields.role}</Label>
+              <select
+                id="role"
+                name="role"
+                defaultValue={defaults?.role ?? "TRAINEE"}
+                className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+              >
+                <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
+                <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
+                <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
+              </select>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="subscriptionType">{labels.fields.subscriptionType}</Label>
-          <select
-            id="subscriptionType"
-            name="subscriptionType"
-            defaultValue={defaults?.subscriptionType ?? "NONE"}
-            onChange={(event) => setSubscriptionType(event.target.value as UserItem["subscriptionType"])}
-            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
-          >
-            <option value="NONE">{labels.subscriptionOptions.NONE}</option>
-            <option value="WEEKLY">{labels.subscriptionOptions.WEEKLY}</option>
-            <option value="MONTHLY">{labels.subscriptionOptions.MONTHLY}</option>
-            <option value="FIXED">{labels.subscriptionOptions.FIXED}</option>
-          </select>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="subscriptionLessons">{labels.fields.subscriptionLessons}</Label>
-          <Input
-            id="subscriptionLessons"
-            name="subscriptionLessons"
-            type="number"
-            min={1}
-            defaultValue={defaults?.subscriptionLessons ?? ""}
-            disabled={subscriptionType === "NONE"}
-          />
-        </div>
-      </div>
+          <div className="space-y-1">
+            <Label htmlFor="emailVerified">{labels.fields.emailVerified}</Label>
+            <input
+              id="emailVerified"
+              name="emailVerified"
+              type="checkbox"
+              defaultChecked={defaults?.emailVerified ?? false}
+              className="h-4 w-4 rounded border-[var(--surface-border)]"
+            />
+          </div>
+        </>
+      ) : null}
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-1">
-          <Label htmlFor="subscriptionRemaining">{labels.fields.subscriptionRemaining}</Label>
-          <Input
-            id="subscriptionRemaining"
-            name="subscriptionRemaining"
-            type="number"
-            min={0}
-            defaultValue={defaults?.subscriptionRemaining ?? ""}
-            disabled={subscriptionType === "NONE"}
-          />
+      {activeTab === "membership" ? (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <Label htmlFor="membershipStatus">{labels.fields.membershipStatus}</Label>
+            <select
+              id="membershipStatus"
+              name="membershipStatus"
+              defaultValue={defaults?.membershipStatus ?? "INACTIVE"}
+              className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+            >
+              <option value="ACTIVE">{labels.membershipOptions.ACTIVE}</option>
+              <option value="INACTIVE">{labels.membershipOptions.INACTIVE}</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="trialEndsAt">{labels.fields.trialEndsAt}</Label>
+            <Input id="trialEndsAt" name="trialEndsAt" type="date" defaultValue={defaults?.trialEndsAt ?? ""} />
+          </div>
         </div>
-        <div className="space-y-1">
-          <Label htmlFor="subscriptionResetAt">{labels.fields.subscriptionResetAt}</Label>
-          <Input
-            id="subscriptionResetAt"
-            name="subscriptionResetAt"
-            type="datetime-local"
-            defaultValue={defaults?.subscriptionResetAt ?? ""}
-            disabled={subscriptionType === "NONE"}
-          />
-        </div>
-      </div>
+      ) : null}
 
-      <div className="space-y-1">
-        <Label htmlFor="subscriptionEndsAt">{labels.fields.subscriptionEndsAt}</Label>
-        <Input
-          id="subscriptionEndsAt"
-          name="subscriptionEndsAt"
-          type="date"
-          defaultValue={defaults?.subscriptionEndsAt ?? ""}
-          disabled={subscriptionType === "NONE"}
-        />
-      </div>
+      {activeTab === "subscription" ? (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="subscriptionType">{labels.fields.subscriptionType}</Label>
+              <select
+                id="subscriptionType"
+                name="subscriptionType"
+                defaultValue={defaults?.subscriptionType ?? "NONE"}
+                onChange={(event) => setSubscriptionType(event.target.value as UserItem["subscriptionType"])}
+                className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+              >
+                <option value="NONE">{labels.subscriptionOptions.NONE}</option>
+                <option value="WEEKLY">{labels.subscriptionOptions.WEEKLY}</option>
+                <option value="MONTHLY">{labels.subscriptionOptions.MONTHLY}</option>
+                <option value="FIXED">{labels.subscriptionOptions.FIXED}</option>
+              </select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="subscriptionLessons">{labels.fields.subscriptionLessons}</Label>
+              <Input
+                id="subscriptionLessons"
+                name="subscriptionLessons"
+                type="number"
+                min={1}
+                defaultValue={defaults?.subscriptionLessons ?? ""}
+                disabled={subscriptionType === "NONE"}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="subscriptionRemaining">{labels.fields.subscriptionRemaining}</Label>
+              <Input
+                id="subscriptionRemaining"
+                name="subscriptionRemaining"
+                type="number"
+                min={0}
+                defaultValue={defaults?.subscriptionRemaining ?? ""}
+                disabled={subscriptionType === "NONE"}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="subscriptionResetAt">{labels.fields.subscriptionResetAt}</Label>
+              <Input
+                id="subscriptionResetAt"
+                name="subscriptionResetAt"
+                type="datetime-local"
+                defaultValue={defaults?.subscriptionResetAt ?? ""}
+                disabled={subscriptionType === "NONE"}
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="subscriptionEndsAt">{labels.fields.subscriptionEndsAt}</Label>
+            <Input
+              id="subscriptionEndsAt"
+              name="subscriptionEndsAt"
+              type="date"
+              defaultValue={defaults?.subscriptionEndsAt ?? ""}
+              disabled={subscriptionType === "NONE"}
+            />
+          </div>
+        </>
+      ) : null}
     </>
   );
 }
-
-

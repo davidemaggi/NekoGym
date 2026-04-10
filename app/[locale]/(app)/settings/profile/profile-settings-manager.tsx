@@ -3,12 +3,16 @@
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { toast } from "sonner";
 
 import {
   changePasswordAction,
+  disableTotpAction,
+  enableTotpAction,
   requestEmailChangeAction,
   sendTestWebPushAction,
+  startTotpSetupAction,
   startTelegramLinkAction,
   updateNotificationPreferencesAction,
 } from "@/app/[locale]/(app)/settings/profile/actions";
@@ -16,12 +20,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { OtpCodeField } from "@/components/ui/otp-code-field";
 
 type ProfileSettingsManagerProps = {
   locale: string;
   labels: {
     title: string;
     subtitle: string;
+    tabs: {
+      security: string;
+      notifications: string;
+      telegram: string;
+    };
     telegramTitle: string;
     telegramDescription: string;
     linkedStatus: string;
@@ -49,6 +59,17 @@ type ProfileSettingsManagerProps = {
     currentPasswordLabel: string;
     newPasswordLabel: string;
     updatePasswordCta: string;
+    twoFactorTitle: string;
+    twoFactorDescription: string;
+    twoFactorEnabled: string;
+    twoFactorDisabled: string;
+    twoFactorSetupCta: string;
+    twoFactorDisableCta: string;
+    twoFactorVerifyCta: string;
+    twoFactorCodeLabel: string;
+    twoFactorSecretLabel: string;
+    twoFactorOtpAuthLabel: string;
+    twoFactorHint: string;
     webPushTitle: string;
     webPushDescription: string;
     webPushSupported: string;
@@ -71,6 +92,8 @@ type ProfileSettingsManagerProps = {
     email: string;
     pendingEmail: string | null;
     isEmailVerified: boolean;
+    totpEnabled: boolean;
+    totpSecret: string | null;
     hasWebPushSubscription: boolean;
     notifyByEmail: boolean;
     notifyByTelegram: boolean;
@@ -84,6 +107,349 @@ type ProfileSettingsManagerProps = {
   };
 };
 
+type ActiveProfileTab = "security" | "notifications" | "telegram";
+
+function ProfileTabs({
+  activeTab,
+  onChange,
+  labels,
+}: {
+  activeTab: ActiveProfileTab;
+  onChange: (tab: ActiveProfileTab) => void;
+  labels: ProfileSettingsManagerProps["labels"]["tabs"];
+}) {
+  return (
+    <div className="flex border-b border-[var(--surface-border)]">
+      {(["security", "notifications", "telegram"] as const).map((tab) => (
+        <button
+          key={tab}
+          type="button"
+          onClick={() => onChange(tab)}
+          className={[
+            "px-3 py-2 text-sm",
+            activeTab === tab ? "border-b-2 border-[var(--primary)] font-medium" : "text-[var(--muted-foreground)]",
+          ].join(" ")}
+        >
+          {labels[tab]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SecurityTabContent(props: {
+  labels: ProfileSettingsManagerProps["labels"];
+  initialEmail: string;
+  isEmailVerified: boolean;
+  pendingEmail: string | null;
+  newEmail: string;
+  currentPassword: string;
+  newPassword: string;
+  totpEnabled: boolean;
+  totpSecret: string | null;
+  totpUri: string | null;
+  totpQrDataUrl: string | null;
+  isIdentityPending: boolean;
+  isTotpPending: boolean;
+  onChangeNewEmail: (value: string) => void;
+  onChangeCurrentPassword: (value: string) => void;
+  onChangeNewPassword: (value: string) => void;
+  onRequestEmailChange: () => void;
+  onChangePassword: () => void;
+  onStartTotpSetup: () => void;
+  onEnableTotp: () => void;
+  onDisableTotp: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{props.labels.accountSecurityTitle}</CardTitle>
+        <p className="text-sm text-[var(--muted-foreground)]">{props.labels.accountSecurityDescription}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-md border border-[var(--surface-border)] p-3">
+          <p className="text-sm font-medium">
+            {props.labels.currentEmailLabel}: {props.initialEmail}
+          </p>
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {props.isEmailVerified ? props.labels.emailVerifiedStatus : props.labels.emailNotVerifiedStatus}
+          </p>
+          {props.pendingEmail ? (
+            <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+              {props.labels.pendingEmailLabel}: {props.pendingEmail}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <Label htmlFor="newEmail">{props.labels.newEmailLabel}</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="newEmail"
+              type="email"
+              value={props.newEmail}
+              onChange={(event) => props.onChangeNewEmail(event.target.value)}
+              placeholder={props.labels.newEmailPlaceholder}
+            />
+            <Button type="button" variant="outline" onClick={props.onRequestEmailChange} disabled={props.isIdentityPending || !props.newEmail}>
+              {props.labels.sendEmailChangeCta}
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <Label htmlFor="currentPassword">{props.labels.currentPasswordLabel}</Label>
+          <Input
+            id="currentPassword"
+            type="password"
+            value={props.currentPassword}
+            onChange={(event) => props.onChangeCurrentPassword(event.target.value)}
+          />
+          <Label htmlFor="newPassword">{props.labels.newPasswordLabel}</Label>
+          <Input
+            id="newPassword"
+            type="password"
+            minLength={8}
+            value={props.newPassword}
+            onChange={(event) => props.onChangeNewPassword(event.target.value)}
+          />
+          <Button type="button" onClick={props.onChangePassword} disabled={props.isIdentityPending || !props.currentPassword || props.newPassword.length < 8}>
+            {props.labels.updatePasswordCta}
+          </Button>
+        </div>
+
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <p className="text-sm font-medium">{props.labels.twoFactorTitle}</p>
+          <p className="text-xs text-[var(--muted-foreground)]">{props.labels.twoFactorDescription}</p>
+          <p className="text-xs font-medium">
+            {props.totpEnabled ? props.labels.twoFactorEnabled : props.labels.twoFactorDisabled}
+          </p>
+
+          {!props.totpEnabled ? (
+            <>
+              <Button type="button" variant="outline" onClick={props.onStartTotpSetup} disabled={props.isTotpPending}>
+                {props.labels.twoFactorSetupCta}
+              </Button>
+
+              {props.totpSecret ? (
+                <div className="space-y-2 rounded-md border border-[var(--surface-border)] bg-[var(--muted)]/30 p-3">
+                  <p className="text-xs text-[var(--muted-foreground)]">{props.labels.twoFactorHint}</p>
+                  <p className="text-xs">
+                    <span className="font-medium">{props.labels.twoFactorSecretLabel}: </span>
+                    <span className="font-mono">{props.totpSecret}</span>
+                  </p>
+                  {props.totpUri ? (
+                    <p className="text-xs break-all">
+                      <span className="font-medium">{props.labels.twoFactorOtpAuthLabel}: </span>
+                      <a className="underline" href={props.totpUri}>
+                        {props.totpUri}
+                      </a>
+                    </p>
+                  ) : null}
+
+                  {props.totpQrDataUrl ? (
+                    <div className="rounded-md border border-[var(--surface-border)] p-2">
+                      <Image
+                        src={props.totpQrDataUrl}
+                        alt={props.labels.twoFactorTitle}
+                        width={180}
+                        height={180}
+                        unoptimized
+                        className="h-[180px] w-[180px]"
+                      />
+                    </div>
+                  ) : null}
+
+                  <form id="totp-enable-form" className="space-y-2" onSubmit={(event) => event.preventDefault()}>
+                    <Label>{props.labels.twoFactorCodeLabel}</Label>
+                    <OtpCodeField />
+                    <Button type="button" onClick={props.onEnableTotp} disabled={props.isTotpPending}>
+                      {props.labels.twoFactorVerifyCta}
+                    </Button>
+                  </form>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <Button type="button" variant="destructive" onClick={props.onDisableTotp} disabled={props.isTotpPending}>
+              {props.labels.twoFactorDisableCta}
+            </Button>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function NotificationsTabContent(props: {
+  labels: ProfileSettingsManagerProps["labels"];
+  supportsWebPush: boolean;
+  unsupportedReasons: string[];
+  webPushDiagnostics: {
+    protocol: string;
+    isStandalone: boolean;
+    isIOS: boolean;
+    permission: string;
+    vapidConfigured: boolean;
+  } | null;
+  hasPushSubscription: boolean;
+  isPushPending: boolean;
+  isIdentityPending: boolean;
+  notifyByEmail: boolean;
+  notifyByTelegram: boolean;
+  notifyByWebPush: boolean;
+  onToggleNotifyByEmail: (value: boolean) => void;
+  onToggleNotifyByTelegram: (value: boolean) => void;
+  onToggleNotifyByWebPush: (value: boolean) => void;
+  onEnableWebPush: () => void;
+  onDisableWebPush: () => void;
+  onSendWebPushTest: () => void;
+  onSaveNotificationPreferences: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{props.labels.notificationPrefsTitle}</CardTitle>
+        <p className="text-sm text-[var(--muted-foreground)]">{props.labels.notificationPrefsDescription}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <p className="text-sm font-medium">{props.labels.webPushTitle}</p>
+          <p className="text-xs text-[var(--muted-foreground)]">{props.labels.webPushDescription}</p>
+          <p className="text-xs text-[var(--muted-foreground)]">
+            {props.supportsWebPush ? props.labels.webPushSupported : props.labels.webPushNotSupported}
+          </p>
+          {!props.supportsWebPush ? (
+            <div className="rounded-md border border-[var(--surface-border)] bg-[var(--muted)]/30 p-2 text-xs text-[var(--muted-foreground)]">
+              <p className="font-medium">Debug</p>
+              <ul className="mt-1 list-disc space-y-0.5 pl-4">
+                {props.unsupportedReasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+                <li>Protocol: {props.webPushDiagnostics?.protocol ?? "n/a"}</li>
+                <li>Standalone app: {props.webPushDiagnostics?.isStandalone ? "yes" : "no"}</li>
+                <li>iOS device: {props.webPushDiagnostics?.isIOS ? "yes" : "no"}</li>
+                <li>Permission: {props.webPushDiagnostics?.permission ?? "n/a"}</li>
+                <li>VAPID public key: {props.webPushDiagnostics?.vapidConfigured ? "configured" : "missing"}</li>
+              </ul>
+            </div>
+          ) : null}
+          <p className="text-xs font-medium">
+            {props.hasPushSubscription ? props.labels.webPushEnabled : props.labels.webPushDisabled}
+          </p>
+          <div className="inline-flex gap-2">
+            <Button type="button" variant="outline" onClick={props.onEnableWebPush} disabled={props.isPushPending}>
+              {props.isPushPending ? props.labels.webPushProcessing : props.labels.webPushEnableCta}
+            </Button>
+            <Button type="button" variant="secondary" onClick={props.onDisableWebPush} disabled={props.isPushPending}>
+              {props.isPushPending ? props.labels.webPushProcessing : props.labels.webPushDisableCta}
+            </Button>
+            <Button type="button" onClick={props.onSendWebPushTest} disabled={props.isPushPending || !props.hasPushSubscription}>
+              {props.isPushPending ? props.labels.webPushProcessing : props.labels.webPushTestCta}
+            </Button>
+          </div>
+        </div>
+
+        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={props.notifyByEmail} onChange={(event) => props.onToggleNotifyByEmail(event.target.checked)} />
+            {props.labels.notificationEmailLabel}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={props.notifyByTelegram} onChange={(event) => props.onToggleNotifyByTelegram(event.target.checked)} />
+            {props.labels.notificationTelegramLabel}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={props.notifyByWebPush} onChange={(event) => props.onToggleNotifyByWebPush(event.target.checked)} />
+            {props.labels.notificationWebPushLabel}
+          </label>
+          <Button type="button" variant="outline" onClick={props.onSaveNotificationPreferences} disabled={props.isIdentityPending}>
+            {props.isIdentityPending ? props.labels.webPushProcessing : props.labels.notificationPrefsSaveCta}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function TelegramTabContent(props: {
+  labels: ProfileSettingsManagerProps["labels"];
+  state: ProfileSettingsManagerProps["initialTelegram"];
+  linkCommand: string | null;
+  qrImageUrl: string | null;
+  isPending: boolean;
+  onGenerateCode: () => void;
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{props.labels.telegramTitle}</CardTitle>
+        <p className="text-sm text-[var(--muted-foreground)]">{props.labels.telegramDescription}</p>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="rounded-md border border-[var(--surface-border)] p-3">
+          <p className="text-sm font-medium">
+            {props.state.chatId ? props.labels.linkedStatus : props.labels.notLinkedStatus}
+          </p>
+          {props.state.chatId ? (
+            <div className="mt-2 space-y-1 text-xs text-[var(--muted-foreground)]">
+              <p>
+                {props.labels.linkedChatIdLabel}: <span className="font-mono">{props.state.chatId}</span>
+              </p>
+              {props.state.username ? <p>{props.labels.linkedUsernameLabel}: @{props.state.username}</p> : null}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Button type="button" onClick={props.onGenerateCode} disabled={props.isPending}>
+            {props.isPending ? props.labels.generating : props.labels.generateCodeCta}
+          </Button>
+          <p className="text-xs text-[var(--muted-foreground)]">{props.labels.expiresHint}</p>
+        </div>
+
+        {props.state.linkToken ? (
+          <div className="grid gap-4 md:grid-cols-[1fr_auto]">
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">{props.labels.codeLabel}</p>
+              <p className="rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 font-mono text-sm">
+                {props.state.linkToken}
+              </p>
+              <p className="text-xs text-[var(--muted-foreground)]">{props.labels.codeHint}</p>
+
+              {props.linkCommand ? (
+                <p className="text-xs text-[var(--muted-foreground)]">
+                  {props.labels.commandLabel}: <span className="font-mono">{props.linkCommand}</span>
+                </p>
+              ) : null}
+
+              {props.state.deepLink ? (
+                <Link
+                  href={props.state.deepLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-sm text-[var(--foreground)] underline underline-offset-2"
+                >
+                  {props.labels.openTelegramCta}
+                </Link>
+              ) : (
+                <p className="text-xs text-amber-600 dark:text-amber-400">{props.labels.noBotConfiguredHint}</p>
+              )}
+            </div>
+
+            {props.qrImageUrl ? (
+              <div className="rounded-md border border-[var(--surface-border)] p-2">
+                <Image src={props.qrImageUrl} alt={props.labels.qrHint} width={180} height={180} unoptimized className="h-[180px] w-[180px]" />
+                <p className="mt-2 max-w-[180px] text-center text-xs text-[var(--muted-foreground)]">{props.labels.qrHint}</p>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function ProfileSettingsManager({ locale, labels, initialIdentity, initialTelegram }: ProfileSettingsManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [isIdentityPending, startIdentityTransition] = useTransition();
@@ -93,11 +459,17 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
   const [pendingEmail, setPendingEmail] = useState(initialIdentity.pendingEmail);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [totpEnabled, setTotpEnabled] = useState(initialIdentity.totpEnabled);
+  const [totpSecret, setTotpSecret] = useState(initialIdentity.totpSecret);
+  const [totpUri, setTotpUri] = useState<string | null>(null);
+  const [totpQrDataUrl, setTotpQrDataUrl] = useState<string | null>(null);
+  const [isTotpPending, startTotpTransition] = useTransition();
   const [isPushPending, startPushTransition] = useTransition();
   const [hasPushSubscription, setHasPushSubscription] = useState(initialIdentity.hasWebPushSubscription);
   const [notifyByEmail, setNotifyByEmail] = useState(initialIdentity.notifyByEmail);
   const [notifyByTelegram, setNotifyByTelegram] = useState(initialIdentity.notifyByTelegram);
   const [notifyByWebPush, setNotifyByWebPush] = useState(initialIdentity.notifyByWebPush);
+  const [activeTab, setActiveTab] = useState<ActiveProfileTab>("security");
   const webPushDiagnostics = useMemo(() => {
     if (typeof window === "undefined") return null;
 
@@ -170,6 +542,7 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
         deepLink: result.deepLink ?? null,
       }));
       setQrVersion((prev) => prev + 1);
+      setActiveTab("telegram");
       toast.success(result.message);
     });
   }
@@ -207,6 +580,71 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
 
       setCurrentPassword("");
       setNewPassword("");
+      toast.success(result.message);
+    });
+  }
+
+  function handleStartTotpSetup() {
+    const formData = new FormData();
+    formData.set("locale", locale);
+
+    startTotpTransition(async () => {
+      const result = await startTotpSetupAction(formData);
+      if (!result.ok || !result.secret) {
+        toast.error(result.message);
+        return;
+      }
+
+      setTotpSecret(result.secret);
+      setTotpUri(result.otpauthUri ?? null);
+      if (result.otpauthUri) {
+        const qrDataUrl = await QRCode.toDataURL(result.otpauthUri, {
+          width: 220,
+          margin: 1,
+          errorCorrectionLevel: "M",
+        });
+        setTotpQrDataUrl(qrDataUrl);
+      } else {
+        setTotpQrDataUrl(null);
+      }
+      setTotpEnabled(false);
+      toast.success(result.message);
+    });
+  }
+
+  function handleEnableTotp() {
+    const form = document.getElementById("totp-enable-form") as HTMLFormElement | null;
+    if (!form) return;
+    const formData = new FormData(form);
+    formData.set("locale", locale);
+
+    startTotpTransition(async () => {
+      const result = await enableTotpAction(formData);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+
+      setTotpEnabled(true);
+      toast.success(result.message);
+    });
+  }
+
+  function handleDisableTotp() {
+    const formData = new FormData();
+    formData.set("locale", locale);
+
+    startTotpTransition(async () => {
+      const result = await disableTotpAction(formData);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+
+      setTotpEnabled(false);
+      setTotpSecret(null);
+      setTotpUri(null);
+      setTotpQrDataUrl(null);
       toast.success(result.message);
     });
   }
@@ -343,192 +781,66 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
         <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
       </header>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.accountSecurityTitle}</CardTitle>
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.accountSecurityDescription}</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border border-[var(--surface-border)] p-3">
-            <p className="text-sm font-medium">
-              {labels.currentEmailLabel}: {initialIdentity.email}
-            </p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {initialIdentity.isEmailVerified
-                ? labels.emailVerifiedStatus
-                : labels.emailNotVerifiedStatus}
-            </p>
-            {pendingEmail ? (
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-                {labels.pendingEmailLabel}: {pendingEmail}
-              </p>
-            ) : null}
-          </div>
+      <ProfileTabs activeTab={activeTab} onChange={setActiveTab} labels={labels.tabs} />
 
-          <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
-            <Label htmlFor="newEmail">{labels.newEmailLabel}</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="newEmail"
-                type="email"
-                value={newEmail}
-                onChange={(event) => setNewEmail(event.target.value)}
-                placeholder={labels.newEmailPlaceholder}
-              />
-              <Button type="button" variant="outline" onClick={handleRequestEmailChange} disabled={isIdentityPending || !newEmail}>
-                {labels.sendEmailChangeCta}
-              </Button>
-            </div>
-          </div>
+      {activeTab === "security" ? (
+        <SecurityTabContent
+          labels={labels}
+          initialEmail={initialIdentity.email}
+          isEmailVerified={initialIdentity.isEmailVerified}
+          pendingEmail={pendingEmail}
+          newEmail={newEmail}
+          currentPassword={currentPassword}
+          newPassword={newPassword}
+          totpEnabled={totpEnabled}
+          totpSecret={totpSecret}
+          totpUri={totpUri}
+          totpQrDataUrl={totpQrDataUrl}
+          isIdentityPending={isIdentityPending}
+          isTotpPending={isTotpPending}
+          onChangeNewEmail={setNewEmail}
+          onChangeCurrentPassword={setCurrentPassword}
+          onChangeNewPassword={setNewPassword}
+          onRequestEmailChange={handleRequestEmailChange}
+          onChangePassword={handleChangePassword}
+          onStartTotpSetup={handleStartTotpSetup}
+          onEnableTotp={handleEnableTotp}
+          onDisableTotp={handleDisableTotp}
+        />
+      ) : null}
 
-          <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
-            <Label htmlFor="currentPassword">{labels.currentPasswordLabel}</Label>
-            <Input
-              id="currentPassword"
-              type="password"
-              value={currentPassword}
-              onChange={(event) => setCurrentPassword(event.target.value)}
-            />
-            <Label htmlFor="newPassword">{labels.newPasswordLabel}</Label>
-            <Input
-              id="newPassword"
-              type="password"
-              minLength={8}
-              value={newPassword}
-              onChange={(event) => setNewPassword(event.target.value)}
-            />
-            <Button type="button" onClick={handleChangePassword} disabled={isIdentityPending || !currentPassword || newPassword.length < 8}>
-              {labels.updatePasswordCta}
-            </Button>
-          </div>
+      {activeTab === "notifications" ? (
+        <NotificationsTabContent
+          labels={labels}
+          supportsWebPush={supportsWebPush}
+          unsupportedReasons={unsupportedReasons}
+          webPushDiagnostics={webPushDiagnostics}
+          hasPushSubscription={hasPushSubscription}
+          isPushPending={isPushPending}
+          isIdentityPending={isIdentityPending}
+          notifyByEmail={notifyByEmail}
+          notifyByTelegram={notifyByTelegram}
+          notifyByWebPush={notifyByWebPush}
+          onToggleNotifyByEmail={setNotifyByEmail}
+          onToggleNotifyByTelegram={setNotifyByTelegram}
+          onToggleNotifyByWebPush={setNotifyByWebPush}
+          onEnableWebPush={handleEnableWebPush}
+          onDisableWebPush={handleDisableWebPush}
+          onSendWebPushTest={handleSendWebPushTest}
+          onSaveNotificationPreferences={handleSaveNotificationPreferences}
+        />
+      ) : null}
 
-          <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
-            <p className="text-sm font-medium">{labels.webPushTitle}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">{labels.webPushDescription}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {supportsWebPush
-                ? labels.webPushSupported
-                : labels.webPushNotSupported}
-            </p>
-            {!supportsWebPush ? (
-              <div className="rounded-md border border-[var(--surface-border)] bg-[var(--muted)]/30 p-2 text-xs text-[var(--muted-foreground)]">
-                <p className="font-medium">Debug</p>
-                <ul className="mt-1 list-disc space-y-0.5 pl-4">
-                  {unsupportedReasons.map((reason) => (
-                    <li key={reason}>{reason}</li>
-                  ))}
-                  <li>Protocol: {webPushDiagnostics?.protocol ?? "n/a"}</li>
-                  <li>Standalone app: {webPushDiagnostics?.isStandalone ? "yes" : "no"}</li>
-                  <li>iOS device: {webPushDiagnostics?.isIOS ? "yes" : "no"}</li>
-                  <li>Permission: {webPushDiagnostics?.permission ?? "n/a"}</li>
-                  <li>VAPID public key: {webPushDiagnostics?.vapidConfigured ? "configured" : "missing"}</li>
-                </ul>
-              </div>
-            ) : null}
-            <p className="text-xs font-medium">
-              {hasPushSubscription ? labels.webPushEnabled : labels.webPushDisabled}
-            </p>
-            <div className="inline-flex gap-2">
-              <Button type="button" variant="outline" onClick={handleEnableWebPush} disabled={isPushPending}>
-                {isPushPending ? labels.webPushProcessing : labels.webPushEnableCta}
-              </Button>
-              <Button type="button" variant="secondary" onClick={handleDisableWebPush} disabled={isPushPending}>
-                {isPushPending ? labels.webPushProcessing : labels.webPushDisableCta}
-              </Button>
-              <Button type="button" onClick={handleSendWebPushTest} disabled={isPushPending || !hasPushSubscription}>
-                {isPushPending ? labels.webPushProcessing : labels.webPushTestCta}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
-            <p className="text-sm font-medium">{labels.notificationPrefsTitle}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">{labels.notificationPrefsDescription}</p>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={notifyByEmail} onChange={(event) => setNotifyByEmail(event.target.checked)} />
-              {labels.notificationEmailLabel}
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={notifyByTelegram} onChange={(event) => setNotifyByTelegram(event.target.checked)} />
-              {labels.notificationTelegramLabel}
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={notifyByWebPush} onChange={(event) => setNotifyByWebPush(event.target.checked)} />
-              {labels.notificationWebPushLabel}
-            </label>
-            <Button type="button" variant="outline" onClick={handleSaveNotificationPreferences} disabled={isIdentityPending}>
-              {isIdentityPending ? labels.webPushProcessing : labels.notificationPrefsSaveCta}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.telegramTitle}</CardTitle>
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.telegramDescription}</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="rounded-md border border-[var(--surface-border)] p-3">
-            <p className="text-sm font-medium">
-              {state.chatId ? labels.linkedStatus : labels.notLinkedStatus}
-            </p>
-            {state.chatId ? (
-              <div className="mt-2 space-y-1 text-xs text-[var(--muted-foreground)]">
-                <p>
-                  {labels.linkedChatIdLabel}: <span className="font-mono">{state.chatId}</span>
-                </p>
-                {state.username ? <p>{labels.linkedUsernameLabel}: @{state.username}</p> : null}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <Button type="button" onClick={handleGenerateCode} disabled={isPending}>
-              {isPending ? labels.generating : labels.generateCodeCta}
-            </Button>
-            <p className="text-xs text-[var(--muted-foreground)]">{labels.expiresHint}</p>
-          </div>
-
-          {state.linkToken ? (
-            <div className="grid gap-4 md:grid-cols-[1fr_auto]">
-              <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--muted-foreground)]">{labels.codeLabel}</p>
-                <p className="rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 py-2 font-mono text-sm">
-                  {state.linkToken}
-                </p>
-                <p className="text-xs text-[var(--muted-foreground)]">{labels.codeHint}</p>
-
-                {linkCommand ? (
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    {labels.commandLabel}: <span className="font-mono">{linkCommand}</span>
-                  </p>
-                ) : null}
-
-                {state.deepLink ? (
-                  <Link
-                    href={state.deepLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex text-sm text-[var(--foreground)] underline underline-offset-2"
-                  >
-                    {labels.openTelegramCta}
-                  </Link>
-                ) : (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">{labels.noBotConfiguredHint}</p>
-                )}
-              </div>
-
-              {qrImageUrl ? (
-                <div className="rounded-md border border-[var(--surface-border)] p-2">
-                  <Image src={qrImageUrl} alt={labels.qrHint} width={180} height={180} unoptimized className="h-[180px] w-[180px]" />
-                  <p className="mt-2 max-w-[180px] text-center text-xs text-[var(--muted-foreground)]">{labels.qrHint}</p>
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+      {activeTab === "telegram" ? (
+        <TelegramTabContent
+          labels={labels}
+          state={state}
+          linkCommand={linkCommand}
+          qrImageUrl={qrImageUrl}
+          isPending={isPending}
+          onGenerateCode={handleGenerateCode}
+        />
+      ) : null}
     </section>
   );
 }

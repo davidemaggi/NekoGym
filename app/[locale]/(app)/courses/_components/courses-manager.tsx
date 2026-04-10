@@ -1,12 +1,13 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 
 import {
   deleteCourseAction,
+  restoreCourseAction,
   createCourseAction,
   updateCourseAction,
 } from "@/app/[locale]/(app)/courses/actions";
@@ -32,10 +33,12 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 
 type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+type CourseFormTab = "main" | "schedule";
 
 const weekdayOrder: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"];
 
@@ -46,6 +49,7 @@ type ScheduleSlot = {
 
 type CourseItem = {
   id: string;
+  deletedAt: Date | null;
   name: string;
   description: string | null;
   durationMinutes: number;
@@ -60,6 +64,7 @@ type CourseItem = {
     id: string;
     name: string;
     iconSvg: string;
+    colorHex: string;
   } | null;
   bookingAdvanceMonths: number;
   cancellationWindowHours: number;
@@ -86,6 +91,7 @@ type LessonTypeItem = {
   name: string;
   description: string | null;
   iconSvg: string;
+  colorHex: string;
 };
 
 type TrainerCandidate = {
@@ -131,6 +137,7 @@ type ConfirmationState =
 type CoursesManagerProps = {
   locale: string;
   courses: CourseItem[];
+  includeDeleted: boolean;
   currentUser: CurrentUser;
   trainerCandidates: TrainerCandidate[];
   lessonTypes: LessonTypeItem[];
@@ -144,12 +151,18 @@ type CoursesManagerProps = {
     updateDescription: string;
     reviewCreate: string;
     reviewUpdate: string;
+    tabs: {
+      main: string;
+    };
     catalogTitle: string;
     empty: string;
     searchPlaceholder: string;
     filterAll: string;
     filterWithTrainer: string;
     filterWithoutTrainer: string;
+    showDeletedCta: string;
+    hideDeletedCta: string;
+    deletedTag: string;
     columns: {
       name: string;
       lessonType: string;
@@ -162,6 +175,7 @@ type CoursesManagerProps = {
     actions: {
       edit: string;
       delete: string;
+      restore: string;
       cancel: string;
       confirm: string;
       processing: string;
@@ -342,6 +356,7 @@ function validateCoursePayloadClient(
 export function CoursesManager({
   locale,
   courses,
+  includeDeleted,
   labels,
   currentUser,
   trainerCandidates,
@@ -359,7 +374,9 @@ export function CoursesManager({
   );
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createTab, setCreateTab] = useState<CourseFormTab>("main");
   const [editOpen, setEditOpen] = useState(false);
+  const [editTab, setEditTab] = useState<CourseFormTab>("main");
   const [selectedCourse, setSelectedCourse] = useState<CourseItem | null>(null);
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [search, setSearch] = useState("");
@@ -461,6 +478,22 @@ export function CoursesManager({
     setEditSchedule([]);
   }
 
+  function restoreCourse(courseId: string) {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("id", courseId);
+      formData.set("locale", locale);
+
+      const result = await restoreCourseAction(formData);
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
   function addScheduleSlot(target: "create" | "edit", weekday: Weekday, startTime: string) {
     if (!isValidTime(startTime)) return;
 
@@ -519,16 +552,30 @@ export function CoursesManager({
         </div>
 
         <div className="flex items-center gap-2">
+          {currentUser.role === "ADMIN" ? (
+            <a
+              className="inline-flex h-9 items-center rounded-md border border-[var(--surface-border)] px-3 text-sm hover:bg-[var(--muted)]"
+              href={`/${locale}/courses${includeDeleted ? "" : "?showDeleted=1"}`}
+            >
+              {includeDeleted ? labels.hideDeletedCta : labels.showDeletedCta}
+            </a>
+          ) : null}
 
           <Dialog
             open={createOpen}
             onOpenChange={(nextOpen) => {
               setCreateOpen(nextOpen);
-              if (!nextOpen) setCreateSchedule([]);
+              if (!nextOpen) {
+                setCreateSchedule([]);
+                setCreateTab("main");
+              }
             }}
           >
             <DialogTrigger asChild>
-              <Button>{labels.createCta}</Button>
+              <Button>
+                <Plus className="h-4 w-4" />
+                <span>{labels.createCta}</span>
+              </Button>
             </DialogTrigger>
             <DialogContent>
             <DialogHeader>
@@ -536,8 +583,36 @@ export function CoursesManager({
               <DialogDescription>{labels.createDescription}</DialogDescription>
             </DialogHeader>
 
+            <div className="inline-flex rounded-md border border-[var(--surface-border)] p-1">
+              <button
+                type="button"
+                onClick={() => setCreateTab("main")}
+                className={[
+                  "rounded px-3 py-1.5 text-xs font-medium",
+                  createTab === "main"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+                ].join(" ")}
+              >
+                Main
+              </button>
+              <button
+                type="button"
+                onClick={() => setCreateTab("schedule")}
+                className={[
+                  "rounded px-3 py-1.5 text-xs font-medium",
+                  createTab === "schedule"
+                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+                ].join(" ")}
+              >
+                {labels.schedule.title}
+              </button>
+            </div>
+
             <form className="space-y-3" onSubmit={askCreateConfirmation}>
               <CourseFields
+                activeTab={createTab}
                 defaultValues={emptyDraft}
                 labels={labels.fields}
                 scheduleLabels={labels.schedule}
@@ -552,7 +627,10 @@ export function CoursesManager({
                 <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
                   {labels.actions.cancel}
                 </Button>
-                <Button type="submit">{labels.reviewCreate}</Button>
+                <Button type="submit">
+                  <Plus className="h-4 w-4" />
+                  <span>{labels.reviewCreate}</span>
+                </Button>
               </DialogFooter>
             </form>
             </DialogContent>
@@ -603,14 +681,26 @@ export function CoursesManager({
                     <tr key={course.id} className="border-b border-[var(--surface-border)]/70">
                       <td className="py-3 pr-2 font-medium">{course.name}</td>
                       <td className="py-3 pr-2">
-                        {course.lessonType ? (
-                          <div className="inline-flex items-center gap-2">
-                            <Image src={course.lessonType.iconSvg} alt={course.lessonType.name} width={18} height={18} />
-                            <span>{course.lessonType.name}</span>
-                          </div>
-                        ) : (
-                          "-"
-                        )}
+                        <div className="inline-flex items-center gap-2">
+                          {course.lessonType ? (
+                            <div className="inline-flex items-center gap-2">
+                              <LessonTypeIcon
+                                iconPath={course.lessonType.iconSvg}
+                                colorHex={course.lessonType.colorHex}
+                                size={18}
+                                title={course.lessonType.name}
+                              />
+                              <span>{course.lessonType.name}</span>
+                            </div>
+                          ) : (
+                            "-"
+                          )}
+                          {course.deletedAt ? (
+                            <span className="rounded-md border border-red-300 px-1.5 py-0.5 text-[10px] text-red-700 dark:border-red-800 dark:text-red-300">
+                              {labels.deletedTag}
+                            </span>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="py-3 pr-2">{course.durationMinutes} min</td>
                       <td className="py-3 pr-2">{course.maxAttendees}</td>
@@ -650,24 +740,41 @@ export function CoursesManager({
                       </td>
                       <td className="py-3 text-right">
                         <div className="inline-flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedCourse(course);
-                              setEditSchedule(normalizeScheduleSlots(course.scheduleSlots));
-                              setEditOpen(true);
-                            }}
-                          >
-                            {labels.actions.edit}
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => askDeleteConfirmation(course.id, course.name, course.futureBookedLessonsCount)}
-                          >
-                            {labels.actions.delete}
-                          </Button>
+                          {course.deletedAt ? (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => restoreCourse(course.id)}
+                              disabled={isPending}
+                            >
+                              <RotateCcw className="h-4 w-4" />
+                              <span>{labels.actions.restore}</span>
+                            </Button>
+                          ) : (
+                            <>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedCourse(course);
+                                  setEditSchedule(normalizeScheduleSlots(course.scheduleSlots));
+                                  setEditTab("main");
+                                  setEditOpen(true);
+                                }}
+                              >
+                                <Pencil className="h-4 w-4" />
+                                <span>{labels.actions.edit}</span>
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => askDeleteConfirmation(course.id, course.name, course.futureBookedLessonsCount)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>{labels.actions.delete}</span>
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -686,6 +793,7 @@ export function CoursesManager({
           if (!nextOpen) {
             setSelectedCourse(null);
             setEditSchedule([]);
+            setEditTab("main");
           }
         }}
       >
@@ -700,7 +808,34 @@ export function CoursesManager({
               className="space-y-3"
               onSubmit={(event) => askUpdateConfirmation(event, selectedCourse.id)}
             >
+              <div className="inline-flex rounded-md border border-[var(--surface-border)] p-1">
+                <button
+                  type="button"
+                  onClick={() => setEditTab("main")}
+                  className={[
+                    "rounded px-3 py-1.5 text-xs font-medium",
+                    editTab === "main"
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                      : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+                  ].join(" ")}
+                >
+                  {labels.tabs.main}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditTab("schedule")}
+                  className={[
+                    "rounded px-3 py-1.5 text-xs font-medium",
+                    editTab === "schedule"
+                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                      : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+                  ].join(" ")}
+                >
+                  {labels.schedule.title}
+                </button>
+              </div>
               <CourseFields
+                activeTab={editTab}
                 defaultValues={{
                   name: selectedCourse.name,
                   description: selectedCourse.description ?? "",
@@ -724,7 +859,10 @@ export function CoursesManager({
                 <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
                   {labels.actions.cancel}
                 </Button>
-                <Button type="submit">{labels.reviewUpdate}</Button>
+                <Button type="submit">
+                  <Pencil className="h-4 w-4" />
+                  <span>{labels.reviewUpdate}</span>
+                </Button>
               </DialogFooter>
             </form>
           ) : null}
@@ -798,6 +936,7 @@ export function CoursesManager({
 }
 
 function CourseFields({
+  activeTab = "main",
   defaultValues,
   labels,
   scheduleLabels,
@@ -808,6 +947,7 @@ function CourseFields({
   onAddSlot,
   onRemoveSlot,
 }: {
+  activeTab?: CourseFormTab;
   defaultValues: {
     name: string;
     description: string;
@@ -839,17 +979,17 @@ function CourseFields({
 
   return (
     <>
-      <div className="space-y-1">
+      <div className={activeTab === "main" ? "space-y-1" : "hidden"}>
         <Label htmlFor="name">{labels.name}</Label>
         <Input id="name" name="name" required defaultValue={defaultValues.name} />
       </div>
 
-      <div className="space-y-1">
+      <div className={activeTab === "main" ? "space-y-1" : "hidden"}>
         <Label htmlFor="description">{labels.description}</Label>
         <Textarea id="description" name="description" defaultValue={defaultValues.description} />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="lessonTypeId">{labels.lessonType}</Label>
           <select
@@ -869,7 +1009,12 @@ function CourseFields({
           </select>
           {selectedLessonType ? (
             <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-              <Image src={selectedLessonType.iconSvg} alt={selectedLessonType.name} width={22} height={22} />
+              <LessonTypeIcon
+                iconPath={selectedLessonType.iconSvg}
+                colorHex={selectedLessonType.colorHex}
+                size={22}
+                title={selectedLessonType.name}
+              />
               <span className="text-xs text-[var(--muted-foreground)]">{selectedLessonType.name}</span>
             </div>
           ) : null}
@@ -892,7 +1037,7 @@ function CourseFields({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="durationMinutes">{labels.durationMinutes}</Label>
           <Input
@@ -919,7 +1064,7 @@ function CourseFields({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="bookingAdvanceMonths">{labels.bookingAdvanceMonths}</Label>
           <Input
@@ -945,7 +1090,7 @@ function CourseFields({
         </div>
       </div>
 
-      <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
+      <div className={activeTab === "schedule" ? "space-y-2 rounded-md border border-[var(--surface-border)] p-3" : "hidden"}>
         <p className="text-sm font-medium">{scheduleLabels.title}</p>
         <p className="text-xs text-[var(--muted-foreground)]">{scheduleLabels.description}</p>
 

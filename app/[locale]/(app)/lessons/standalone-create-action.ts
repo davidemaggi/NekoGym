@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import type { Prisma } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
+import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
+import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
 type LessonMutationResult = {
@@ -27,6 +29,10 @@ function messages(locale: string) {
     trainerInvalid: isIt ? "Trainer non valido." : "Invalid trainer.",
     trainerForbidden: isIt ? "Come trainer puoi assegnare solo te stesso." : "As trainer you can only assign yourself.",
     lessonTypeInvalid: isIt ? "Tipo lezione non valido." : "Invalid lesson type.",
+    closedBySchedule:
+      isIt
+        ? "La palestra e chiusa nella data selezionata."
+        : "The gym is closed on the selected date.",
     lessonUnavailable: isIt ? "Lezione non disponibile." : "Lesson is not available.",
     staffForbidden: isIt ? "Non puoi gestire questa lezione." : "You cannot manage this lesson.",
     attendeeRequired: isIt ? "Utente non valido." : "Invalid user.",
@@ -76,6 +82,22 @@ function parseStartsAt(raw: string, locale: string): Date {
   const date = new Date(raw);
   if (Number.isNaN(date.getTime())) throw new Error(t.startsAtRequired);
   return date;
+}
+
+async function validateStartsAtBySiteSchedule(input: {
+  tx: Prisma.TransactionClient;
+  startsAt: Date;
+  locale: string;
+}) {
+  const settings = await input.tx.siteSettings.findUnique({
+    where: { id: 1 },
+    select: { openWeekdaysCsv: true, closedDatesCsv: true },
+  });
+  const openWeekdays = parseOpenWeekdaysCsv(settings?.openWeekdaysCsv);
+  const closedDates = parseClosedDatesCsv(settings?.closedDatesCsv);
+  if (!isLessonAllowedBySiteSchedule(input.startsAt, openWeekdays, closedDates)) {
+    throw new Error(messages(input.locale).closedBySchedule);
+  }
 }
 
 async function validateTrainer(input: {
@@ -193,6 +215,10 @@ async function loadManagedLessonOrThrow(input: {
     throw new Error(t.lessonRequired);
   }
 
+  if (lesson.deletedAt) {
+    throw new Error(t.lessonUnavailable);
+  }
+
   if (input.currentUser.role === "TRAINER" && lesson.trainerId !== input.currentUser.id) {
     throw new Error(t.staffForbidden);
   }
@@ -279,18 +305,23 @@ export async function createStandaloneLessonMutationAction(formData: FormData): 
     const cancellationWindowHours = parsePositiveInt(getField(formData, "cancellationWindowHours"));
     const trainerId = getField(formData, "trainerId") || null;
     const lessonTypeId = getField(formData, "lessonTypeId") || null;
+    const title = getField(formData, "title") || null;
+    const description = getField(formData, "description") || null;
 
     if (!durationMinutes || !maxAttendees || !cancellationWindowHours) {
       throw new Error(t.numericInvalid);
     }
 
     await prisma.$transaction(async (tx) => {
+      await validateStartsAtBySiteSchedule({ tx, startsAt, locale });
       await validateTrainer({ tx, locale, trainerId, currentUser: user });
       await validateLessonType(tx, lessonTypeId, locale);
 
       const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
       await tx.lesson.create({
         data: {
+          title,
+          description,
           startsAt,
           endsAt,
           maxAttendees,
@@ -330,6 +361,8 @@ export async function updateStandaloneLessonMutationAction(formData: FormData): 
     const cancellationWindowHours = parsePositiveInt(getField(formData, "cancellationWindowHours"));
     const trainerId = getField(formData, "trainerId") || null;
     const lessonTypeId = getField(formData, "lessonTypeId") || null;
+    const title = getField(formData, "title") || null;
+    const description = getField(formData, "description") || null;
 
     if (!durationMinutes || !maxAttendees || !cancellationWindowHours) {
       throw new Error(t.numericInvalid);
@@ -344,13 +377,17 @@ export async function updateStandaloneLessonMutationAction(formData: FormData): 
       });
 
       if (!lesson) throw new Error(t.lessonRequired);
+      if (lesson.deletedAt) throw new Error(t.lessonUnavailable);
       if (lesson.courseId) throw new Error(t.standaloneOnly);
 
+      await validateStartsAtBySiteSchedule({ tx, startsAt, locale });
       await validateTrainer({ tx, locale, trainerId, currentUser: user });
       await validateLessonType(tx, lessonTypeId, locale);
 
       const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
       const hasMeaningfulChange =
+        lesson.title !== title ||
+        lesson.description !== description ||
         lesson.startsAt.getTime() !== startsAt.getTime() ||
         lesson.endsAt.getTime() !== endsAt.getTime() ||
         lesson.trainerId !== trainerId;
@@ -358,6 +395,8 @@ export async function updateStandaloneLessonMutationAction(formData: FormData): 
       await tx.lesson.update({
         where: { id: lessonId },
         data: {
+          title,
+          description,
           startsAt,
           endsAt,
           maxAttendees,
@@ -404,6 +443,8 @@ export async function updateLessonMainMutationAction(formData: FormData): Promis
     const maxAttendees = parsePositiveInt(getField(formData, "maxAttendees"));
     const cancellationWindowHours = parsePositiveInt(getField(formData, "cancellationWindowHours"));
     const lessonTypeId = getField(formData, "lessonTypeId") || null;
+    const title = getField(formData, "title") || null;
+    const description = getField(formData, "description") || null;
 
     if (!durationMinutes || !maxAttendees || !cancellationWindowHours) {
       throw new Error(t.numericInvalid);
@@ -425,10 +466,13 @@ export async function updateLessonMainMutationAction(formData: FormData): Promis
         throw new Error(t.pastLocked);
       }
 
+      await validateStartsAtBySiteSchedule({ tx, startsAt, locale });
       await validateLessonType(tx, lessonTypeId, locale);
 
       const endsAt = new Date(startsAt.getTime() + durationMinutes * 60 * 1000);
       const hasMeaningfulChange =
+        lesson.title !== title ||
+        lesson.description !== description ||
         lesson.startsAt.getTime() !== startsAt.getTime() ||
         lesson.endsAt.getTime() !== endsAt.getTime() ||
         lesson.maxAttendees !== maxAttendees ||
@@ -442,6 +486,8 @@ export async function updateLessonMainMutationAction(formData: FormData): Promis
       await tx.lesson.update({
         where: { id: lessonId },
         data: {
+          title,
+          description,
           startsAt,
           endsAt,
           maxAttendees,
@@ -577,6 +623,7 @@ export async function addLessonAttendeeMutationAction(formData: FormData): Promi
               courseId: lesson.courseId,
               startsAt: { gte: startOfDay, lt: endOfDay },
               status: "SCHEDULED",
+              deletedAt: null,
             },
           },
         });
@@ -675,7 +722,7 @@ export async function removeLessonAttendeeMutationAction(formData: FormData): Pr
         if (remainingBookings === 0 && lesson.startsAt > new Date() && msUntilStart <= noticeMs) {
           await tx.lesson.update({
             where: { id: lessonId },
-            data: { status: "CANCELLED" },
+            data: { status: "CANCELLED", deletedAt: new Date() },
           });
         }
       }
@@ -802,4 +849,3 @@ export async function removeLessonWaitlistEntryMutationAction(formData: FormData
     };
   }
 }
-

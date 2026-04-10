@@ -224,6 +224,7 @@ export async function reconcileFutureLessonsForCourse(
       courseId,
       startsAt: { gt: now },
       isGenerated: true,
+      deletedAt: null,
     },
     include: {
       _count: { select: { bookings: true } },
@@ -243,7 +244,7 @@ export async function reconcileFutureLessonsForCourse(
       if (lesson._count.bookings > 0) {
         await tx.lesson.update({
           where: { id: lesson.id },
-          data: { status: "CANCELLED" },
+          data: { status: "CANCELLED", deletedAt: new Date() },
         });
         await enqueueAutoCancelledLessonNotifications(tx, {
           lessonId: lesson.id,
@@ -256,7 +257,10 @@ export async function reconcileFutureLessonsForCourse(
         seedByKey.delete(key);
         cancelled += 1;
       } else {
-        await tx.lesson.delete({ where: { id: lesson.id } });
+        await tx.lesson.update({
+          where: { id: lesson.id },
+          data: { status: "CANCELLED", deletedAt: new Date() },
+        });
         // Keep seed key so a fresh generated lesson can be recreated.
         deleted += 1;
       }
@@ -267,7 +271,7 @@ export async function reconcileFutureLessonsForCourse(
       if (lesson._count.bookings > 0) {
         await tx.lesson.update({
           where: { id: lesson.id },
-          data: { status: "CANCELLED" },
+          data: { status: "CANCELLED", deletedAt: new Date() },
         });
         await enqueueAutoCancelledLessonNotifications(tx, {
           lessonId: lesson.id,
@@ -278,7 +282,10 @@ export async function reconcileFutureLessonsForCourse(
         });
         cancelled += 1;
       } else {
-        await tx.lesson.delete({ where: { id: lesson.id } });
+        await tx.lesson.update({
+          where: { id: lesson.id },
+          data: { status: "CANCELLED", deletedAt: new Date() },
+        });
         deleted += 1;
       }
       continue;
@@ -361,6 +368,7 @@ export async function reconcileFutureLessonsForSiteSchedule(tx: Prisma.Transacti
     where: {
       startsAt: { gt: now },
       status: "SCHEDULED",
+      deletedAt: null,
     },
     include: {
       course: { select: { name: true } },
@@ -373,7 +381,10 @@ export async function reconcileFutureLessonsForSiteSchedule(tx: Prisma.Transacti
     if (allowed) continue;
 
     if (lesson._count.bookings > 0) {
-      await tx.lesson.update({ where: { id: lesson.id }, data: { status: "CANCELLED" } });
+      await tx.lesson.update({
+        where: { id: lesson.id },
+        data: { status: "CANCELLED", deletedAt: new Date() },
+      });
       await enqueueAutoCancelledLessonNotifications(tx, {
         lessonId: lesson.id,
         startsAt: lesson.startsAt,
@@ -382,7 +393,10 @@ export async function reconcileFutureLessonsForSiteSchedule(tx: Prisma.Transacti
         reason: "chiusura palestra",
       });
     } else {
-      await tx.lesson.delete({ where: { id: lesson.id } });
+      await tx.lesson.update({
+        where: { id: lesson.id },
+        data: { status: "CANCELLED", deletedAt: new Date() },
+      });
     }
   }
 }
@@ -398,6 +412,7 @@ export async function cancelFutureLessonsForDeletedCourse(
     where: {
       courseId,
       startsAt: { gt: now },
+      deletedAt: null,
     },
     include: {
       course: { select: { name: true } },
@@ -413,7 +428,7 @@ export async function cancelFutureLessonsForDeletedCourse(
 
       await tx.lesson.update({
         where: { id: lesson.id },
-        data: { status: "CANCELLED" },
+        data: { status: "CANCELLED", deletedAt: new Date() },
       });
       await enqueueAutoCancelledLessonNotifications(tx, {
         lessonId: lesson.id,
@@ -423,7 +438,10 @@ export async function cancelFutureLessonsForDeletedCourse(
         reason: "corso eliminato",
       });
     } else {
-      await tx.lesson.delete({ where: { id: lesson.id } });
+      await tx.lesson.update({
+        where: { id: lesson.id },
+        data: { status: "CANCELLED", deletedAt: new Date() },
+      });
     }
   }
 }
@@ -433,6 +451,7 @@ export async function cancelLessonsEnteringNoticeWindow(tx: Prisma.TransactionCl
   const lessons = await tx.lesson.findMany({
     where: {
       status: "SCHEDULED",
+      deletedAt: null,
       startsAt: { gt: now },
     },
     include: {
@@ -453,7 +472,7 @@ export async function cancelLessonsEnteringNoticeWindow(tx: Prisma.TransactionCl
 
     await tx.lesson.update({
       where: { id: lesson.id },
-      data: { status: "CANCELLED" },
+      data: { status: "CANCELLED", deletedAt: new Date() },
     });
 
     if (lesson.trainer) {

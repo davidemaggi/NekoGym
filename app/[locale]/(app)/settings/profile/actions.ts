@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAuth } from "@/lib/authorization";
-import { changePassword, requestEmailChange } from "@/lib/auth";
+import { changePassword, disableTotp, enableTotp, requestEmailChange, startTotpSetup } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   TELEGRAM_LINK_TOKEN_TTL_MINUTES,
@@ -19,6 +19,11 @@ type StartTelegramLinkResult = {
 type ProfileMutationResult = {
   ok: boolean;
   message: string;
+};
+
+type TotpSetupResult = ProfileMutationResult & {
+  secret?: string;
+  otpauthUri?: string;
 };
 
 function getMessages(locale: string) {
@@ -184,6 +189,73 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.notificationPrefsFailed,
+    };
+  }
+}
+
+export async function startTotpSetupAction(formData: FormData): Promise<TotpSetupResult> {
+  const locale = getField(formData, "locale") || "it";
+
+  try {
+    const user = await requireAuth(locale);
+    const setup = await startTotpSetup({
+      userId: user.id,
+      accountName: user.email,
+    });
+
+    return {
+      ok: true,
+      message: locale === "it" ? "Configura l'app e conferma con un codice." : "Set up your app and confirm with a code.",
+      secret: setup.secret,
+      otpauthUri: setup.otpauthUri,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : locale === "it" ? "Impossibile avviare la configurazione 2FA." : "Unable to start 2FA setup.",
+    };
+  }
+}
+
+export async function enableTotpAction(formData: FormData): Promise<ProfileMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const code = getField(formData, "code");
+
+  try {
+    const user = await requireAuth(locale);
+    await enableTotp({
+      userId: user.id,
+      code,
+      locale,
+    });
+
+    return {
+      ok: true,
+      message: locale === "it" ? "2FA abilitata." : "2FA enabled.",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : locale === "it" ? "Impossibile abilitare la 2FA." : "Unable to enable 2FA.",
+    };
+  }
+}
+
+export async function disableTotpAction(formData: FormData): Promise<ProfileMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+
+  try {
+    const user = await requireAuth(locale);
+    await disableTotp(user.id);
+
+    return {
+      ok: true,
+      message: locale === "it" ? "2FA disabilitata." : "2FA disabled.",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : locale === "it" ? "Impossibile disabilitare la 2FA." : "Unable to disable 2FA.",
     };
   }
 }

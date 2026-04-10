@@ -1,17 +1,22 @@
 import { requireAnyRole } from "@/lib/authorization";
 import { getDictionary, isLocale } from "@/lib/i18n";
-import { getLessonTypeIconOptions, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
+import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
+import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { prisma } from "@/lib/prisma";
 
 import { CoursesManager } from "@/app/[locale]/(app)/courses/_components/courses-manager";
 
 export default async function CoursesPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ showDeleted?: string }>;
 }) {
   const { locale } = await params;
+  const { showDeleted } = await searchParams;
   const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+  const includeDeleted = currentUser.role === "ADMIN" && showDeleted === "1";
 
   const trainerCandidates =
     currentUser.role === "ADMIN"
@@ -34,16 +39,18 @@ export default async function CoursesPage({
   const safeLessonTypes = lessonTypes.map((type) => ({
     ...type,
     iconSvg: sanitizeLessonTypeIconPath(type.iconSvg, iconOptions),
+    colorHex: sanitizeLessonTypeColor(type.colorHex),
   }));
 
   const courses = await prisma.course.findMany({
-    where: { deletedAt: null },
+    where: { deletedAt: includeDeleted ? undefined : null },
     include: {
       scheduleSlots: true,
       lessons: {
         where: {
           startsAt: { gt: new Date() },
           status: "SCHEDULED",
+          deletedAt: null,
         },
         select: {
           id: true,
@@ -54,7 +61,7 @@ export default async function CoursesPage({
         select: { id: true, name: true, email: true },
       },
       lessonType: {
-        select: { id: true, name: true, iconSvg: true },
+        select: { id: true, name: true, iconSvg: true, colorHex: true },
       },
     },
     orderBy: { createdAt: "desc" },
@@ -67,6 +74,7 @@ export default async function CoursesPage({
       ? {
           ...course.lessonType,
           iconSvg: sanitizeLessonTypeIconPath(course.lessonType.iconSvg, iconOptions),
+          colorHex: sanitizeLessonTypeColor(course.lessonType.colorHex),
         }
       : null,
   }));
@@ -80,6 +88,7 @@ export default async function CoursesPage({
       courses={safeCourses}
       labels={labels}
       currentUser={currentUser}
+      includeDeleted={includeDeleted}
       trainerCandidates={trainerCandidates}
       lessonTypes={safeLessonTypes}
     />

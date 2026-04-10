@@ -1,9 +1,19 @@
 import type { MetadataRoute } from "next";
 
-export default function manifest(): MetadataRoute.Manifest {
+import { prisma } from "@/lib/prisma";
+import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
+
+export default async function manifest(): Promise<MetadataRoute.Manifest> {
+  const siteSettings = await prisma.siteSettings.findUnique({
+    where: { id: 1 },
+    select: { siteName: true, siteLogoSvg: true },
+  });
+  const siteName = siteSettings?.siteName?.trim() || "NekoGym";
+  const siteLogoSvg = sanitizeSiteLogoSvg(siteSettings?.siteLogoSvg);
+
   return {
-    name: "NekoGym",
-    short_name: "NekoGym",
+    name: siteName,
+    short_name: siteName,
     description: "Gym management platform",
     start_url: "/",
     display: "standalone",
@@ -11,17 +21,17 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#111827",
     icons: [
       {
-        src: "/logo-nekogym.svg",
+        src: siteLogoSvg,
         sizes: "any",
         type: "image/svg+xml",
       },
       {
-        src: "/favicon.ico",
-        sizes: "48x48",
-        type: "image/x-icon",
+        src: siteLogoSvg,
+        sizes: "512x512",
+        type: "image/svg+xml",
+        purpose: "any maskable",
       },
     ],
   };
 }
-
 

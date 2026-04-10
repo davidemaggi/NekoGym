@@ -35,6 +35,11 @@ type Dictionary = {
   profileSettings: {
     title: string;
     subtitle: string;
+    tabs: {
+      security: string;
+      notifications: string;
+      telegram: string;
+    };
     telegramTitle: string;
     telegramDescription: string;
     linkedStatus: string;
@@ -62,6 +67,17 @@ type Dictionary = {
     currentPasswordLabel: string;
     newPasswordLabel: string;
     updatePasswordCta: string;
+    twoFactorTitle: string;
+    twoFactorDescription: string;
+    twoFactorEnabled: string;
+    twoFactorDisabled: string;
+    twoFactorSetupCta: string;
+    twoFactorDisableCta: string;
+    twoFactorVerifyCta: string;
+    twoFactorCodeLabel: string;
+    twoFactorSecretLabel: string;
+    twoFactorOtpAuthLabel: string;
+    twoFactorHint: string;
     webPushTitle: string;
     webPushDescription: string;
     webPushSupported: string;
@@ -128,9 +144,9 @@ type Dictionary = {
   lessonsPage: {
     title: string;
     description: string;
-    prevWeek: string;
-    nextWeek: string;
-    weekLabel: string;
+    prevMonth: string;
+    nextMonth: string;
+    monthNavigationLabel: string;
     emptyDay: string;
     trainerLabel: string;
     bookedLabel: string;
@@ -146,10 +162,17 @@ type Dictionary = {
     standaloneMaxAttendees: string;
     standaloneCancellationWindow: string;
     standaloneLessonType: string;
+    lessonTitleLabel: string;
+    lessonDescriptionLabel: string;
     startsAtLabel: string;
     createStandaloneCta: string;
     updateStandaloneCta: string;
     deleteStandaloneCta: string;
+    deleteLessonCta: string;
+    restoreLessonCta: string;
+    showDeletedCta: string;
+    hideDeletedCta: string;
+    deletedTag: string;
     manageTitle: string;
     manageDescription: string;
     manageTriggerLabel: string;
@@ -193,6 +216,7 @@ type Dictionary = {
       name: string;
       email: string;
       password: string;
+      emailVerified: string;
       role: string;
       membershipStatus: string;
       trialEndsAt: string;
@@ -201,6 +225,11 @@ type Dictionary = {
       subscriptionRemaining: string;
       subscriptionResetAt: string;
       subscriptionEndsAt: string;
+    };
+    tabs: {
+      profile: string;
+      membership: string;
+      subscription: string;
     };
     actions: {
       save: string;
@@ -246,12 +275,18 @@ type Dictionary = {
     updateDescription: string;
     reviewCreate: string;
     reviewUpdate: string;
+    tabs: {
+      main: string;
+    };
     catalogTitle: string;
     empty: string;
     searchPlaceholder: string;
     filterAll: string;
     filterWithTrainer: string;
     filterWithoutTrainer: string;
+    showDeletedCta: string;
+    hideDeletedCta: string;
+    deletedTag: string;
     columns: {
       name: string;
       lessonType: string;
@@ -264,6 +299,7 @@ type Dictionary = {
     actions: {
       edit: string;
       delete: string;
+      restore: string;
       cancel: string;
       confirm: string;
       processing: string;
@@ -356,6 +392,7 @@ type Dictionary = {
       nameLabel: string;
       descriptionLabel: string;
       iconSvgLabel: string;
+      colorLabel: string;
       createCta: string;
       editCta: string;
       updateTitle: string;
@@ -511,6 +548,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     profileSettings: {
       title: "Impostazioni profilo",
       subtitle: "Gestisci collegamento Telegram e impostazioni personali.",
+      tabs: {
+        security: "Sicurezza",
+        notifications: "Notifiche",
+        telegram: "Telegram",
+      },
       telegramTitle: "Telegram",
       telegramDescription: "Collega il tuo account Telegram per ricevere notifiche e usare i comandi bot.",
       linkedStatus: "Telegram collegato",
@@ -538,6 +580,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       currentPasswordLabel: "Password corrente",
       newPasswordLabel: "Nuova password",
       updatePasswordCta: "Aggiorna password",
+      twoFactorTitle: "Autenticazione a due fattori (2FA)",
+      twoFactorDescription: "Proteggi l'accesso con password richiedendo un codice dell'app authenticator.",
+      twoFactorEnabled: "2FA attiva",
+      twoFactorDisabled: "2FA non attiva",
+      twoFactorSetupCta: "Configura 2FA",
+      twoFactorDisableCta: "Disabilita 2FA",
+      twoFactorVerifyCta: "Conferma codice",
+      twoFactorCodeLabel: "Codice app",
+      twoFactorSecretLabel: "Secret key",
+      twoFactorOtpAuthLabel: "URI otpauth",
+      twoFactorHint: "Inserisci la chiave nell'app Authenticator e poi conferma con un codice a 6 cifre.",
       webPushTitle: "Notifiche web push",
       webPushDescription: "Ricevi notifiche browser anche quando non hai la pagina aperta.",
       webPushSupported: "Browser compatibile con web push.",
@@ -590,10 +643,10 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     lessonsPage: {
       title: "Lezioni",
-      description: "Elenco settimanale delle lezioni, raggruppate per giorno.",
-      prevWeek: "Settimana precedente",
-      nextWeek: "Settimana successiva",
-      weekLabel: "Settimana {n}",
+      description: "Elenco mensile delle lezioni, raggruppate per giorno.",
+      prevMonth: "Mese precedente",
+      nextMonth: "Mese successivo",
+      monthNavigationLabel: "Naviga mese per mese",
       emptyDay: "Nessuna lezione in questo giorno.",
       trainerLabel: "Trainer",
       bookedLabel: "Iscritti",
@@ -609,10 +662,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       standaloneMaxAttendees: "Max posti",
       standaloneCancellationWindow: "Limite cancellazione (ore)",
       standaloneLessonType: "Tipo lezione",
+      lessonTitleLabel: "Titolo lezione",
+      lessonDescriptionLabel: "Descrizione lezione",
       startsAtLabel: "Inizio",
       createStandaloneCta: "Crea lezione",
       updateStandaloneCta: "Salva modifiche",
       deleteStandaloneCta: "Elimina",
+      deleteLessonCta: "Cancella",
+      restoreLessonCta: "Ripristina",
+      showDeletedCta: "Mostra cancellate",
+      hideDeletedCta: "Nascondi cancellate",
+      deletedTag: "Cancellata",
       manageTitle: "Gestisci lezione",
       manageDescription: "Modifica dati, trainer e iscritti da questa modale.",
       manageTriggerLabel: "Gestisci lezione",
@@ -656,6 +716,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         name: "Nome",
         email: "Email",
         password: "Password",
+        emailVerified: "Email verificata",
         role: "Ruolo",
         membershipStatus: "Stato membership",
         trialEndsAt: "Fine trial",
@@ -664,6 +725,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         subscriptionRemaining: "Lezioni residue",
         subscriptionResetAt: "Reset piano",
         subscriptionEndsAt: "Fine subscription",
+      },
+      tabs: {
+        profile: "Profilo",
+        membership: "Membership",
+        subscription: "Subscription",
       },
       actions: {
         save: "Salva",
@@ -722,12 +788,18 @@ const dictionaries: Record<Locale, Dictionary> = {
       updateDescription: "Modifica i valori e conferma l'aggiornamento.",
       reviewCreate: "Rivedi creazione",
       reviewUpdate: "Rivedi aggiornamento",
+      tabs: {
+        main: "Dettagli",
+      },
       catalogTitle: "Catalogo corsi",
       empty: "Nessun corso presente. Crea il primo corso.",
       searchPlaceholder: "Cerca per nome o trainer...",
       filterAll: "Tutti",
       filterWithTrainer: "Con trainer",
       filterWithoutTrainer: "Senza trainer",
+      showDeletedCta: "Mostra cancellati",
+      hideDeletedCta: "Nascondi cancellati",
+      deletedTag: "Cancellato",
       columns: {
         name: "Nome",
         lessonType: "Tipo lezione",
@@ -740,6 +812,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       actions: {
         edit: "Modifica",
         delete: "Elimina",
+        restore: "Ripristina",
         cancel: "Annulla",
         confirm: "Conferma",
         processing: "Elaborazione...",
@@ -833,6 +906,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         nameLabel: "Nome",
         descriptionLabel: "Descrizione",
         iconSvgLabel: "Icona SVG",
+        colorLabel: "Colore",
         createCta: "Crea tipo",
         editCta: "Modifica",
         updateTitle: "Modifica LessonType",
@@ -986,6 +1060,11 @@ const dictionaries: Record<Locale, Dictionary> = {
     profileSettings: {
       title: "Profile settings",
       subtitle: "Manage Telegram link and personal preferences.",
+      tabs: {
+        security: "Security",
+        notifications: "Notifications",
+        telegram: "Telegram",
+      },
       telegramTitle: "Telegram",
       telegramDescription: "Link your Telegram account to receive notifications and use bot commands.",
       linkedStatus: "Telegram linked",
@@ -1013,6 +1092,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       currentPasswordLabel: "Current password",
       newPasswordLabel: "New password",
       updatePasswordCta: "Update password",
+      twoFactorTitle: "Two-factor authentication (2FA)",
+      twoFactorDescription: "Secure password sign-in by requiring a code from your authenticator app.",
+      twoFactorEnabled: "2FA enabled",
+      twoFactorDisabled: "2FA disabled",
+      twoFactorSetupCta: "Set up 2FA",
+      twoFactorDisableCta: "Disable 2FA",
+      twoFactorVerifyCta: "Verify code",
+      twoFactorCodeLabel: "App code",
+      twoFactorSecretLabel: "Secret key",
+      twoFactorOtpAuthLabel: "otpauth URI",
+      twoFactorHint: "Add the secret to your Authenticator app and confirm with a 6-digit code.",
       webPushTitle: "Web push notifications",
       webPushDescription: "Receive browser notifications even when the page is closed.",
       webPushSupported: "Browser supports web push.",
@@ -1065,10 +1155,10 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     lessonsPage: {
       title: "Lessons",
-      description: "Weekly list of lessons grouped by day.",
-      prevWeek: "Previous week",
-      nextWeek: "Next week",
-      weekLabel: "Week {n}",
+      description: "Monthly list of lessons grouped by day.",
+      prevMonth: "Previous month",
+      nextMonth: "Next month",
+      monthNavigationLabel: "Browse month by month",
       emptyDay: "No lessons in this day.",
       trainerLabel: "Trainer",
       bookedLabel: "Booked",
@@ -1084,10 +1174,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       standaloneMaxAttendees: "Max seats",
       standaloneCancellationWindow: "Cancellation window (hours)",
       standaloneLessonType: "Lesson type",
+      lessonTitleLabel: "Lesson title",
+      lessonDescriptionLabel: "Lesson description",
       startsAtLabel: "Starts at",
       createStandaloneCta: "Create lesson",
       updateStandaloneCta: "Save changes",
       deleteStandaloneCta: "Delete",
+      deleteLessonCta: "Cancel",
+      restoreLessonCta: "Restore",
+      showDeletedCta: "Show deleted",
+      hideDeletedCta: "Hide deleted",
+      deletedTag: "Deleted",
       manageTitle: "Manage lesson",
       manageDescription: "Update data, trainer and attendees from this modal.",
       manageTriggerLabel: "Manage lesson",
@@ -1131,6 +1228,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         name: "Name",
         email: "Email",
         password: "Password",
+        emailVerified: "Email verified",
         role: "Role",
         membershipStatus: "Membership status",
         trialEndsAt: "Trial ends",
@@ -1139,6 +1237,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         subscriptionRemaining: "Remaining lessons",
         subscriptionResetAt: "Plan reset",
         subscriptionEndsAt: "Subscription end",
+      },
+      tabs: {
+        profile: "Profile",
+        membership: "Membership",
+        subscription: "Subscription",
       },
       actions: {
         save: "Save",
@@ -1197,12 +1300,18 @@ const dictionaries: Record<Locale, Dictionary> = {
       updateDescription: "Edit values and confirm the update.",
       reviewCreate: "Review creation",
       reviewUpdate: "Review update",
+      tabs: {
+        main: "Details",
+      },
       catalogTitle: "Course catalog",
       empty: "No courses yet. Start by creating your first course.",
       searchPlaceholder: "Search by name or trainer...",
       filterAll: "All",
       filterWithTrainer: "With trainer",
       filterWithoutTrainer: "Without trainer",
+      showDeletedCta: "Show deleted",
+      hideDeletedCta: "Hide deleted",
+      deletedTag: "Deleted",
       columns: {
         name: "Name",
         lessonType: "Lesson type",
@@ -1215,6 +1324,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       actions: {
         edit: "Edit",
         delete: "Delete",
+        restore: "Restore",
         cancel: "Cancel",
         confirm: "Confirm",
         processing: "Processing...",
@@ -1308,6 +1418,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         nameLabel: "Name",
         descriptionLabel: "Description",
         iconSvgLabel: "SVG icon",
+        colorLabel: "Color",
         createCta: "Create type",
         editCta: "Edit",
         updateTitle: "Edit LessonType",
@@ -1452,4 +1563,3 @@ export function pickLocale(acceptLanguage?: string | null): Locale {
   if (normalized.includes("en")) return "en";
   return defaultLocale;
 }
-

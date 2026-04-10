@@ -4,6 +4,8 @@ import Script from "next/script";
 
 import { SwRegister } from "@/components/pwa/sw-register";
 import { AppToaster } from "@/components/ui/toaster";
+import { prisma } from "@/lib/prisma";
+import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,11 +18,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "NekoGym",
-  description: "Gym management platform",
-  manifest: "/manifest.webmanifest",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const siteSettings = await prisma.siteSettings.findUnique({
+    where: { id: 1 },
+    select: { siteName: true, siteLogoSvg: true },
+  });
+  const siteName = siteSettings?.siteName?.trim() || "NekoGym";
+  const siteLogoSvg = sanitizeSiteLogoSvg(siteSettings?.siteLogoSvg);
+
+  return {
+    title: siteName,
+    description: "Gym management platform",
+    manifest: "/manifest.webmanifest",
+    icons: {
+      icon: [{ url: siteLogoSvg, type: "image/svg+xml" }],
+      shortcut: [{ url: siteLogoSvg, type: "image/svg+xml" }],
+      apple: [{ url: siteLogoSvg, type: "image/svg+xml" }],
+    },
+  };
+}
 
 export default function RootLayout({
   children,

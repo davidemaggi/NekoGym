@@ -192,8 +192,8 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         }
       }
 
-      const lesson = await tx.lesson.findUnique({
-        where: { id: lessonId },
+      const lesson = await tx.lesson.findFirst({
+        where: { id: lessonId, deletedAt: null },
         include: {
           course: { select: { name: true } },
           trainer: { select: { id: true, telegramChatId: true } },
@@ -250,6 +250,7 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
                 lt: endOfDay,
               },
               status: "SCHEDULED",
+              deletedAt: null,
             },
           },
         });
@@ -282,6 +283,7 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
                   gte: window.start,
                   lt: window.end,
                 },
+                deletedAt: null,
               },
             },
           });
@@ -363,8 +365,8 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
         throw new Error(messages.authRequired);
       }
 
-      const lesson = await tx.lesson.findUnique({
-        where: { id: lessonId },
+      const lesson = await tx.lesson.findFirst({
+        where: { id: lessonId, deletedAt: null },
         include: {
           course: { select: { name: true } },
           trainer: { select: { id: true, telegramChatId: true } },
@@ -409,7 +411,10 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
         remainingBookings === 0 && lesson.startsAt > new Date() && msUntilStart <= noticeMs;
 
       if (shouldCancelForNoticeWindow) {
-        await tx.lesson.update({ where: { id: lessonId }, data: { status: "CANCELLED" } });
+        await tx.lesson.update({
+          where: { id: lessonId },
+          data: { status: "CANCELLED", deletedAt: new Date() },
+        });
       } else if (remainingBookings < lesson.maxAttendees) {
         await notifyWaitlistSeatAvailable({
           tx,

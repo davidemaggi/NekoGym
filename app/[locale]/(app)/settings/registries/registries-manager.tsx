@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { Pencil, Plus, Trash2 } from "lucide-react";
 
 import {
   createLessonTypeAction,
@@ -22,6 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -33,18 +34,23 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
+import type { LessonTypeColorOption } from "@/lib/lesson-type-icons";
+import { hexToRgba } from "@/lib/lesson-type-icons";
 
 type LessonTypeItem = {
   id: string;
   name: string;
   description: string | null;
   iconSvg: string;
+  colorHex: string;
 };
 
 type RegistriesManagerProps = {
   locale: string;
   lessonTypes: LessonTypeItem[];
   iconOptions: string[];
+  colorOptions: LessonTypeColorOption[];
   labels: {
     title: string;
     subtitle: string;
@@ -57,6 +63,7 @@ type RegistriesManagerProps = {
       nameLabel: string;
       descriptionLabel: string;
       iconSvgLabel: string;
+      colorLabel: string;
       createCta: string;
       editCta: string;
       updateTitle: string;
@@ -71,23 +78,32 @@ type RegistriesManagerProps = {
   };
 };
 
-export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: RegistriesManagerProps) {
+export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, colorOptions }: RegistriesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [activeTab, setActiveTab] = useState<"lessonTypes">("lessonTypes");
+  const [createOpen, setCreateOpen] = useState(false);
   const [editingType, setEditingType] = useState<LessonTypeItem | null>(null);
   const [deletingType, setDeletingType] = useState<LessonTypeItem | null>(null);
   const defaultIcon = iconOptions[0] ?? "";
+  const defaultColor = colorOptions[0]?.value ?? "#2563EB";
   const [createIcon, setCreateIcon] = useState(defaultIcon);
+  const [createColor, setCreateColor] = useState(defaultColor);
   const [editIcon, setEditIcon] = useState("");
+  const [editColor, setEditColor] = useState(defaultColor);
 
   useEffect(() => {
     setCreateIcon(defaultIcon);
   }, [defaultIcon]);
 
   useEffect(() => {
+    setCreateColor(defaultColor);
+  }, [defaultColor]);
+
+  useEffect(() => {
     setEditIcon(editingType?.iconSvg ?? "");
-  }, [editingType]);
+    setEditColor(editingType?.colorHex ?? defaultColor);
+  }, [defaultColor, editingType]);
 
   function iconFileName(iconPath: string) {
     return iconPath.replace("/icons/lessontypes/", "");
@@ -104,7 +120,9 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
       if (result.ok) {
         toast.success(result.message);
         form.reset();
+        setCreateOpen(false);
         setCreateIcon(defaultIcon);
+        setCreateColor(defaultColor);
         router.refresh();
       } else {
         toast.error(result.message);
@@ -178,47 +196,103 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
             <p className="text-sm text-[var(--muted-foreground)]">{labels.lessonTypes.description}</p>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form className="space-y-3" onSubmit={onCreateLessonType}>
-              <div className="space-y-1">
-                <Label htmlFor="registry-lt-name">{labels.lessonTypes.nameLabel}</Label>
-                <Input id="registry-lt-name" name="name" required />
-              </div>
+            <div className="flex justify-end">
+              <Dialog
+                open={createOpen}
+                onOpenChange={(nextOpen) => {
+                  setCreateOpen(nextOpen);
+                  if (!nextOpen) {
+                    setCreateIcon(defaultIcon);
+                    setCreateColor(defaultColor);
+                  }
+                }}
+              >
+                <DialogTrigger asChild>
+                  <Button disabled={isPending}>
+                    <Plus className="h-4 w-4" />
+                    <span>{labels.lessonTypes.createCta}</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>{labels.lessonTypes.createCta}</DialogTitle>
+                    <DialogDescription>{labels.lessonTypes.description}</DialogDescription>
+                  </DialogHeader>
+                  <form className="space-y-3" onSubmit={onCreateLessonType}>
+                    <div className="space-y-1">
+                      <Label htmlFor="registry-lt-name">{labels.lessonTypes.nameLabel}</Label>
+                      <Input id="registry-lt-name" name="name" required />
+                    </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="registry-lt-description">{labels.lessonTypes.descriptionLabel}</Label>
-                <Textarea id="registry-lt-description" name="description" />
-              </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="registry-lt-description">{labels.lessonTypes.descriptionLabel}</Label>
+                      <Textarea id="registry-lt-description" name="description" />
+                    </div>
 
-              <div className="space-y-1">
-                <Label htmlFor="registry-lt-icon">{labels.lessonTypes.iconSvgLabel}</Label>
-                <select
-                  id="registry-lt-icon"
-                  name="iconSvg"
-                  required
-                  value={createIcon}
-                  onChange={(event) => setCreateIcon(event.target.value)}
-                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
-                >
-                  {iconOptions.map((icon) => (
-                    <option key={icon} value={icon}>
-                      {iconFileName(icon)}
-                    </option>
-                  ))}
-                </select>
-                {createIcon ? (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-                    <Image src={createIcon} alt={iconFileName(createIcon)} width={26} height={26} />
-                    <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(createIcon)}</span>
-                  </div>
-                ) : null}
-              </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="registry-lt-icon">{labels.lessonTypes.iconSvgLabel}</Label>
+                      <select
+                        id="registry-lt-icon"
+                        name="iconSvg"
+                        required
+                        value={createIcon}
+                        onChange={(event) => setCreateIcon(event.target.value)}
+                        className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                      >
+                        {iconOptions.map((icon) => (
+                          <option key={icon} value={icon}>
+                            {iconFileName(icon)}
+                          </option>
+                        ))}
+                      </select>
+                      {createIcon ? (
+                        <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
+                          <LessonTypeIcon iconPath={createIcon} colorHex={createColor} size={26} />
+                          <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(createIcon)}</span>
+                        </div>
+                      ) : null}
+                    </div>
 
-              <Button type="submit" disabled={isPending}>
-                {isPending ? "..." : labels.lessonTypes.createCta}
-              </Button>
-            </form>
+                    <div className="space-y-1">
+                      <Label htmlFor="registry-lt-color">{labels.lessonTypes.colorLabel}</Label>
+                      <select
+                        id="registry-lt-color"
+                        name="colorHex"
+                        required
+                        value={createColor}
+                        onChange={(event) => setCreateColor(event.target.value)}
+                        className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                      >
+                        {colorOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label} ({option.value})
+                          </option>
+                        ))}
+                      </select>
+                      <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
+                        <span
+                          className="inline-block h-5 w-5 rounded"
+                          style={{
+                            backgroundColor: hexToRgba(createColor, 0.2),
+                            border: `1px solid ${createColor}`,
+                          }}
+                        />
+                        <span className="text-xs text-[var(--muted-foreground)]">{createColor}</span>
+                      </div>
+                    </div>
 
-            <div className="space-y-2 border-t border-[var(--surface-border)] pt-3">
+                    <DialogFooter>
+                      <Button type="submit" disabled={isPending}>
+                        <Plus className="h-4 w-4" />
+                        <span>{isPending ? "..." : labels.lessonTypes.createCta}</span>
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="space-y-2">
               {lessonTypes.length === 0 ? (
                 <p className="text-sm text-[var(--muted-foreground)]">{labels.lessonTypes.empty}</p>
               ) : (
@@ -229,7 +303,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                   >
                     <div>
                       <div className="flex items-center gap-2">
-                        <Image src={type.iconSvg} alt={type.name} width={20} height={20} />
+                        <LessonTypeIcon iconPath={type.iconSvg} colorHex={type.colorHex} size={20} />
                         <p className="text-sm font-medium">{type.name}</p>
                       </div>
                       {type.description ? <p className="text-xs text-[var(--muted-foreground)]">{type.description}</p> : null}
@@ -240,7 +314,8 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                       onClick={() => setEditingType(type)}
                       disabled={isPending}
                     >
-                      {labels.lessonTypes.editCta}
+                      <Pencil className="h-4 w-4" />
+                      <span>{labels.lessonTypes.editCta}</span>
                     </Button>
                     <Button
                       variant="destructive"
@@ -248,7 +323,8 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                       onClick={() => setDeletingType(type)}
                       disabled={isPending}
                     >
-                      {labels.lessonTypes.deleteCta}
+                      <Trash2 className="h-4 w-4" />
+                      <span>{labels.lessonTypes.deleteCta}</span>
                     </Button>
                   </div>
                 ))
@@ -295,15 +371,44 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                 </select>
                 {editIcon ? (
                   <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-                    <Image src={editIcon} alt={iconFileName(editIcon)} width={26} height={26} />
+                    <LessonTypeIcon iconPath={editIcon} colorHex={editColor} size={26} />
                     <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(editIcon)}</span>
                   </div>
                 ) : null}
               </div>
 
+              <div className="space-y-1">
+                <Label htmlFor="edit-lt-color">{labels.lessonTypes.colorLabel}</Label>
+                <select
+                  id="edit-lt-color"
+                  name="colorHex"
+                  required
+                  value={editColor}
+                  onChange={(event) => setEditColor(event.target.value)}
+                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                >
+                  {colorOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label} ({option.value})
+                    </option>
+                  ))}
+                </select>
+                <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
+                  <span
+                    className="inline-block h-5 w-5 rounded"
+                    style={{
+                      backgroundColor: hexToRgba(editColor, 0.2),
+                      border: `1px solid ${editColor}`,
+                    }}
+                  />
+                  <span className="text-xs text-[var(--muted-foreground)]">{editColor}</span>
+                </div>
+              </div>
+
               <DialogFooter>
                 <Button type="submit" disabled={isPending}>
-                  {isPending ? "..." : labels.lessonTypes.updateCta}
+                  <Pencil className="h-4 w-4" />
+                  <span>{isPending ? "..." : labels.lessonTypes.updateCta}</span>
                 </Button>
               </DialogFooter>
             </form>
@@ -334,7 +439,8 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
                   onDeleteLessonType(deletingType.id);
                 }}
               >
-                {isPending ? labels.lessonTypes.processing : labels.lessonTypes.deleteCta}
+                <Trash2 className="h-4 w-4" />
+                <span>{isPending ? labels.lessonTypes.processing : labels.lessonTypes.deleteCta}</span>
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -343,6 +449,5 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions }: 
     </section>
   );
 }
-
 
 
