@@ -284,7 +284,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                     <DialogFooter>
                       <Button type="submit" disabled={isPending}>
                         <Plus className="h-4 w-4" />
-                        <span>{isPending ? "..." : labels.lessonTypes.createCta}</span>
+                        <span>{isPending ? labels.lessonTypes.processing : labels.lessonTypes.createCta}</span>
                       </Button>
                     </DialogFooter>
                   </form>
@@ -408,7 +408,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
               <DialogFooter>
                 <Button type="submit" disabled={isPending}>
                   <Pencil className="h-4 w-4" />
-                  <span>{isPending ? "..." : labels.lessonTypes.updateCta}</span>
+                  <span>{isPending ? labels.lessonTypes.processing : labels.lessonTypes.updateCta}</span>
                 </Button>
               </DialogFooter>
             </form>

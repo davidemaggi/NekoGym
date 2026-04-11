@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { loginWithMagicLinkToken } from "@/lib/auth";
+import { getAppBaseUrl, loginWithMagicLinkToken } from "@/lib/auth";
 import { defaultLocale, isLocale } from "@/lib/i18n";
 
 export async function GET(
@@ -11,20 +11,21 @@ export async function GET(
   const locale = isLocale(rawLocale) ? rawLocale : defaultLocale;
 
   const url = new URL(request.url);
+  const appBaseUrl = getAppBaseUrl();
   const token = url.searchParams.get("token")?.trim();
 
   if (!token) {
     return NextResponse.redirect(
       new URL(
         `/${locale}/login?error=${encodeURIComponent(locale === "it" ? "Link non valido o scaduto." : "Invalid or expired link.")}&method=magic`,
-        request.url
+        appBaseUrl
       )
     );
   }
 
   try {
     await loginWithMagicLinkToken({ locale, token });
-    return NextResponse.redirect(new URL(`/${locale}`, request.url));
+    return NextResponse.redirect(new URL(`/${locale}`, appBaseUrl));
   } catch (error) {
     const message =
       error instanceof Error && error.message
@@ -34,7 +35,7 @@ export async function GET(
           : "Invalid or expired link.";
 
     return NextResponse.redirect(
-      new URL(`/${locale}/login?error=${encodeURIComponent(message)}&method=magic`, request.url)
+      new URL(`/${locale}/login?error=${encodeURIComponent(message)}&method=magic`, appBaseUrl)
     );
   }
 }

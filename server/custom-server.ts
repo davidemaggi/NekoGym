@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import { createServer as createSecureServer } from "node:https";
-import { readFileSync } from "node:fs";
+import { mkdirSync, readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { loadEnvConfig } from "@next/env";
@@ -11,12 +12,29 @@ loadEnvConfig(process.cwd());
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
+const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 
 function isEnabled(value?: string): boolean {
   return value?.trim().toLowerCase() === "true";
 }
 
+function prepareDatabase() {
+  mkdirSync("data", { recursive: true });
+  mkdirSync("data/backups", { recursive: true });
+
+  const result = spawnSync(npxCommand, ["prisma", "migrate", "deploy"], {
+    stdio: "inherit",
+    env: process.env,
+  });
+
+  if (result.status !== 0) {
+    throw new Error("Database bootstrap failed while applying Prisma migrations.");
+  }
+}
+
 async function main() {
+  prepareDatabase();
+
   const [{ prisma }, { startBackgroundServices }] = await Promise.all([
     import("@/lib/prisma"),
     import("@/server/background-services"),
@@ -94,6 +112,5 @@ async function main() {
 }
 
 void main();
-
 
 

@@ -147,7 +147,7 @@ export function MyNotificationsManager({ locale, labels, items, page, totalPages
               key={item.id}
               className={[
                 "rounded-md border p-3",
-                item.isNew ? "border-emerald-300 bg-emerald-50/70 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-[var(--surface-border)]",
+                item.isNew ? "border-[var(--success-hover)] bg-[var(--success-bg)]/70 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-[var(--surface-border)]",
               ].join(" ")}
             >
               <div className="flex items-start justify-between gap-2">

@@ -11,6 +11,7 @@ export type AppMenuItem = {
     | "myNotifications"
     | "registries"
     | "siteSettings"
+    | "dangerZone"
     | "manualNotifications"
     | "profileSettings";
   href: string;
@@ -27,6 +28,7 @@ export const appMenuItems: AppMenuItem[] = [
   { key: "myNotifications", href: "/my-notifications", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "profileSettings", href: "/settings/profile", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "siteSettings", href: "/settings/site", allowedRoles: ["ADMIN"] },
+  { key: "dangerZone", href: "/settings/danger-zone", allowedRoles: ["ADMIN"] },
   { key: "manualNotifications", href: "/settings/notifications", allowedRoles: ["ADMIN"] },
   { key: "registries", href: "/settings/registries", allowedRoles: ["ADMIN", "TRAINER"] },
 ];
@@ -34,4 +36,3 @@ export const appMenuItems: AppMenuItem[] = [
 export function getMenuItemsForRole(role: UserRole): AppMenuItem[] {
   return appMenuItems.filter((item) => item.allowedRoles.includes(role));
 }
-

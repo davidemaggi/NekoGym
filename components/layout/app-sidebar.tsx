@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  AlertTriangle,
   BarChart3,
   BookOpen,
   Bell,
@@ -18,6 +19,7 @@ import {
   PanelLeftOpen,
   UserCog,
   Settings2,
+  Table2,
   Users,
 } from "lucide-react";
 
@@ -69,6 +71,7 @@ type AppSidebarProps = {
       | "myNotifications"
       | "registries"
       | "siteSettings"
+      | "dangerZone"
       | "manualNotifications"
       | "profileSettings",
       string
@@ -109,8 +112,9 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
     myNotifications: Bell,
     profileSettings: UserCog,
     siteSettings: Settings2,
+    dangerZone: AlertTriangle,
     manualNotifications: Megaphone,
-    registries: Settings2,
+    registries: Table2,
   };
 
   function toggleSidebar() {
@@ -125,6 +129,11 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
   const mainMenuItems = menuItems.filter((item) => !item.href.startsWith("/settings"));
   const settingsMenuItems = menuItems.filter((item) => item.href.startsWith("/settings"));
   const settingsBaseItems = settingsMenuItems.filter((item) => item.key !== "profileSettings");
+  const settingsBaseItemsSorted = [...settingsBaseItems].sort((a, b) => {
+    if (a.key === "dangerZone" && b.key !== "dangerZone") return 1;
+    if (a.key !== "dangerZone" && b.key === "dangerZone") return -1;
+    return 0;
+  });
   const safeLogoSrc = sanitizeSiteLogoSvg(siteLogoSvg);
   const settingsPrefix = withLocalePath(locale, "/settings");
   const profileHref = withLocalePath(locale, "/settings/profile");
@@ -253,9 +262,11 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
 
                 {!isDesktopCollapsed && isSettingsExpanded ? (
                   <SidebarMenuSub id="sidebar-settings-submenu">
-                    {settingsBaseItems.map((item) => {
+                    {settingsBaseItemsSorted.map((item) => {
                       const href = withLocalePath(locale, item.href);
                       const isActive = pathname === href;
+                      const isDanger = item.key === "dangerZone";
+                      const ItemIcon = iconByKey[item.key];
 
                       return (
                         <SidebarMenuSubItem key={item.href}>
@@ -264,16 +275,21 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
                             title={labels.nav[item.key]}
                             aria-current={isActive ? "page" : undefined}
                             className={[
-                              "flex items-center rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
-                              isActive
-                                ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
-                                : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
+                              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
+                              isDanger
+                                ? isActive
+                                  ? "bg-[var(--danger-bg)] text-[var(--danger-fg)]"
+                                  : "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
+                                : isActive
+                                  ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
+                                  : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
                             ].join(" ")}
                             onClick={() => {
                               if (isMobile) setIsMobileOpen(false);
                             }}
                           >
-                            {labels.nav[item.key]}
+                            <ItemIcon size={14} />
+                            <span>{labels.nav[item.key]}</span>
                           </Link>
                         </SidebarMenuSubItem>
                       );

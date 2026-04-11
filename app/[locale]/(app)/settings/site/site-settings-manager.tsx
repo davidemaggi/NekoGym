@@ -226,7 +226,7 @@ export function SiteSettingsManager({ locale, labels, initialValues, envValues }
                     onChange={(event) => setField("siteLogoSvg", event.target.value)}
                   />
                   {!isLogoPathValid ? (
-                    <p className="text-xs text-rose-700 dark:text-rose-300">{labels.logoPathInvalid}</p>
+                    <p className="text-xs text-[var(--danger-fg)] dark:text-rose-300">{labels.logoPathInvalid}</p>
                   ) : null}
                 </div>
                 <div className="space-y-1">
@@ -372,14 +372,14 @@ export function SiteSettingsManager({ locale, labels, initialValues, envValues }
                     placeholder="YYYY-MM-DD"
                   />
                   {!areClosedDatesValid ? (
-                    <p className="text-xs text-rose-700 dark:text-rose-300">{labels.closedDatesInvalid}</p>
+                    <p className="text-xs text-[var(--danger-fg)] dark:text-rose-300">{labels.closedDatesInvalid}</p>
                   ) : null}
                 </div>
               </>
             ) : null}
 
             {!isLogoPathValid ? (
-              <p className="text-xs text-rose-700 dark:text-rose-300">{labels.logoPathInvalid}</p>
+              <p className="text-xs text-[var(--danger-fg)] dark:text-rose-300">{labels.logoPathInvalid}</p>
             ) : null}
 
             <Button type="submit" disabled={isPending || !isLogoPathValid || !areClosedDatesValid}>

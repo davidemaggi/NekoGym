@@ -141,6 +141,7 @@ type CoursesManagerProps = {
   currentUser: CurrentUser;
   trainerCandidates: TrainerCandidate[];
   lessonTypes: LessonTypeItem[];
+  availableWeekdays: Weekday[];
   labels: {
     title: string;
     subtitle: string;
@@ -211,6 +212,8 @@ type CoursesManagerProps = {
       numericPositive: string;
       scheduleRequired: string;
       scheduleInvalid: string;
+      scheduleOverlap: string;
+      scheduleClosedWeekday: string;
     };
     schedule: {
       title: string;
@@ -269,6 +272,39 @@ function isValidTime(value: string): boolean {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
 }
 
+function toMinutes(value: string): number {
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number.parseInt(hourRaw ?? "", 10);
+  const minute = Number.parseInt(minuteRaw ?? "", 10);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return -1;
+  return hour * 60 + minute;
+}
+
+function hasOverlappingScheduleSlots(slots: ScheduleSlot[], durationMinutes: number): boolean {
+  const grouped = new Map<Weekday, number[]>();
+  for (const slot of slots) {
+    const minute = toMinutes(slot.startTime);
+    if (minute < 0) return true;
+    const list = grouped.get(slot.weekday) ?? [];
+    list.push(minute);
+    grouped.set(slot.weekday, list);
+  }
+
+  for (const starts of grouped.values()) {
+    const sorted = [...starts].sort((a, b) => a - b);
+    for (let index = 0; index < sorted.length - 1; index += 1) {
+      const currentStart = sorted[index];
+      const currentEnd = currentStart + durationMinutes;
+      const nextStart = sorted[index + 1];
+      if (nextStart < currentEnd) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 function normalizeScheduleSlots(slots: ScheduleSlot[]): ScheduleSlot[] {
   return [...slots].sort((a, b) => {
     if (a.weekday === b.weekday) return a.startTime.localeCompare(b.startTime);
@@ -313,7 +349,8 @@ function formatScheduleRows(
 
 function validateCoursePayloadClient(
   payload: CoursePayload,
-  labels: CoursesManagerProps["labels"]
+  labels: CoursesManagerProps["labels"],
+  availableWeekdays: Weekday[]
 ): string | null {
   if (!payload.name) return labels.validation.nameRequired;
   if (!payload.lessonTypeId) return labels.validation.lessonTypeRequired;
@@ -337,6 +374,11 @@ function validateCoursePayloadClient(
     return labels.validation.scheduleRequired;
   }
 
+  const openWeekdaySet = new Set(availableWeekdays);
+  if (payload.scheduleSlots.some((slot) => !openWeekdaySet.has(slot.weekday))) {
+    return labels.validation.scheduleClosedWeekday;
+  }
+
   const unique = new Set<string>();
   for (const slot of payload.scheduleSlots) {
     if (!isValidTime(slot.startTime)) {
@@ -350,6 +392,11 @@ function validateCoursePayloadClient(
     unique.add(key);
   }
 
+  const durationMinutes = Number.parseInt(payload.durationMinutes, 10);
+  if (!Number.isNaN(durationMinutes) && hasOverlappingScheduleSlots(payload.scheduleSlots, durationMinutes)) {
+    return labels.validation.scheduleOverlap;
+  }
+
   return null;
 }
 
@@ -361,16 +408,14 @@ export function CoursesManager({
   currentUser,
   trainerCandidates,
   lessonTypes,
+  availableWeekdays,
 }: CoursesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
   const weekdays = useMemo(
-    () =>
-      (["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY"] as Weekday[]).map(
-        (day) => ({ value: day, label: labels.schedule.weekdays[day] })
-      ),
-    [labels.schedule.weekdays]
+    () => availableWeekdays.map((day) => ({ value: day, label: labels.schedule.weekdays[day] })),
+    [availableWeekdays, labels.schedule.weekdays]
   );
 
   const [createOpen, setCreateOpen] = useState(false);
@@ -417,7 +462,7 @@ export function CoursesManager({
   function askCreateConfirmation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const payload = readCoursePayload(event.currentTarget, locale, createSchedule);
-    const validationError = validateCoursePayloadClient(payload, labels);
+    const validationError = validateCoursePayloadClient(payload, labels, availableWeekdays);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -434,7 +479,7 @@ export function CoursesManager({
   function askUpdateConfirmation(event: FormEvent<HTMLFormElement>, courseId: string) {
     event.preventDefault();
     const payload = readCoursePayload(event.currentTarget, locale, editSchedule, courseId);
-    const validationError = validateCoursePayloadClient(payload, labels);
+    const validationError = validateCoursePayloadClient(payload, labels, availableWeekdays);
     if (validationError) {
       toast.error(validationError);
       return;
@@ -588,7 +633,7 @@ export function CoursesManager({
                 type="button"
                 onClick={() => setCreateTab("main")}
                 className={[
-                  "rounded px-3 py-1.5 text-xs font-medium",
+                  "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
                   createTab === "main"
                     ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                     : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
@@ -600,7 +645,7 @@ export function CoursesManager({
                 type="button"
                 onClick={() => setCreateTab("schedule")}
                 className={[
-                  "rounded px-3 py-1.5 text-xs font-medium",
+                  "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
                   createTab === "schedule"
                     ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                     : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
@@ -615,6 +660,7 @@ export function CoursesManager({
                 activeTab={createTab}
                 defaultValues={emptyDraft}
                 labels={labels.fields}
+                validationLabels={labels.validation}
                 scheduleLabels={labels.schedule}
                 weekdays={weekdays}
                 scheduleSlots={createSchedule}
@@ -696,7 +742,7 @@ export function CoursesManager({
                             "-"
                           )}
                           {course.deletedAt ? (
-                            <span className="rounded-md border border-red-300 px-1.5 py-0.5 text-[10px] text-red-700 dark:border-red-800 dark:text-red-300">
+                            <span className="rounded-md border border-[var(--danger-hover)] px-1.5 py-0.5 text-[10px] text-[var(--danger-fg)] dark:border-red-800 dark:text-red-300">
                               {labels.deletedTag}
                             </span>
                           ) : null}
@@ -813,7 +859,7 @@ export function CoursesManager({
                   type="button"
                   onClick={() => setEditTab("main")}
                   className={[
-                    "rounded px-3 py-1.5 text-xs font-medium",
+                    "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
                     editTab === "main"
                       ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                       : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
@@ -825,7 +871,7 @@ export function CoursesManager({
                   type="button"
                   onClick={() => setEditTab("schedule")}
                   className={[
-                    "rounded px-3 py-1.5 text-xs font-medium",
+                    "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
                     editTab === "schedule"
                       ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
                       : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
@@ -847,6 +893,7 @@ export function CoursesManager({
                   cancellationWindowHours: String(selectedCourse.cancellationWindowHours),
                 }}
                 labels={labels.fields}
+                validationLabels={labels.validation}
                 scheduleLabels={labels.schedule}
                 weekdays={weekdays}
                 scheduleSlots={editSchedule}
@@ -939,6 +986,7 @@ function CourseFields({
   activeTab = "main",
   defaultValues,
   labels,
+  validationLabels,
   scheduleLabels,
   weekdays,
   scheduleSlots,
@@ -959,6 +1007,7 @@ function CourseFields({
     cancellationWindowHours: string;
   };
   labels: CoursesManagerProps["labels"]["fields"];
+  validationLabels: CoursesManagerProps["labels"]["validation"];
   scheduleLabels: CoursesManagerProps["labels"]["schedule"];
   weekdays: Array<{ value: Weekday; label: string }>;
   scheduleSlots: ScheduleSlot[];
@@ -967,7 +1016,7 @@ function CourseFields({
   onAddSlot: (weekday: Weekday, startTime: string) => void;
   onRemoveSlot: (weekday: Weekday, startTime: string) => void;
 }) {
-  const [dayToAdd, setDayToAdd] = useState<Weekday>("MONDAY");
+  const [dayToAdd, setDayToAdd] = useState<Weekday>(() => weekdays[0]?.value ?? "MONDAY");
   const [timeToAdd, setTimeToAdd] = useState("08:00");
   const [durationInput, setDurationInput] = useState(defaultValues.durationMinutes);
   const [selectedLessonTypeId, setSelectedLessonTypeId] = useState(defaultValues.lessonTypeId);
@@ -976,6 +1025,9 @@ function CourseFields({
 
   const durationValue = Number.parseInt(durationInput, 10);
   const durationMinutes = Number.isNaN(durationValue) || durationValue <= 0 ? 60 : durationValue;
+  const safeDayToAdd = weekdays.some((weekday) => weekday.value === dayToAdd)
+    ? dayToAdd
+    : (weekdays[0]?.value ?? "MONDAY");
 
   return (
     <>
@@ -1096,7 +1148,7 @@ function CourseFields({
 
         <div className="flex flex-col gap-2 md:flex-row">
           <select
-            value={dayToAdd}
+            value={safeDayToAdd}
             onChange={(event) => setDayToAdd(event.target.value as Weekday)}
             className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
@@ -1110,8 +1162,14 @@ function CourseFields({
           <Button
             type="button"
             variant="outline"
+            disabled={weekdays.length === 0}
             onClick={() => {
-              onAddSlot(dayToAdd, timeToAdd);
+              const nextSlots = normalizeScheduleSlots([...scheduleSlots, { weekday: safeDayToAdd, startTime: timeToAdd }]);
+              if (hasOverlappingScheduleSlots(nextSlots, durationMinutes)) {
+                toast.error(validationLabels.scheduleOverlap);
+                return;
+              }
+              onAddSlot(safeDayToAdd, timeToAdd);
             }}
           >
             {scheduleLabels.addSlot}
@@ -1122,13 +1180,13 @@ function CourseFields({
           <p className="text-sm text-[var(--muted-foreground)]">{scheduleLabels.noSlots}</p>
         ) : (
           <div className="space-y-2">
-            {weekdays.map((weekday) => {
-              const daySlots = scheduleSlots.filter((slot) => slot.weekday === weekday.value);
+            {weekdayOrder.map((weekday) => {
+              const daySlots = scheduleSlots.filter((slot) => slot.weekday === weekday);
               if (daySlots.length === 0) return null;
 
               return (
-                <div key={weekday.value} className="space-y-1">
-                  <p className="text-xs font-medium text-[var(--muted-foreground)]">{weekday.label}</p>
+                <div key={weekday} className="space-y-1">
+                  <p className="text-xs font-medium text-[var(--muted-foreground)]">{scheduleLabels.weekdays[weekday]}</p>
                   <div className="flex flex-wrap gap-2">
                     {daySlots.map((slot) => (
                       <div
@@ -1140,7 +1198,7 @@ function CourseFields({
                         </span>
                         <button
                           type="button"
-                          className="text-red-600 hover:underline"
+                          className="text-[var(--danger-fg)] hover:underline"
                           onClick={() => onRemoveSlot(slot.weekday, slot.startTime)}
                         >
                           {scheduleLabels.removeSlot}

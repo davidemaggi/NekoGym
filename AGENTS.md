@@ -88,3 +88,27 @@ An Admin can also manage the gym's schedule, for example they can block certain 
 An Admin can also manage the gym's trainers, for example they can assign a trainer to a course, or they can remove a trainer from a course, or they can set the availability of a trainer, in this case lessons can only be scheduled during the trainer's availability.
 An Admin can also manage the gym's trainees, for example they can activate or deactivate a trainee's membership status, or they can set a trial period for a trainee, or they can set a subscription plan for a trainee.
 A trainee can signup for an account, but they cannot book lessons until an admin activates their membership status and sets a subscription plan for them. An admin can also manually activate a trainee's account and set a subscription plan for them, without the trainee having to sign up for an account.
+
+## Critical Reconcile Rules (Course -> Lessons)
+
+This codebase treats course-to-lessons reconciliation as a critical business workflow.
+
+When editing code around courses/lessons:
+
+- Assume reconcile behavior is safety-critical for bookings and notifications.
+- Preserve the meaning of reconcile outcomes:
+  - `modified`: existing generated future lesson updated to match course
+  - `unchanged`: existing generated future lesson already aligned
+  - `cancelled`: lesson with bookings cannot be silently removed
+  - `deleted`: lesson without bookings can be removed
+  - `created`: missing lesson generated from seed
+- Do not remove per-lesson server logs from reconcile unless explicitly requested.
+- Keep logs clear enough to debug one single lesson decision (id, startsAt, outcome, reason).
+- Keep notifications for auto-cancelled booked lessons.
+- Keep constraints:
+  - reconcile only future generated lessons
+  - customized lessons (`isCustomized=true`) are handled separately from normal generated lessons
+  - site schedule constraints (open weekdays/closed dates) filter generated seeds
+- Any change to this flow should update both:
+  - `README.md` user-facing explanation
+  - this `AGENTS.md` section

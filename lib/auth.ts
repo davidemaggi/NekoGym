@@ -144,12 +144,13 @@ function generateSixDigitCode() {
   return String(randomInt(0, 1_000_000)).padStart(6, "0");
 }
 
-function appBaseUrl() {
-  return process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+export function getAppBaseUrl() {
+  const raw = process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000";
+  return raw.replace(/\/+$/, "");
 }
 
 function buildLocalizedUrl(locale: string, pathWithQuery: string) {
-  return `${appBaseUrl()}/${locale}${pathWithQuery}`;
+  return `${getAppBaseUrl()}/${locale}${pathWithQuery}`;
 }
 
 async function setSessionCookie(token: string, expiresAt: Date) {

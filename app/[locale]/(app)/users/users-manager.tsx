@@ -3,9 +3,9 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
 
-import { createUserAction, deleteUserAction, updateUserAction } from "@/app/[locale]/(app)/users/actions";
+import { createUserAction, deleteUserAction, sendUserMessageAction, updateUserAction } from "@/app/[locale]/(app)/users/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 
 type UserItem = {
   id: string;
@@ -110,10 +111,15 @@ type UsersManagerProps = {
       reviewUpdate: string;
       cancel: string;
       edit: string;
+      message: string;
+      sendMessage: string;
       delete: string;
       confirm: string;
       processing: string;
     };
+    messageDialogTitle: string;
+    messageDialogDescription: string;
+    messagePlaceholder: string;
     confirmCreateTitle: string;
     confirmCreateDescription: string;
     confirmUpdateTitle: string;
@@ -183,6 +189,8 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
   const [createOpen, setCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<UserItem | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
+  const [messageUser, setMessageUser] = useState<UserItem | null>(null);
+  const [messageBody, setMessageBody] = useState("");
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserItem["role"] | "ALL">("ALL");
@@ -277,6 +285,27 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
         setEditUser(null);
         setDeleteUser(null);
         setConfirmation(null);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
+  function submitUserMessage() {
+    if (!messageUser) return;
+
+    const formData = new FormData();
+    formData.set("locale", locale);
+    formData.set("id", messageUser.id);
+    formData.set("message", messageBody);
+
+    startTransition(async () => {
+      const result = await sendUserMessageAction(formData);
+      if (result.ok) {
+        toast.success(result.message);
+        setMessageUser(null);
+        setMessageBody("");
         router.refresh();
       } else {
         toast.error(result.message);
@@ -385,6 +414,18 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
                             <span>{labels.actions.edit}</span>
                           </Button>
                           <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-[#BEE3F8] bg-[#E6F4FF] text-[#1E5D85] hover:bg-[#D8EEFF] dark:border-[#2B5D86] dark:bg-[#123A56] dark:text-[#BFE6FF] dark:hover:bg-[#184666]"
+                            onClick={() => {
+                              setMessageUser(user);
+                              setMessageBody("");
+                            }}
+                          >
+                            <MessageSquare className="h-4 w-4" />
+                            <span>{labels.actions.message}</span>
+                          </Button>
+                          <Button
                             variant="destructive"
                             size="sm"
                             onClick={() => {
@@ -444,6 +485,56 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
               </DialogFooter>
             </form>
           ) : null}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(messageUser)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setMessageUser(null);
+            setMessageBody("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{labels.messageDialogTitle}</DialogTitle>
+            <DialogDescription>{labels.messageDialogDescription.replace("{name}", messageUser?.name ?? "")}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="users-message-body">{labels.actions.message}</Label>
+            <Textarea
+              id="users-message-body"
+              rows={5}
+              value={messageBody}
+              onChange={(event) => setMessageBody(event.target.value)}
+              placeholder={labels.messagePlaceholder}
+              disabled={isPending}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                setMessageUser(null);
+                setMessageBody("");
+              }}
+              disabled={isPending}
+            >
+              {labels.actions.cancel}
+            </Button>
+            <Button
+              type="button"
+              className="border-[#BEE3F8] bg-[#E6F4FF] text-[#1E5D85] hover:bg-[#D8EEFF] dark:border-[#2B5D86] dark:bg-[#123A56] dark:text-[#BFE6FF] dark:hover:bg-[#184666]"
+              onClick={submitUserMessage}
+              disabled={isPending || !messageBody.trim()}
+            >
+              <MessageSquare className="h-4 w-4" />
+              <span>{isPending ? labels.actions.processing : labels.actions.sendMessage}</span>
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -8,6 +8,7 @@ import { ListChecks, ThumbsDown, ThumbsUp } from "lucide-react";
 import { confirmLessonBookingAction, rejectLessonBookingAction } from "@/app/[locale]/(app)/bookings/actions";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { UserQuickProfileTooltip } from "@/components/users/user-quick-profile-tooltip";
 
 type PendingApprovalItem = {
   lessonId: string;
@@ -106,11 +107,15 @@ export function DashboardPendingApprovals({
                 <p className="text-xs text-[var(--muted-foreground)]">
                   {item.lessonTypeName} · {item.startsAtLabel}
                 </p>
-                <p className="mt-1 text-xs">{item.traineeName}</p>
+                <p className="mt-1 text-xs">
+                  <UserQuickProfileTooltip userId={item.traineeId} locale={locale}>
+                    {item.traineeName}
+                  </UserQuickProfileTooltip>
+                </p>
                 <div className="mt-2 inline-flex flex-wrap gap-1">
                   <Button
                     size="sm"
-                    className="h-8 w-8 bg-sky-100 p-0 text-sky-800 hover:bg-sky-200 dark:bg-sky-900/40 dark:text-sky-200 dark:hover:bg-sky-900/60"
+                    className="h-8 w-8 bg-[var(--info-bg)] p-0 text-[var(--info-fg)] hover:bg-[var(--info-hover)]"
                     onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "approveUnlock" })}
                     disabled={isPending || busyKey !== null}
                     title={labels.approveAndUnlockCta}
@@ -120,7 +125,7 @@ export function DashboardPendingApprovals({
                   </Button>
                   <Button
                     size="sm"
-                    className="h-8 w-8 bg-emerald-100 p-0 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
+                    className="h-8 w-8 bg-[var(--success-bg)] p-0 text-[var(--success-fg)] hover:bg-[var(--success-hover)] dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
                     onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "approve" })}
                     disabled={isPending || busyKey !== null}
                     title={labels.approveCta}
@@ -130,7 +135,7 @@ export function DashboardPendingApprovals({
                   </Button>
                   <Button
                     size="sm"
-                    className="h-8 w-8 bg-rose-100 p-0 text-rose-800 hover:bg-rose-200 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900/60"
+                    className="h-8 w-8 bg-[var(--danger-bg)] p-0 text-[var(--danger-fg)] hover:bg-[var(--danger-hover)] dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900/60"
                     onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "reject" })}
                     disabled={isPending || busyKey !== null}
                     title={labels.rejectCta}

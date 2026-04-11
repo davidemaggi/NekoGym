@@ -8,6 +8,7 @@ Base application for gym management built with Next.js App Router.
 - Internationalization routing with `it` and `en` locales (`/[locale]/...`)
 - Auth with Prisma + SQLite (register, login, logout)
 - First registered user is automatically assigned role `ADMIN`
+- SQLite path is fixed to `./data/nekogym.db` (no `DATABASE_URL` override)
 
 ## Tech stack
 
@@ -21,15 +22,20 @@ Base application for gym management built with Next.js App Router.
 
 1. Install dependencies
 2. Configure environment
-3. Run Prisma migration
-4. Start dev server
+3. Start dev server
 
 ```bash
 npm install
 cp .env.example .env
-npm run prisma:migrate -- --name init
 npm run dev
 ```
+
+At startup, the custom server automatically creates `./data` and `./data/backups` if missing, then runs `prisma migrate deploy`.
+
+Data folders used by the app:
+
+- `./data` (contains `nekogym.db`)
+- `./data/backups` (contains DB backups/imported backups)
 
 ## Useful commands
 
@@ -99,6 +105,48 @@ docker compose down
 - Notification outbox worker (email always + Telegram when linked)
 - Web Push delivery for users with active browser subscription
 - Telegram bot bootstrap hook (enabled when `TELEGRAM_BOT_TOKEN` is set)
+
+## Course Change Reconcile (Critical)
+
+When a course is created, updated, or restored, NekoGym runs a **future-lessons reconcile** to align generated lessons with course schedule and constraints.
+
+Trigger points:
+
+- `createCourseAction` -> reconcile for the new course
+- `updateCourseAction` -> reconcile for the updated course
+- `restoreCourseAction` -> reconcile for the restored course
+- daily background job -> reconcile all active courses
+
+What reconcile does (future generated lessons only):
+
+1. Build target lesson seeds from course schedule slots + booking window.
+2. Filter seeds using site opening rules (`openWeekdays`, `closedDates`).
+3. Compare existing generated lessons vs seeds.
+4. For each existing lesson, choose one outcome:
+   - `modified`: lesson updated to match course-derived values
+   - `unchanged`: no update needed, lesson already aligned
+   - `cancelled`: lesson cancelled (kept as cancelled/deleted) because it has bookings and cannot be silently removed
+   - `deleted`: lesson cancelled/deleted with no bookings
+5. Create missing lessons from remaining seeds (`created`).
+
+Important constraints:
+
+- Only lessons with `isGenerated=true`, `startsAt > now`, `deletedAt=null` are reconciled.
+- `isCustomized=true` lessons are never treated as standard generated lessons:
+  - with bookings -> cancelled and notifications sent
+  - without bookings -> cancelled/deleted, and seed remains available for fresh generated lesson creation
+- If a schedule slot is removed:
+  - with bookings -> lesson is cancelled + notifications
+  - without bookings -> lesson is deleted
+- Site closures can block seed generation, so expected lessons may be intentionally skipped.
+
+Server logs (verbose):
+
+- Course-triggered reconcile now logs one line per processed lesson with outcome:
+  - `outcome=modified|unchanged|cancelled|deleted|created`
+  - reason/reasons (for modified/cancelled/deleted)
+- Each run prints a summary:
+  - `created`, `updated`, `unchanged`, `cancelled`, `deleted`
 
 Environment variables:
 
@@ -225,4 +273,3 @@ If delivery fails, inspect outbox errors and retry from the same page.
 curl -X POST "http://localhost:3000/api/cron/lessons/reconcile" \
   -H "x-cron-secret: $CRON_SECRET"
 ```
-

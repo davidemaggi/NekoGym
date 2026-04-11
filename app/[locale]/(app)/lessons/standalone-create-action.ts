@@ -62,9 +62,130 @@ function messages(locale: string) {
     queueMissing: isIt ? "Utente non presente in coda." : "User is not in waitlist.",
     queueConfirmed: isIt ? "Utente confermato dalla coda." : "User confirmed from waitlist.",
     queueRemoved: isIt ? "Utente rimosso dalla coda." : "User removed from waitlist.",
+    waitlistPromotedSubject: isIt ? "Posto confermato dalla coda" : "Seat confirmed from waitlist",
+    waitlistPromotedBody: (courseName: string | null, startsAt: Date) =>
+      isIt
+        ? `Si e liberato un posto: la tua iscrizione alla lezione ${courseName ?? "-"} del ${formatDateForNotification(startsAt, locale)} e ora confermata.`
+        : `A seat is now available: your booking for lesson ${courseName ?? "-"} on ${formatDateForNotification(startsAt, locale)} is now confirmed.`,
+    staffReplacementSubject: isIt ? "Sostituzione automatica in lezione" : "Automatic replacement in lesson",
+    staffReplacementBody: (removedName: string, promotedName: string, courseName: string | null, startsAt: Date) =>
+      isIt
+        ? `${removedName} e stato rimosso dalla lezione ${courseName ?? "-"} del ${formatDateForNotification(startsAt, locale)}. ${promotedName} e stato confermato automaticamente dalla coda e ha preso il posto.`
+        : `${removedName} was removed from lesson ${courseName ?? "-"} on ${formatDateForNotification(startsAt, locale)}. ${promotedName} was automatically confirmed from waitlist and took the seat.`,
     queueConfirmFailed: isIt ? "Impossibile confermare utente dalla coda." : "Unable to confirm user from waitlist.",
     queueRemoveFailed: isIt ? "Impossibile rimuovere utente dalla coda." : "Unable to remove user from waitlist.",
+    broadcastMessageRequired: isIt ? "Messaggio notifica obbligatorio." : "Notification message is required.",
+    broadcastNoRecipients: isIt ? "Nessun iscritto da notificare." : "No attendees to notify.",
+    broadcastSent: isIt ? "Notifica inviata agli iscritti." : "Notification sent to attendees.",
+    broadcastFailed: isIt ? "Impossibile inviare la notifica." : "Unable to send notification.",
   };
+}
+
+async function getLessonStaffTargets(input: {
+  tx: Prisma.TransactionClient;
+  lessonId: string;
+}): Promise<Array<{ id: string; telegramChatId: string | null }>> {
+  const lesson = await input.tx.lesson.findUnique({
+    where: { id: input.lessonId },
+    select: { trainerId: true },
+  });
+  const admins = await input.tx.user.findMany({
+    where: { role: "ADMIN" },
+    select: { id: true, telegramChatId: true },
+  });
+
+  const targets = new Map<string, { id: string; telegramChatId: string | null }>();
+  for (const admin of admins) {
+    targets.set(admin.id, admin);
+  }
+
+  if (lesson?.trainerId) {
+    const trainer = await input.tx.user.findUnique({
+      where: { id: lesson.trainerId },
+      select: { id: true, telegramChatId: true },
+    });
+    if (trainer) {
+      targets.set(trainer.id, trainer);
+    }
+  }
+
+  return Array.from(targets.values());
+}
+
+async function promoteOldestWaitlistEntry(input: {
+  tx: Prisma.TransactionClient;
+  lessonId: string;
+  confirmedById: string;
+}): Promise<{ id: string; name: string; telegramChatId: string | null } | null> {
+  while (true) {
+    const firstQueued = await input.tx.lessonWaitlistEntry.findFirst({
+      where: { lessonId: input.lessonId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        trainee: {
+          select: {
+            id: true,
+            name: true,
+            telegramChatId: true,
+            role: true,
+            membershipStatus: true,
+            subscriptionType: true,
+            subscriptionRemaining: true,
+          },
+        },
+      },
+    });
+
+    if (!firstQueued) return null;
+
+    const existingBooking = await input.tx.lessonBooking.findUnique({
+      where: {
+        lessonId_traineeId: {
+          lessonId: input.lessonId,
+          traineeId: firstQueued.traineeId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existingBooking) {
+      await input.tx.lessonWaitlistEntry.delete({ where: { id: firstQueued.id } });
+      continue;
+    }
+
+    await input.tx.lessonBooking.create({
+      data: {
+        lessonId: input.lessonId,
+        traineeId: firstQueued.traineeId,
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+        confirmedById: input.confirmedById,
+      },
+    });
+    await input.tx.lessonWaitlistEntry.delete({ where: { id: firstQueued.id } });
+
+    if (
+      firstQueued.trainee.role === "TRAINEE" &&
+      firstQueued.trainee.membershipStatus === "ACTIVE" &&
+      firstQueued.trainee.subscriptionType === "FIXED"
+    ) {
+      await input.tx.user.update({
+        where: { id: firstQueued.trainee.id },
+        data: {
+          subscriptionRemaining:
+            firstQueued.trainee.subscriptionRemaining === null
+              ? null
+              : Math.max(0, firstQueued.trainee.subscriptionRemaining - 1),
+        },
+      });
+    }
+
+    return {
+      id: firstQueued.trainee.id,
+      name: firstQueued.trainee.name,
+      telegramChatId: firstQueued.trainee.telegramChatId,
+    };
+  }
 }
 
 function isPastOrNow(startsAt: Date): boolean {
@@ -209,6 +330,7 @@ async function loadManagedLessonOrThrow(input: {
     where: { id: input.lessonId },
     include: {
       course: { select: { name: true, trainerId: true } },
+      lessonType: { select: { name: true } },
       _count: { select: { bookings: true } },
     },
   });
@@ -700,6 +822,12 @@ export async function removeLessonAttendeeMutationAction(formData: FormData): Pr
 
       await tx.lessonBooking.delete({ where: { id: booking.id } });
 
+      const promotedFromQueue = await promoteOldestWaitlistEntry({
+        tx,
+        lessonId,
+        confirmedById: currentUser.id,
+      });
+
       const remainingBookings = await tx.lessonBooking.count({ where: { lessonId } });
 
       if (!pastOrNow) {
@@ -712,7 +840,24 @@ export async function removeLessonAttendeeMutationAction(formData: FormData): Pr
           lesson,
         });
 
-        if (remainingBookings < lesson.maxAttendees) {
+        if (promotedFromQueue) {
+          await enqueueNotificationForUsers(
+            tx,
+            [{ id: promotedFromQueue.id, telegramChatId: promotedFromQueue.telegramChatId }],
+            {
+              subject: t.waitlistPromotedSubject,
+              body: t.waitlistPromotedBody(lesson.course?.name ?? null, lesson.startsAt),
+            }
+          );
+
+          const staffTargets = await getLessonStaffTargets({ tx, lessonId });
+          if (staffTargets.length > 0) {
+            await enqueueNotificationForUsers(tx, staffTargets, {
+              subject: t.staffReplacementSubject,
+              body: t.staffReplacementBody(booking.trainee.name, promotedFromQueue.name, lesson.course?.name ?? null, lesson.startsAt),
+            });
+          }
+        } else if (remainingBookings < lesson.maxAttendees) {
           await notifyWaitlistSeatAvailable({
             tx,
             locale,
@@ -854,6 +999,64 @@ export async function removeLessonWaitlistEntryMutationAction(formData: FormData
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.queueRemoveFailed,
+    };
+  }
+}
+
+export async function broadcastLessonNotificationMutationAction(formData: FormData): Promise<LessonMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const t = messages(locale);
+
+  try {
+    const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    const lessonId = getField(formData, "lessonId");
+    const message = getField(formData, "message");
+    if (!lessonId) throw new Error(t.lessonRequired);
+    if (!message) throw new Error(t.broadcastMessageRequired);
+
+    await prisma.$transaction(async (tx) => {
+      const lesson = await loadManagedLessonOrThrow({
+        tx,
+        lessonId,
+        locale,
+        currentUser,
+      });
+
+      const bookings = await tx.lessonBooking.findMany({
+        where: { lessonId },
+        select: {
+          trainee: {
+            select: { id: true, telegramChatId: true },
+          },
+        },
+      });
+
+      if (bookings.length === 0) {
+        throw new Error(t.broadcastNoRecipients);
+      }
+
+      const lessonName = (lesson.title?.trim() || lesson.course?.name || "-").trim();
+      const lessonTypeName = lesson.lessonType?.name?.trim() || "-";
+      const scheduleLabel = `${formatDateForNotification(lesson.startsAt, locale)} - ${new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(lesson.endsAt)}`;
+      const detailsLabel = locale === "it" ? "Dettagli lezione" : "Lesson details";
+      const subject = locale === "it" ? "Messaggio lezione" : "Lesson message";
+      const body = `${message}\n\n${detailsLabel}:\n${locale === "it" ? "Nome" : "Name"}: ${lessonName}\n${locale === "it" ? "Tipo" : "Type"}: ${lessonTypeName}\n${locale === "it" ? "Quando" : "When"}: ${scheduleLabel}`;
+
+      const targets = bookings.map((booking) => ({
+        id: booking.trainee.id,
+        telegramChatId: booking.trainee.telegramChatId,
+      }));
+      await enqueueNotificationForUsers(tx, targets, { subject, body });
+    });
+
+    return { ok: true, message: t.broadcastSent };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : t.broadcastFailed,
     };
   }
 }

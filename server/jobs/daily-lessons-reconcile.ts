@@ -40,7 +40,7 @@ export function startDailyLessonsReconcileJob(log: Logger): () => void {
     try {
       const stats = await prisma.$transaction(async (tx) => reconcileFutureLessonsForAllCourses(tx));
       log(
-        `Lessons reconcile completed: courses=${stats.coursesProcessed}, created=${stats.created}, updated=${stats.updated}, cancelled=${stats.cancelled}, deleted=${stats.deleted}`
+        `Lessons reconcile completed: courses=${stats.coursesProcessed}, created=${stats.created}, updated=${stats.updated}, unchanged=${stats.unchanged}, cancelled=${stats.cancelled}, deleted=${stats.deleted}`
       );
     } catch (error) {
       log(`Lessons reconcile failed: ${error instanceof Error ? error.message : "unknown error"}`);
@@ -71,4 +71,3 @@ export function startDailyLessonsReconcileJob(log: Logger): () => void {
     if (timeoutId) clearTimeout(timeoutId);
   };
 }
-

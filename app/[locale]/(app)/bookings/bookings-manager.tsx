@@ -1,15 +1,13 @@
 "use client";
 
-import { type CSSProperties, useMemo, useState } from "react";
+import { type CSSProperties, useMemo } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock3, Hourglass, Pencil, Plus, UserRound, Users } from "lucide-react";
-import { LessonManageDialog } from "@/app/[locale]/(app)/lessons/lesson-manage-dialog";
+import { AlertTriangle, Clock3, Hourglass, Plus, UserRound, Users } from "lucide-react";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
 import { BookingBadgeToggle } from "@/components/bookings/booking-badge-toggle";
+import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { hexToRgba } from "@/lib/lesson-type-icons";
 
 type LessonCalendarItem = {
@@ -75,6 +73,10 @@ type BookingsManagerProps = {
     nextMonth: string;
     bookCta: string;
     unbookCta: string;
+    confirmUnbookTitle: string;
+    confirmUnbookDescription: string;
+    confirmUnbookCta: string;
+    confirmKeepBookingCta: string;
     processing: string;
     youAreQueued: string;
     queuedLabel: string;
@@ -108,6 +110,10 @@ type BookingsManagerProps = {
     noWaitlist: string;
     confirmWaitlistCta: string;
     removeWaitlistCta: string;
+    notifySectionTitle: string;
+    notifyMessageLabel: string;
+    notifyMessagePlaceholder: string;
+    notifySendCta: string;
     manageTitle: string;
     manageDescription: string;
     manageTriggerLabel: string;
@@ -130,17 +136,6 @@ type BookingsManagerProps = {
   closedDates: string[];
   isAdmin: boolean;
 };
-
-function formatDateTime(value: string, locale: string): string {
-  const date = new Date(value);
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
-}
 
 function formatTime(value: string, locale: string): string {
   const date = new Date(value);
@@ -208,15 +203,14 @@ function defaultStartsAtForDay(day: Date): string {
   return toDateTimeLocalValue(value);
 }
 
-function toDateTimeLocalFromIso(value: string): string {
-  return toDateTimeLocalValue(new Date(value));
-}
-
 function lessonCardStyle(lesson: LessonCalendarItem, isSelected: boolean): CSSProperties | undefined {
-  if (!lesson.lessonTypeColor) return undefined;
+  const borderStyle: CSSProperties["borderStyle"] = lesson.isBookedByCurrentUser ? "solid" : "dashed";
+  if (!lesson.lessonTypeColor) return { borderStyle };
   return {
     backgroundColor: hexToRgba(lesson.lessonTypeColor, isSelected ? 0.24 : 0.16),
-    border: `1px solid ${hexToRgba(lesson.lessonTypeColor, isSelected ? 0.9 : 0.55)}`,
+    borderColor: hexToRgba(lesson.lessonTypeColor, isSelected ? 0.9 : 0.55),
+    borderWidth: 1,
+    borderStyle,
   };
 }
 
@@ -238,12 +232,6 @@ export function BookingsManager({
   closedDates,
   isAdmin,
 }: BookingsManagerProps) {
-  const [selectedLessonId, setSelectedLessonId] = useState<string | null>(null);
-  const [manageLessonId, setManageLessonId] = useState<string | null>(null);
-
-  const selectedLesson = lessons.find((lesson) => lesson.id === selectedLessonId) ?? null;
-  const manageLesson = lessons.find((lesson) => lesson.id === manageLessonId) ?? null;
-
   const monthDate = parseMonth(month);
   const firstGridDate = useMemo(() => {
     const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
@@ -283,6 +271,8 @@ export function BookingsManager({
     const dateKey = localDateKeyFromDate(date);
     return !openWeekdaySet.has(weekday) || closedDateSet.has(dateKey);
   }
+
+  // Details are rendered through the shared LessonDetailsDialogTrigger component.
 
   return (
     <section className="space-y-4">
@@ -367,67 +357,107 @@ export function BookingsManager({
                         : undefined;
 
                       return (
-                        <div
+                        <LessonDetailsDialogTrigger
                           key={`mobile-${lesson.id}`}
-                          role="button"
-                          tabIndex={0}
-                          className={[
-                            "w-full cursor-pointer rounded px-2 py-1 text-left text-xs transition hover:brightness-95",
-                            selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
-                            lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
-                            !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
-                          ].join(" ")}
-                          style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
-                          onClick={() => setSelectedLessonId(lesson.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedLessonId(lesson.id);
-                            }
+                          locale={locale}
+                          lesson={{
+                            id: lesson.id,
+                            title: lesson.title ?? lesson.courseName,
+                            description: lesson.description,
+                            startsAt: lesson.startsAt,
+                            endsAt: lesson.endsAt,
+                            trainerName: lesson.trainerName,
+                            occupancy: lesson.occupancy,
+                            queueLength: lesson.queueLength,
+                            canViewWaitlist: lesson.canViewWaitlist,
+                            isCourseLesson: lesson.isCourseLesson,
+                            lessonTypeName: lesson.lessonTypeName,
+                            lessonTypeIcon: lesson.lessonTypeIcon,
+                            lessonTypeColor: lesson.lessonTypeColor,
+                            canBroadcast: lesson.canManageLesson,
                           }}
-                        >
-                          <div className="flex items-start gap-2">
-                            {lesson.lessonTypeIcon ? (
-                              <LessonTypeIcon
-                                iconPath={lesson.lessonTypeIcon}
-                                colorHex={lesson.lessonTypeColor}
-                                size={22}
-                                title={lesson.lessonTypeName ?? undefined}
-                              />
-                            ) : null}
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
-                            </div>
-                          </div>
-                          <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
-                            <span className="inline-flex items-center gap-1" title={timeTooltip}>
-                              <Clock3 className="h-3.5 w-3.5" />
-                              {formatTime(lesson.startsAt, locale)}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Hourglass className="h-3.5 w-3.5" />
-                              {durationMinutes} min
-                            </span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
-                            <span className="inline-flex items-center gap-1">
-                              <UserRound className="h-3.5 w-3.5" />
-                              {lesson.trainerName ?? "-"}
-                            </span>
-                            <span title={bookedTooltip} className="inline-flex items-center gap-1">
-                              {isAdmin && lesson.pendingApprovalsCount > 0 ? (
-                                <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                              ) : (
-                                <Users className="h-3.5 w-3.5" />
-                              )}
-                              {labels.bookedLabel}: {lesson.occupancy}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-end">
-                            {lesson.isAccessDenied ? (
-                              <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
+                          labels={{
+                            detailsTitle: labels.detailsTitle,
+                            detailsDescription: labels.detailsDescription,
+                            startsAtLabel: labels.startsAtLabel,
+                            endsAtLabel: labels.endsAtLabel,
+                            trainerLabel: labels.trainerLabel,
+                            bookedLabel: labels.bookedLabel,
+                            queuedLabel: labels.queuedLabel,
+                            closeCta: labels.closeCta,
+                            courseTag: labels.courseTag,
+                            lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
+                            notifySectionTitle: lessonCreateLabels.notifySectionTitle,
+                            notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
+                            notifySendCta: lessonCreateLabels.notifySendCta,
+                          }}
+                          manage={lesson.canManageLesson ? {
+                            lesson: {
+                              id: lesson.id,
+                              canEditMain: !lesson.isCourseLesson,
+                              title: lesson.title ?? "",
+                              description: lesson.description ?? "",
+                              startsAt: toDateTimeLocalValue(new Date(lesson.startsAt)),
+                              durationMinutes,
+                              maxAttendees: lesson.maxAttendees,
+                              cancellationWindowHours: lesson.cancellationWindowHours,
+                              trainerId: lesson.trainerId,
+                              lessonTypeId: lesson.lessonTypeId,
+                              canManageTrainer: canUpdateTrainer,
+                              attendees: lesson.attendees,
+                              pendingApprovals: lesson.pendingApprovals,
+                              waitlist: lesson.waitlist,
+                            },
+                            trainerCandidates,
+                            lessonTypeCandidates,
+                            attendeeCandidates,
+                            canBroadcastToAttendees: lesson.canManageLesson,
+                            labels: {
+                              title: lessonCreateLabels.manageTitle,
+                              description: lessonCreateLabels.manageDescription,
+                              tabMain: lessonCreateLabels.manageTabMain,
+                              tabPeople: lessonCreateLabels.manageTabPeople,
+                              startsAtLabel: lessonCreateLabels.startsAtLabel,
+                              trainerLabel: lessonCreateLabels.trainerLabel,
+                              standaloneDuration: lessonCreateLabels.standaloneDuration,
+                              standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
+                              standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
+                              standaloneLessonType: lessonCreateLabels.standaloneLessonType,
+                              lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
+                              lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
+                              updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
+                              updateTrainerCta: lessonCreateLabels.updateTrainerCta,
+                              attendeesLabel: lessonCreateLabels.attendeesLabel,
+                              noAttendees: lessonCreateLabels.noAttendees,
+                              attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
+                              addAttendeeCta: lessonCreateLabels.addAttendeeCta,
+                              removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
+                              pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
+                              noPendingApprovals: lessonCreateLabels.noPendingApprovals,
+                              confirmPendingCta: lessonCreateLabels.confirmPendingCta,
+                              confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
+                              rejectPendingCta: lessonCreateLabels.rejectPendingCta,
+                              waitlistLabel: lessonCreateLabels.waitlistLabel,
+                              noWaitlist: lessonCreateLabels.noWaitlist,
+                              confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,
+                              removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
+                              processing: lessonCreateLabels.processing,
+                              closeCta: lessonCreateLabels.closeCta,
+                              manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
+                              notifySectionTitle: lessonCreateLabels.notifySectionTitle,
+                              notifyMessageLabel: lessonCreateLabels.notifyMessageLabel,
+                              notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
+                              notifySendCta: lessonCreateLabels.notifySendCta,
+                            },
+                          } : undefined}
+                          footerSlot={
+                            lesson.isAccessDenied ? (
+                              <Badge variant="neutral" className="inline-flex items-center gap-1 px-3 py-2 text-xs">{labels.accessDenied}</Badge>
                             ) : lesson.isQueuedByCurrentUser ? (
-                              <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                              <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
+                                <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
+                                {labels.youAreQueued}
+                              </Badge>
                             ) : (
                               <BookingBadgeToggle
                                 locale={locale}
@@ -441,11 +471,72 @@ export function BookingsManager({
                                   bookedCta: labels.youAreBooked,
                                   pendingCta: labels.awaitingConfirmation,
                                   processing: labels.processing,
+                                  confirmUnbookTitle: labels.confirmUnbookTitle,
+                                  confirmUnbookDescription: labels.confirmUnbookDescription,
+                                  confirmUnbookCta: labels.confirmUnbookCta,
+                                  confirmKeepBookingCta: labels.confirmKeepBookingCta,
                                 }}
                               />
-                            )}
-                          </div>
-                        </div>
+                            )
+                          }
+                          trigger={
+                            <div
+                              className={[
+                                "w-full rounded border border-[var(--surface-border)] px-2 py-1 text-left text-xs transition hover:brightness-95",
+                                lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
+                                !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
+                              ].join(" ")}
+                              style={lessonCardStyle(lesson, false)}
+                            >
+                              <div className="flex items-start gap-2">
+                                {lesson.lessonTypeIcon ? (
+                                  <LessonTypeIcon
+                                    iconPath={lesson.lessonTypeIcon}
+                                    colorHex={lesson.lessonTypeColor}
+                                    size={22}
+                                    title={lesson.lessonTypeName ?? undefined}
+                                  />
+                                ) : null}
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
+                                </div>
+                              </div>
+                              <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
+                                <span className="inline-flex items-center gap-1" title={timeTooltip}>
+                                  <Clock3 className="h-3.5 w-3.5" />
+                                  {formatTime(lesson.startsAt, locale)}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Hourglass className="h-3.5 w-3.5" />
+                                  {durationMinutes} min
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
+                                <span className="inline-flex items-center gap-1">
+                                  <UserRound className="h-3.5 w-3.5" />
+                                  {lesson.trainerName ?? "-"}
+                                </span>
+                                <span title={bookedTooltip} className="inline-flex items-center gap-1">
+                                  {isAdmin && lesson.pendingApprovalsCount > 0 ? (
+                                    <AlertTriangle className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400" />
+                                  ) : (
+                                    <Users className="h-3.5 w-3.5" />
+                                  )}
+                                  {labels.bookedLabel}: {lesson.occupancy}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-end">
+                                {lesson.isAccessDenied ? (
+                                  <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
+                                ) : lesson.isQueuedByCurrentUser ? (
+                                  <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                                ) : (
+                                  <span className="text-[10px] text-[var(--muted-foreground)]">{labels.detailsCta}</span>
+                                )}
+                              </div>
+                            </div>
+                          }
+                        />
                       );
                     })}
                   </div>
@@ -469,7 +560,7 @@ export function BookingsManager({
                   className={[
                     "min-h-28 rounded-md border p-2",
                     day.isCurrentMonth ? "border-[var(--surface-border)] bg-[var(--surface)]" : "border-[var(--surface-border)] bg-[var(--surface)] opacity-70",
-                    day.key === todayKey ? "ring-2 ring-blue-500" : "",
+                    day.key === todayKey ? "ring-2 ring-[var(--primary)]" : "",
                   ].join(" ")}
                 >
                   <div className="mb-2 flex items-center justify-between gap-1">
@@ -524,67 +615,107 @@ export function BookingsManager({
                         : undefined;
 
                       return (
-                        <div
+                        <LessonDetailsDialogTrigger
                           key={lesson.id}
-                          role="button"
-                          tabIndex={0}
-                          className={[
-                            "w-full cursor-pointer rounded px-2 py-1 text-left text-[11px] transition hover:brightness-95",
-                            selectedLessonId === lesson.id ? "ring-2 ring-offset-1 ring-blue-500" : "",
-                            lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
-                            !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
-                          ].join(" ")}
-                          style={lessonCardStyle(lesson, selectedLessonId === lesson.id)}
-                          onClick={() => setSelectedLessonId(lesson.id)}
-                          onKeyDown={(event) => {
-                            if (event.key === "Enter" || event.key === " ") {
-                              event.preventDefault();
-                              setSelectedLessonId(lesson.id);
-                            }
+                          locale={locale}
+                          lesson={{
+                            id: lesson.id,
+                            title: lesson.title ?? lesson.courseName,
+                            description: lesson.description,
+                            startsAt: lesson.startsAt,
+                            endsAt: lesson.endsAt,
+                            trainerName: lesson.trainerName,
+                            occupancy: lesson.occupancy,
+                            queueLength: lesson.queueLength,
+                            canViewWaitlist: lesson.canViewWaitlist,
+                            isCourseLesson: lesson.isCourseLesson,
+                            lessonTypeName: lesson.lessonTypeName,
+                            lessonTypeIcon: lesson.lessonTypeIcon,
+                            lessonTypeColor: lesson.lessonTypeColor,
+                            canBroadcast: lesson.canManageLesson,
                           }}
-                        >
-                          <div className="flex items-start gap-2">
-                            {lesson.lessonTypeIcon ? (
-                              <LessonTypeIcon
-                                iconPath={lesson.lessonTypeIcon}
-                                colorHex={lesson.lessonTypeColor}
-                                size={20}
-                                title={lesson.lessonTypeName ?? undefined}
-                              />
-                            ) : null}
-                            <div className="min-w-0">
-                              <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
-                            </div>
-                          </div>
-                          <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
-                            <span className="inline-flex items-center gap-1" title={timeTooltip}>
-                              <Clock3 className="h-3.5 w-3.5" />
-                              {formatTime(lesson.startsAt, locale)}
-                            </span>
-                            <span className="inline-flex items-center gap-1">
-                              <Hourglass className="h-3.5 w-3.5" />
-                              {durationMinutes} min
-                            </span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
-                            <span className="inline-flex items-center gap-1">
-                              <UserRound className="h-3.5 w-3.5" />
-                              {lesson.trainerName ?? "-"}
-                            </span>
-                            <span title={bookedTooltip} className="inline-flex items-center gap-1">
-                              {isAdmin && lesson.pendingApprovalsCount > 0 ? (
-                                <AlertTriangle className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                              ) : (
-                                <Users className="h-3.5 w-3.5" />
-                              )}
-                              {labels.bookedLabel}: {lesson.occupancy}
-                            </span>
-                          </div>
-                          <div className="mt-1 flex items-center justify-end">
-                            {lesson.isAccessDenied ? (
-                              <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
+                          labels={{
+                            detailsTitle: labels.detailsTitle,
+                            detailsDescription: labels.detailsDescription,
+                            startsAtLabel: labels.startsAtLabel,
+                            endsAtLabel: labels.endsAtLabel,
+                            trainerLabel: labels.trainerLabel,
+                            bookedLabel: labels.bookedLabel,
+                            queuedLabel: labels.queuedLabel,
+                            closeCta: labels.closeCta,
+                            courseTag: labels.courseTag,
+                            lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
+                            notifySectionTitle: lessonCreateLabels.notifySectionTitle,
+                            notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
+                            notifySendCta: lessonCreateLabels.notifySendCta,
+                          }}
+                          manage={lesson.canManageLesson ? {
+                            lesson: {
+                              id: lesson.id,
+                              canEditMain: !lesson.isCourseLesson,
+                              title: lesson.title ?? "",
+                              description: lesson.description ?? "",
+                              startsAt: toDateTimeLocalValue(new Date(lesson.startsAt)),
+                              durationMinutes,
+                              maxAttendees: lesson.maxAttendees,
+                              cancellationWindowHours: lesson.cancellationWindowHours,
+                              trainerId: lesson.trainerId,
+                              lessonTypeId: lesson.lessonTypeId,
+                              canManageTrainer: canUpdateTrainer,
+                              attendees: lesson.attendees,
+                              pendingApprovals: lesson.pendingApprovals,
+                              waitlist: lesson.waitlist,
+                            },
+                            trainerCandidates,
+                            lessonTypeCandidates,
+                            attendeeCandidates,
+                            canBroadcastToAttendees: lesson.canManageLesson,
+                            labels: {
+                              title: lessonCreateLabels.manageTitle,
+                              description: lessonCreateLabels.manageDescription,
+                              tabMain: lessonCreateLabels.manageTabMain,
+                              tabPeople: lessonCreateLabels.manageTabPeople,
+                              startsAtLabel: lessonCreateLabels.startsAtLabel,
+                              trainerLabel: lessonCreateLabels.trainerLabel,
+                              standaloneDuration: lessonCreateLabels.standaloneDuration,
+                              standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
+                              standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
+                              standaloneLessonType: lessonCreateLabels.standaloneLessonType,
+                              lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
+                              lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
+                              updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
+                              updateTrainerCta: lessonCreateLabels.updateTrainerCta,
+                              attendeesLabel: lessonCreateLabels.attendeesLabel,
+                              noAttendees: lessonCreateLabels.noAttendees,
+                              attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
+                              addAttendeeCta: lessonCreateLabels.addAttendeeCta,
+                              removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
+                              pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
+                              noPendingApprovals: lessonCreateLabels.noPendingApprovals,
+                              confirmPendingCta: lessonCreateLabels.confirmPendingCta,
+                              confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
+                              rejectPendingCta: lessonCreateLabels.rejectPendingCta,
+                              waitlistLabel: lessonCreateLabels.waitlistLabel,
+                              noWaitlist: lessonCreateLabels.noWaitlist,
+                              confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,
+                              removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
+                              processing: lessonCreateLabels.processing,
+                              closeCta: lessonCreateLabels.closeCta,
+                              manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
+                              notifySectionTitle: lessonCreateLabels.notifySectionTitle,
+                              notifyMessageLabel: lessonCreateLabels.notifyMessageLabel,
+                              notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
+                              notifySendCta: lessonCreateLabels.notifySendCta,
+                            },
+                          } : undefined}
+                          footerSlot={
+                            lesson.isAccessDenied ? (
+                              <Badge variant="neutral" className="inline-flex items-center gap-1 px-3 py-2 text-xs">{labels.accessDenied}</Badge>
                             ) : lesson.isQueuedByCurrentUser ? (
-                              <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                              <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
+                                <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
+                                {labels.youAreQueued}
+                              </Badge>
                             ) : (
                               <BookingBadgeToggle
                                 locale={locale}
@@ -598,11 +729,72 @@ export function BookingsManager({
                                   bookedCta: labels.youAreBooked,
                                   pendingCta: labels.awaitingConfirmation,
                                   processing: labels.processing,
+                                  confirmUnbookTitle: labels.confirmUnbookTitle,
+                                  confirmUnbookDescription: labels.confirmUnbookDescription,
+                                  confirmUnbookCta: labels.confirmUnbookCta,
+                                  confirmKeepBookingCta: labels.confirmKeepBookingCta,
                                 }}
                               />
-                            )}
-                          </div>
-                        </div>
+                            )
+                          }
+                          trigger={
+                            <div
+                              className={[
+                                "w-full rounded border border-[var(--surface-border)] px-2 py-1 text-left text-[11px] transition hover:brightness-95",
+                                lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
+                                !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
+                              ].join(" ")}
+                              style={lessonCardStyle(lesson, false)}
+                            >
+                              <div className="flex items-start gap-2">
+                                {lesson.lessonTypeIcon ? (
+                                  <LessonTypeIcon
+                                    iconPath={lesson.lessonTypeIcon}
+                                    colorHex={lesson.lessonTypeColor}
+                                    size={20}
+                                    title={lesson.lessonTypeName ?? undefined}
+                                  />
+                                ) : null}
+                                <div className="min-w-0">
+                                  <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
+                                </div>
+                              </div>
+                              <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
+                                <span className="inline-flex items-center gap-1" title={timeTooltip}>
+                                  <Clock3 className="h-3.5 w-3.5" />
+                                  {formatTime(lesson.startsAt, locale)}
+                                </span>
+                                <span className="inline-flex items-center gap-1">
+                                  <Hourglass className="h-3.5 w-3.5" />
+                                  {durationMinutes} min
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
+                                <span className="inline-flex items-center gap-1">
+                                  <UserRound className="h-3.5 w-3.5" />
+                                  {lesson.trainerName ?? "-"}
+                                </span>
+                                <span title={bookedTooltip} className="inline-flex items-center gap-1">
+                                  {isAdmin && lesson.pendingApprovalsCount > 0 ? (
+                                    <AlertTriangle className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400" />
+                                  ) : (
+                                    <Users className="h-3.5 w-3.5" />
+                                  )}
+                                  {labels.bookedLabel}: {lesson.occupancy}
+                                </span>
+                              </div>
+                              <div className="mt-1 flex items-center justify-end">
+                                {lesson.isAccessDenied ? (
+                                  <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
+                                ) : lesson.isQueuedByCurrentUser ? (
+                                  <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
+                                ) : (
+                                  <span className="text-[10px] text-[var(--muted-foreground)]">{labels.detailsCta}</span>
+                                )}
+                              </div>
+                            </div>
+                          }
+                        />
                       );
                     })}
                   </div>
@@ -611,196 +803,6 @@ export function BookingsManager({
               </div>
             </div>
 
-            <Dialog open={Boolean(selectedLesson)} onOpenChange={(open) => !open && setSelectedLessonId(null)}>
-              <DialogContent>
-                {selectedLesson ? (
-                  <>
-                    <DialogHeader>
-                      <div className="flex items-start gap-3">
-                        {selectedLesson.lessonTypeIcon ? (
-                          <span
-                            className="inline-flex h-16 w-16 items-center justify-center rounded-xl"
-                            style={{
-                              backgroundColor: selectedLesson.lessonTypeColor
-                                ? hexToRgba(selectedLesson.lessonTypeColor, 0.18)
-                                : undefined,
-                              border: selectedLesson.lessonTypeColor
-                                ? `1px solid ${hexToRgba(selectedLesson.lessonTypeColor, 0.5)}`
-                                : undefined,
-                            }}
-                          >
-                            <LessonTypeIcon
-                              iconPath={selectedLesson.lessonTypeIcon}
-                              colorHex={selectedLesson.lessonTypeColor}
-                              size={44}
-                              title={selectedLesson.lessonTypeName ?? undefined}
-                            />
-                          </span>
-                        ) : null}
-                        <div className="space-y-1">
-                          <DialogTitle className="text-xl">{selectedLesson.title ?? selectedLesson.courseName}</DialogTitle>
-                          <DialogDescription>{labels.detailsDescription}</DialogDescription>
-                        </div>
-                      </div>
-                    </DialogHeader>
-
-                    <div
-                      className="space-y-2 rounded-md p-2 text-sm"
-                      style={
-                        selectedLesson.lessonTypeColor
-                          ? {
-                              backgroundColor: hexToRgba(selectedLesson.lessonTypeColor, 0.14),
-                              border: `1px solid ${hexToRgba(selectedLesson.lessonTypeColor, 0.45)}`,
-                            }
-                          : undefined
-                      }
-                    >
-                      {selectedLesson.description ? (
-                        <p className="text-xs text-[var(--muted-foreground)]">
-                          {lessonCreateLabels.lessonDescriptionLabel}: {selectedLesson.description}
-                        </p>
-                      ) : null}
-                      <p>{labels.startsAtLabel}: {formatDateTime(selectedLesson.startsAt, locale)}</p>
-                      <p>{labels.endsAtLabel}: {formatDateTime(selectedLesson.endsAt, locale)}</p>
-                      <p>{labels.trainerLabel}: {selectedLesson.trainerName ?? "-"}</p>
-                      <p>{labels.bookedLabel}: {selectedLesson.occupancy}</p>
-                      {selectedLesson.canViewWaitlist ? <p>{labels.queuedLabel}: {selectedLesson.queueLength}</p> : null}
-                      {selectedLesson.isCourseLesson ? (
-                        <Badge variant="info">
-                          {labels.courseTag}
-                        </Badge>
-                      ) : null}
-                      <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-                        {selectedLesson.lessonTypeIcon ? (
-                          <LessonTypeIcon
-                            iconPath={selectedLesson.lessonTypeIcon}
-                            colorHex={selectedLesson.lessonTypeColor}
-                            size={16}
-                            title={selectedLesson.lessonTypeName ?? undefined}
-                          />
-                        ) : null}
-                        <span>{selectedLesson.lessonTypeName ?? "-"}</span>
-                      </div>
-                    </div>
-
-                    <DialogFooter>
-                      <Button type="button" variant="secondary" onClick={() => setSelectedLessonId(null)}>
-                        {labels.closeCta}
-                      </Button>
-                      {selectedLesson.canManageLesson ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="gap-1"
-                          aria-label={lessonCreateLabels.manageTriggerLabel}
-                          title={lessonCreateLabels.manageTriggerLabel}
-                          onClick={() => {
-                            setManageLessonId(selectedLesson.id);
-                            setSelectedLessonId(null);
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span>{lessonCreateLabels.manageTriggerLabel}</span>
-                        </Button>
-                      ) : null}
-                      {selectedLesson.isAccessDenied ? (
-                        <Badge variant="neutral" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
-                          {labels.accessDenied}
-                        </Badge>
-                      ) : selectedLesson.isQueuedByCurrentUser ? (
-                        <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
-                          <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
-                          {labels.youAreQueued}
-                        </Badge>
-                      ) : (
-                        <BookingBadgeToggle
-                          locale={locale}
-                          lessonId={selectedLesson.id}
-                          isBooked={selectedLesson.isBookedByCurrentUser}
-                          isPendingApproval={selectedLesson.isPendingByCurrentUser}
-                          canBook={selectedLesson.canBook}
-                          canUnbook={selectedLesson.canUnbook}
-                          labels={{
-                            bookCta: labels.bookCta,
-                            bookedCta: labels.youAreBooked,
-                            pendingCta: labels.awaitingConfirmation,
-                            processing: labels.processing,
-                          }}
-                        />
-                      )}
-                    </DialogFooter>
-                  </>
-                ) : null}
-              </DialogContent>
-            </Dialog>
-
-            {manageLesson ? (
-              <LessonManageDialog
-                open
-                showDefaultTrigger={false}
-                onOpenChangeAction={(nextOpen) => {
-                  if (!nextOpen) setManageLessonId(null);
-                }}
-                locale={locale}
-                lesson={{
-                  id: manageLesson.id,
-                  canEditMain: !manageLesson.isCourseLesson,
-                  title: manageLesson.title ?? "",
-                  description: manageLesson.description ?? "",
-                  startsAt: toDateTimeLocalFromIso(manageLesson.startsAt),
-                  durationMinutes: Math.max(
-                    1,
-                    Math.round((new Date(manageLesson.endsAt).getTime() - new Date(manageLesson.startsAt).getTime()) / 60000)
-                  ),
-                  maxAttendees: manageLesson.maxAttendees,
-                  cancellationWindowHours: manageLesson.cancellationWindowHours,
-                  trainerId: manageLesson.trainerId,
-                  lessonTypeId: manageLesson.lessonTypeId,
-                  canManageTrainer: canUpdateTrainer,
-                  attendees: manageLesson.attendees,
-                  pendingApprovals: manageLesson.pendingApprovals,
-                  waitlist: manageLesson.waitlist,
-                }}
-                trainerCandidates={trainerCandidates}
-                lessonTypeCandidates={lessonTypeCandidates}
-                attendeeCandidates={attendeeCandidates}
-                openWeekdays={openWeekdays}
-                closedDates={closedDates}
-                labels={{
-                  title: lessonCreateLabels.manageTitle,
-                  description: lessonCreateLabels.manageDescription,
-                  tabMain: lessonCreateLabels.manageTabMain,
-                  tabPeople: lessonCreateLabels.manageTabPeople,
-                  startsAtLabel: lessonCreateLabels.startsAtLabel,
-                  trainerLabel: lessonCreateLabels.trainerLabel,
-                  standaloneDuration: lessonCreateLabels.standaloneDuration,
-                  standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
-                  standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
-                  standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-                  lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
-                  lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                  updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
-                  updateTrainerCta: lessonCreateLabels.updateTrainerCta,
-                  attendeesLabel: lessonCreateLabels.attendeesLabel,
-                  noAttendees: lessonCreateLabels.noAttendees,
-                  attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
-                  addAttendeeCta: lessonCreateLabels.addAttendeeCta,
-                  removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
-                  pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
-                  noPendingApprovals: lessonCreateLabels.noPendingApprovals,
-                  confirmPendingCta: lessonCreateLabels.confirmPendingCta,
-                  confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
-                  rejectPendingCta: lessonCreateLabels.rejectPendingCta,
-                  waitlistLabel: lessonCreateLabels.waitlistLabel,
-                  noWaitlist: lessonCreateLabels.noWaitlist,
-                  confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,
-                  removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
-                  processing: lessonCreateLabels.processing,
-                  closeCta: lessonCreateLabels.closeCta,
-                  manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
-                }}
-              />
-            ) : null}
           </>
         )}
       </div>

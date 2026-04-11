@@ -14,7 +14,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   default: "bg-[var(--primary)] text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]",
   secondary: "bg-[var(--muted)] text-[var(--foreground)] hover:brightness-95",
   outline: "border border-[var(--surface-border)] bg-transparent text-[var(--foreground)] hover:bg-[var(--muted)]",
-  destructive: "bg-red-600 text-white hover:bg-red-500",
+  destructive: "bg-[var(--destructive-bg)] text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

@@ -23,7 +23,7 @@ export default async function ResetPasswordPage({
       </h1>
 
       {error ? (
-        <p className="rounded-md bg-red-100 px-3 py-2 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">
+        <p className="rounded-md bg-[var(--danger-bg)] px-3 py-2 text-sm text-[var(--danger-fg)] dark:bg-red-900/30 dark:text-red-300">
           {decodeURIComponent(error)}
         </p>
       ) : null}

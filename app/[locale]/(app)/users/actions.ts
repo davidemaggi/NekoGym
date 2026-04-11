@@ -29,6 +29,9 @@ function t(locale: string) {
   const isIt = locale === "it";
   return {
     idRequired: isIt ? "Utente non valido." : "Invalid user.",
+    messageRequired: isIt ? "Messaggio obbligatorio." : "Message is required.",
+    userNotFound: isIt ? "Utente non trovato." : "User not found.",
+    directMessageSubject: isIt ? "Messaggio dall'amministrazione" : "Message from administration",
     required: isIt ? "Compila tutti i campi obbligatori." : "Fill all required fields.",
     emailUsed: isIt ? "Email gia in uso." : "Email already in use.",
     roleInvalid: isIt ? "Ruolo non valido." : "Invalid role.",
@@ -43,6 +46,7 @@ function t(locale: string) {
     updateFailed: isIt ? "Impossibile aggiornare utente." : "Unable to update user.",
     deleteFailed: isIt ? "Impossibile eliminare utente." : "Unable to delete user.",
     cannotDeleteSelf: isIt ? "Non puoi eliminare il tuo utente." : "You cannot delete your own user.",
+    messageQueued: isIt ? "Notifica accodata." : "Notification queued.",
     futureBookingsRevoked:
       isIt
         ? "Alcune prenotazioni future sono state annullate per aggiornamento accessi ai tipi lezione."
@@ -55,6 +59,7 @@ function t(locale: string) {
       isIt
         ? "Le tue impostazioni di accesso ai tipi lezione sono state aggiornate da un amministratore."
         : "Your lesson type access settings were updated by an admin.",
+    messageFailed: isIt ? "Impossibile inviare il messaggio." : "Unable to send message.",
   };
 }
 
@@ -420,6 +425,45 @@ export async function deleteUserAction(formData: FormData): Promise<UserMutation
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.deleteFailed,
+    };
+  }
+}
+
+export async function sendUserMessageAction(formData: FormData): Promise<UserMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const msg = t(locale);
+
+  try {
+    await requireAnyRole(["ADMIN"], locale);
+    const id = getField(formData, "id");
+    const message = getField(formData, "message");
+
+    if (!id) throw new Error(msg.idRequired);
+    if (!message) throw new Error(msg.messageRequired);
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        telegramChatId: true,
+      },
+    });
+
+    if (!user) throw new Error(msg.userNotFound);
+
+    await prisma.$transaction(async (tx) => {
+      await enqueueNotificationForUsers(tx, [user], {
+        subject: msg.directMessageSubject,
+        body: message,
+      });
+    });
+
+    revalidatePath(`/${locale}/users`);
+    return { ok: true, message: msg.messageQueued };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : msg.messageFailed,
     };
   }
 }

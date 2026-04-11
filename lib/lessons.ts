@@ -38,6 +38,19 @@ export type LessonsReconcileStats = {
   updated: number;
   cancelled: number;
   deleted: number;
+  unchanged: number;
+};
+
+type ReconcileLogger = (message: string) => void;
+
+type ReconcileLogContext = {
+  trigger: string;
+  actorUserId?: string;
+};
+
+type ReconcileOptions = {
+  logger?: ReconcileLogger;
+  context?: ReconcileLogContext;
 };
 
 function parseTime(value: string): { hour: number; minute: number } {
@@ -196,16 +209,32 @@ export function buildLessonSeeds(course: CourseForGeneration, fromDate = new Dat
 
 export async function reconcileFutureLessonsForCourse(
   tx: Prisma.TransactionClient,
-  courseId: string
+  courseId: string,
+  options?: ReconcileOptions
 ): Promise<Omit<LessonsReconcileStats, "coursesProcessed">> {
+  const logger = options?.logger;
+  const ctx = options?.context;
+  const logPrefix = `[lessons:reconcile][course:${courseId}]`;
+  const log = (message: string) => {
+    if (!logger) return;
+    const triggerLabel = ctx?.trigger ? ` trigger=${ctx.trigger}` : "";
+    const actorLabel = ctx?.actorUserId ? ` actor=${ctx.actorUserId}` : "";
+    logger(`${logPrefix}${triggerLabel}${actorLabel} ${message}`);
+  };
+
   const course = await tx.course.findUnique({
     where: { id: courseId },
     include: { scheduleSlots: true },
   });
 
   if (!course || course.deletedAt) {
-    return { created: 0, updated: 0, cancelled: 0, deleted: 0 };
+    log("skip: missing or deleted course");
+    return { created: 0, updated: 0, cancelled: 0, deleted: 0, unchanged: 0 };
   }
+
+  log(
+    `start: lessonType=${course.lessonTypeId ?? "-"} trainer=${course.trainerId ?? "-"} duration=${course.durationMinutes} maxAttendees=${course.maxAttendees} bookingAdvanceMonths=${course.bookingAdvanceMonths} cancellationWindowHours=${course.cancellationWindowHours} scheduleSlots=${course.scheduleSlots.length}`
+  );
 
   const now = new Date();
   const siteSettings = await tx.siteSettings.findUnique({
@@ -218,6 +247,7 @@ export async function reconcileFutureLessonsForCourse(
     isLessonAllowedBySiteSchedule(seed.startsAt, siteSchedule.openWeekdays, siteSchedule.closedDates)
   );
   const seedByKey = new Map(seeds.map((seed) => [toKey(seed.startsAt), seed]));
+  log(`seeds: generated=${seeds.length}`);
 
   const existing = await tx.lesson.findMany({
     where: {
@@ -235,6 +265,7 @@ export async function reconcileFutureLessonsForCourse(
   let updated = 0;
   let cancelled = 0;
   let deleted = 0;
+  let unchanged = 0;
 
   for (const lesson of existing) {
     const key = toKey(lesson.startsAt);
@@ -256,6 +287,9 @@ export async function reconcileFutureLessonsForCourse(
         // Avoid creating a duplicate for same course+startsAt when customized lesson is kept as cancelled.
         seedByKey.delete(key);
         cancelled += 1;
+        log(
+          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=cancelled reason=customized_with_bookings bookings=${lesson._count.bookings}`
+        );
       } else {
         await tx.lesson.update({
           where: { id: lesson.id },
@@ -263,6 +297,9 @@ export async function reconcileFutureLessonsForCourse(
         });
         // Keep seed key so a fresh generated lesson can be recreated.
         deleted += 1;
+        log(
+          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=deleted reason=customized_without_bookings_recreate_allowed`
+        );
       }
       continue;
     }
@@ -281,31 +318,54 @@ export async function reconcileFutureLessonsForCourse(
           reason: "aggiornamento corso",
         });
         cancelled += 1;
+        log(
+          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=cancelled reason=slot_removed_with_bookings bookings=${lesson._count.bookings}`
+        );
       } else {
         await tx.lesson.update({
           where: { id: lesson.id },
           data: { status: "CANCELLED", deletedAt: new Date() },
         });
         deleted += 1;
+        log(`lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=deleted reason=slot_removed_without_bookings`);
       }
       continue;
     }
 
-    await tx.lesson.update({
-      where: { id: lesson.id },
-      data: {
-        endsAt: nextSeed.endsAt,
-        sourceWeekday: nextSeed.sourceWeekday,
-        sourceStartTime: nextSeed.sourceStartTime,
-        trainerId: course.trainerId,
-        lessonTypeId: course.lessonTypeId,
-        maxAttendees: course.maxAttendees,
-        cancellationWindowHours: course.cancellationWindowHours,
-        status: "SCHEDULED",
-        isCustomized: false,
-      },
-    });
-    updated += 1;
+    const changeReasons: string[] = [];
+    if (lesson.endsAt.getTime() !== nextSeed.endsAt.getTime()) changeReasons.push("endsAt");
+    if (lesson.sourceWeekday !== nextSeed.sourceWeekday) changeReasons.push("sourceWeekday");
+    if (lesson.sourceStartTime !== nextSeed.sourceStartTime) changeReasons.push("sourceStartTime");
+    if (lesson.trainerId !== course.trainerId) changeReasons.push("trainerId");
+    if (lesson.lessonTypeId !== course.lessonTypeId) changeReasons.push("lessonTypeId");
+    if (lesson.maxAttendees !== course.maxAttendees) changeReasons.push("maxAttendees");
+    if (lesson.cancellationWindowHours !== course.cancellationWindowHours) changeReasons.push("cancellationWindowHours");
+    if (lesson.status !== "SCHEDULED") changeReasons.push("status");
+    if (lesson.isCustomized !== false) changeReasons.push("isCustomized");
+
+    if (changeReasons.length > 0) {
+      await tx.lesson.update({
+        where: { id: lesson.id },
+        data: {
+          endsAt: nextSeed.endsAt,
+          sourceWeekday: nextSeed.sourceWeekday,
+          sourceStartTime: nextSeed.sourceStartTime,
+          trainerId: course.trainerId,
+          lessonTypeId: course.lessonTypeId,
+          maxAttendees: course.maxAttendees,
+          cancellationWindowHours: course.cancellationWindowHours,
+          status: "SCHEDULED",
+          isCustomized: false,
+        },
+      });
+      updated += 1;
+      log(
+        `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=modified reasons=${changeReasons.join(",")}`
+      );
+    } else {
+      unchanged += 1;
+      log(`lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=unchanged`);
+    }
 
     seedByKey.delete(key);
   }
@@ -328,9 +388,13 @@ export async function reconcileFutureLessonsForCourse(
       },
     });
     created += 1;
+    log(
+      `lesson=(new) startsAt=${seed.startsAt.toISOString()} outcome=created sourceWeekday=${seed.sourceWeekday} sourceStartTime=${seed.sourceStartTime}`
+    );
   }
 
-  return { created, updated, cancelled, deleted };
+  log(`done: created=${created} updated=${updated} cancelled=${cancelled} deleted=${deleted} unchanged=${unchanged}`);
+  return { created, updated, cancelled, deleted, unchanged };
 }
 
 export async function reconcileFutureLessonsForAllCourses(
@@ -343,6 +407,7 @@ export async function reconcileFutureLessonsForAllCourses(
     updated: 0,
     cancelled: 0,
     deleted: 0,
+    unchanged: 0,
   };
 
   for (const course of courses) {
@@ -351,6 +416,7 @@ export async function reconcileFutureLessonsForAllCourses(
     totals.updated += stats.updated;
     totals.cancelled += stats.cancelled;
     totals.deleted += stats.deleted;
+    totals.unchanged += stats.unchanged;
   }
 
   return totals;
@@ -491,4 +557,3 @@ export async function cancelLessonsEnteringNoticeWindow(tx: Prisma.TransactionCl
 
   return cancelled;
 }
-

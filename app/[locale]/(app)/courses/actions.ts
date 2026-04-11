@@ -8,6 +8,7 @@ import { sanitizeLessonTypeColor } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { cancelFutureLessonsForDeletedCourse, reconcileFutureLessonsForCourse } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
+import { parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
 type CourseMutationResult = {
   ok: boolean;
@@ -34,6 +35,14 @@ function courseMessages(locale: string) {
       isIt ? "I campi numerici devono essere maggiori di 0." : "Numeric fields must be greater than 0.",
     scheduleRequired: isIt ? "Aggiungi almeno uno slot di schedulazione." : "Add at least one schedule slot.",
     scheduleInvalid: isIt ? "La schedulazione contiene dati non validi." : "Schedule contains invalid data.",
+    scheduleOverlap:
+      isIt
+        ? "La schedulazione contiene lezioni sovrapposte nello stesso giorno."
+        : "Schedule contains overlapping lessons on the same day.",
+    scheduleClosedWeekday:
+      isIt
+        ? "La schedulazione contiene giorni attualmente chiusi dalla configurazione palestra."
+        : "Schedule contains weekdays that are currently closed in site settings.",
     lessonTypeRequired: isIt ? "Seleziona un tipo lezione." : "Select a lesson type.",
     trainerForbidden:
       isIt ? "Come trainer puoi assegnare solo te stesso." : "As trainer you can only assign yourself.",
@@ -70,6 +79,39 @@ const validWeekdays: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", 
 
 function isValidTime(value: string): boolean {
   return /^([01]\d|2[0-3]):([0-5]\d)$/.test(value);
+}
+
+function toMinutes(value: string): number {
+  const [hourRaw, minuteRaw] = value.split(":");
+  const hour = Number.parseInt(hourRaw ?? "", 10);
+  const minute = Number.parseInt(minuteRaw ?? "", 10);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return -1;
+  return hour * 60 + minute;
+}
+
+function hasOverlappingScheduleSlots(slots: ScheduleSlotInput[], durationMinutes: number): boolean {
+  const grouped = new Map<Weekday, number[]>();
+  for (const slot of slots) {
+    const minute = toMinutes(slot.startTime);
+    if (minute < 0) return true;
+    const list = grouped.get(slot.weekday) ?? [];
+    list.push(minute);
+    grouped.set(slot.weekday, list);
+  }
+
+  for (const starts of grouped.values()) {
+    const sorted = [...starts].sort((a, b) => a - b);
+    for (let index = 0; index < sorted.length - 1; index += 1) {
+      const currentStart = sorted[index];
+      const currentEnd = currentStart + durationMinutes;
+      const nextStart = sorted[index + 1];
+      if (nextStart < currentEnd) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 function parseScheduleSlots(formData: FormData, locale: string): ScheduleSlotInput[] {
@@ -188,6 +230,10 @@ function getLocale(formData: FormData): string {
   return locale || "it";
 }
 
+function logCourseReconcile(message: string) {
+  console.log(`[courses][reconcile] ${message}`);
+}
+
 export async function createCourseAction(formData: FormData): Promise<CourseMutationResult> {
   const locale = getLocale(formData);
   const messages = courseMessages(locale);
@@ -200,7 +246,7 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
       throw new Error(messages.trainerForbidden);
     }
 
-    const [trainer, lessonType] = await Promise.all([
+    const [trainer, lessonType, siteSettings] = await Promise.all([
       input.trainerId
         ? prisma.user.findUnique({
             where: { id: input.trainerId },
@@ -208,7 +254,20 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
           })
         : Promise.resolve(null),
       prisma.lessonType.findUnique({ where: { id: input.lessonTypeId } }),
+      prisma.siteSettings.findUnique({
+        where: { id: 1 },
+        select: { openWeekdaysCsv: true },
+      }),
     ]);
+
+    const siteOpenWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
+    const siteOpenWeekdaySet = new Set<Weekday>(siteOpenWeekdays as Weekday[]);
+    if (input.scheduleSlots.some((slot) => !siteOpenWeekdaySet.has(slot.weekday))) {
+      throw new Error(messages.scheduleClosedWeekday);
+    }
+    if (hasOverlappingScheduleSlots(input.scheduleSlots, input.durationMinutes)) {
+      throw new Error(messages.scheduleOverlap);
+    }
 
     if (trainer && trainer.role !== "TRAINER" && trainer.role !== "ADMIN") throw new Error(messages.trainerNotFound);
     if (!lessonType) throw new Error(messages.lessonTypeNotFound);
@@ -232,7 +291,13 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
     });
 
     await prisma.$transaction(async (tx) => {
-      await reconcileFutureLessonsForCourse(tx, created.id);
+      await reconcileFutureLessonsForCourse(tx, created.id, {
+        logger: logCourseReconcile,
+        context: {
+          trigger: "create-course",
+          actorUserId: currentUser.id,
+        },
+      });
     });
 
     revalidatePath(`/${locale}/courses`);
@@ -265,7 +330,7 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
       throw new Error(messages.trainerForbidden);
     }
 
-    const [trainer, lessonType] = await Promise.all([
+    const [trainer, lessonType, siteSettings] = await Promise.all([
       input.trainerId
         ? prisma.user.findUnique({
             where: { id: input.trainerId },
@@ -273,7 +338,20 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
           })
         : Promise.resolve(null),
       prisma.lessonType.findUnique({ where: { id: input.lessonTypeId } }),
+      prisma.siteSettings.findUnique({
+        where: { id: 1 },
+        select: { openWeekdaysCsv: true },
+      }),
     ]);
+
+    const siteOpenWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
+    const siteOpenWeekdaySet = new Set<Weekday>(siteOpenWeekdays as Weekday[]);
+    if (input.scheduleSlots.some((slot) => !siteOpenWeekdaySet.has(slot.weekday))) {
+      throw new Error(messages.scheduleClosedWeekday);
+    }
+    if (hasOverlappingScheduleSlots(input.scheduleSlots, input.durationMinutes)) {
+      throw new Error(messages.scheduleOverlap);
+    }
 
     if (trainer && trainer.role !== "TRAINER" && trainer.role !== "ADMIN") throw new Error(messages.trainerNotFound);
     if (!lessonType) throw new Error(messages.lessonTypeNotFound);
@@ -300,7 +378,13 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
         },
       });
 
-      await reconcileFutureLessonsForCourse(tx, id);
+      await reconcileFutureLessonsForCourse(tx, id, {
+        logger: logCourseReconcile,
+        context: {
+          trigger: "update-course",
+          actorUserId: currentUser.id,
+        },
+      });
     });
     revalidatePath(`/${locale}/courses`);
     revalidatePath(`/${locale}/bookings`);
@@ -477,7 +561,7 @@ export async function restoreCourseAction(formData: FormData): Promise<CourseMut
   const id = getField(formData, "id");
 
   try {
-    await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
 
     if (!id) {
       throw new Error(messages.idRequired);
@@ -494,7 +578,13 @@ export async function restoreCourseAction(formData: FormData): Promise<CourseMut
       }
 
       await tx.course.update({ where: { id }, data: { deletedAt: null } });
-      await reconcileFutureLessonsForCourse(tx, id);
+      await reconcileFutureLessonsForCourse(tx, id, {
+        logger: logCourseReconcile,
+        context: {
+          trigger: "restore-course",
+          actorUserId: currentUser.id,
+        },
+      });
     });
 
     revalidatePath(`/${locale}/courses`);
@@ -509,4 +599,3 @@ export async function restoreCourseAction(formData: FormData): Promise<CourseMut
     };
   }
 }
-

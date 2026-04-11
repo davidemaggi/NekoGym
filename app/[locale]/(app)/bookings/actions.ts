@@ -58,6 +58,16 @@ function bookingMessages(locale: string) {
         ? "Richiesta inviata: trainer e admin sono stati notificati."
         : "Request submitted: trainer and admins have been notified.",
     unbooked: isIt ? "Disiscrizione completata." : "Booking cancelled.",
+    waitlistPromotedSubject: isIt ? "Posto confermato dalla coda" : "Seat confirmed from waitlist",
+    waitlistPromotedBody: (courseName: string, startsAt: Date) =>
+      isIt
+        ? `Si e liberato un posto: la tua iscrizione alla lezione ${courseName} del ${formatLessonDateTime(startsAt, locale)} e ora confermata.`
+        : `A seat is now available: your booking for lesson ${courseName} on ${formatLessonDateTime(startsAt, locale)} is now confirmed.`,
+    staffReplacementSubject: isIt ? "Sostituzione automatica in lezione" : "Automatic replacement in lesson",
+    staffReplacementBody: (leavingName: string, promotedName: string, courseName: string, startsAt: Date) =>
+      isIt
+        ? `${leavingName} si e disiscritto dalla lezione ${courseName} del ${formatLessonDateTime(startsAt, locale)}. ${promotedName} e stato confermato automaticamente dalla coda e ha preso il posto.`
+        : `${leavingName} cancelled booking for lesson ${courseName} on ${formatLessonDateTime(startsAt, locale)}. ${promotedName} was automatically confirmed from waitlist and took the seat.`,
     cannotUnbook: isIt ? "Tempo massimo per disiscriversi superato." : "Cancellation window has expired.",
     notBooked: isIt ? "Non risulti iscritto a questa lezione." : "You are not booked for this lesson.",
     failed: isIt ? "Impossibile prenotare la lezione." : "Unable to book lesson.",
@@ -70,6 +80,83 @@ function bookingMessages(locale: string) {
     rejected: isIt ? "Prenotazione rifiutata." : "Booking rejected.",
     rejectFailed: isIt ? "Impossibile rifiutare la prenotazione." : "Unable to reject booking.",
   };
+}
+
+async function promoteOldestWaitlistEntry(input: {
+  tx: Prisma.TransactionClient;
+  lessonId: string;
+  confirmedById: string;
+}): Promise<{ id: string; name: string; telegramChatId: string | null } | null> {
+  while (true) {
+    const firstQueued = await input.tx.lessonWaitlistEntry.findFirst({
+      where: { lessonId: input.lessonId },
+      orderBy: { createdAt: "asc" },
+      include: {
+        trainee: {
+          select: {
+            id: true,
+            name: true,
+            telegramChatId: true,
+            role: true,
+            membershipStatus: true,
+            subscriptionType: true,
+            subscriptionRemaining: true,
+          },
+        },
+      },
+    });
+
+    if (!firstQueued) return null;
+
+    const existingBooking = await input.tx.lessonBooking.findUnique({
+      where: {
+        lessonId_traineeId: {
+          lessonId: input.lessonId,
+          traineeId: firstQueued.traineeId,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (existingBooking) {
+      await input.tx.lessonWaitlistEntry.delete({ where: { id: firstQueued.id } });
+      continue;
+    }
+
+    await input.tx.lessonBooking.create({
+      data: {
+        lessonId: input.lessonId,
+        traineeId: firstQueued.traineeId,
+        status: "CONFIRMED",
+        confirmedAt: new Date(),
+        confirmedById: input.confirmedById,
+      },
+    });
+
+    await input.tx.lessonWaitlistEntry.delete({ where: { id: firstQueued.id } });
+
+    if (
+      firstQueued.trainee.role === "TRAINEE" &&
+      firstQueued.trainee.membershipStatus === "ACTIVE" &&
+      firstQueued.trainee.subscriptionType === "FIXED"
+    ) {
+      await input.tx.user.update({
+        where: { id: firstQueued.trainee.id },
+        data: {
+          subscriptionRemaining:
+            firstQueued.trainee.subscriptionRemaining === null
+              ? null
+              : Math.max(0, firstQueued.trainee.subscriptionRemaining - 1),
+        },
+      });
+    }
+
+    return {
+      id: firstQueued.trainee.id,
+      name: firstQueued.trainee.name,
+      telegramChatId: firstQueued.trainee.telegramChatId,
+    };
+  }
 }
 
 function isTrialActive(trialEndsAt: Date | null): boolean {
@@ -524,9 +611,31 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
 
       await tx.lessonBooking.delete({ where: { id: booking.id } });
 
-      const remainingBookings = await tx.lessonBooking.count({ where: { lessonId } });
+      const promotedFromQueue = await promoteOldestWaitlistEntry({
+        tx,
+        lessonId,
+        confirmedById: user.id,
+      });
 
-      if (lesson.trainerId && lesson.trainer && lesson.trainer.id !== user.id) {
+      if (promotedFromQueue) {
+        const courseName = lesson.course?.name ?? "-";
+        await enqueueNotificationForUsers(
+          tx,
+          [{ id: promotedFromQueue.id, telegramChatId: promotedFromQueue.telegramChatId }],
+          {
+            subject: messages.waitlistPromotedSubject,
+            body: messages.waitlistPromotedBody(courseName, lesson.startsAt),
+          }
+        );
+
+        const staffTargets = await getLessonStaffTargets({ tx, lessonId });
+        if (staffTargets.length > 0) {
+          await enqueueNotificationForUsers(tx, staffTargets, {
+            subject: messages.staffReplacementSubject,
+            body: messages.staffReplacementBody(fullUser.name, promotedFromQueue.name, courseName, lesson.startsAt),
+          });
+        }
+      } else if (lesson.trainerId && lesson.trainer && lesson.trainer.id !== user.id) {
         await notifyTrainerBookingChanged({
           tx,
           locale,
@@ -535,6 +644,8 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
           lesson,
         });
       }
+
+      const remainingBookings = await tx.lessonBooking.count({ where: { lessonId } });
 
       const msUntilStart = lesson.startsAt.getTime() - Date.now();
       const noticeMs = lesson.cancellationWindowHours * 60 * 60 * 1000;
@@ -546,7 +657,7 @@ export async function unbookLessonAction(formData: FormData): Promise<BookingAct
           where: { id: lessonId },
           data: { status: "CANCELLED", deletedAt: new Date() },
         });
-      } else if (remainingBookings < lesson.maxAttendees) {
+      } else if (!promotedFromQueue && remainingBookings < lesson.maxAttendees) {
         await notifyWaitlistSeatAvailable({
           tx,
           locale,

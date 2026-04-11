@@ -57,7 +57,7 @@ export function LocalNotificationsLive({ pollMs = 5000 }: LocalNotificationsLive
   if (unreadCount <= 0) return null;
 
   return (
-    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-semibold leading-5 text-white">
+    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--danger-bg)] px-1.5 text-[10px] font-semibold leading-5 text-[var(--danger-fg)]">
       {unreadCount}
     </span>
   );

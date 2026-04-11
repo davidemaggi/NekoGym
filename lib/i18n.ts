@@ -31,6 +31,7 @@ type Dictionary = {
       manualNotifications: string;
       registries: string;
       siteSettings: string;
+      dangerZone: string;
     };
   };
   profileSettings: {
@@ -109,6 +110,8 @@ type Dictionary = {
   auth: {
     loginTitle: string;
     registerTitle: string;
+    tabLogin: string;
+    tabRegister: string;
     noAccount: string;
     hasAccount: string;
     loginCta: string;
@@ -116,6 +119,18 @@ type Dictionary = {
     nameLabel: string;
     emailLabel: string;
     passwordLabel: string;
+    loginMethodPassword: string;
+    loginMethodOtp: string;
+    loginMethodMagicLink: string;
+    sendCodeCta: string;
+    verifyCodeCta: string;
+    sendMagicLinkCta: string;
+    twoFactorTitle: string;
+    twoFactorHint: string;
+    forgotPasswordCta: string;
+    resendVerificationCta: string;
+    resendVerificationLabel: string;
+    resendVerificationSubmitCta: string;
     firstUserHint: string;
     invalidCredentials: string;
   };
@@ -142,6 +157,10 @@ type Dictionary = {
     nextMonth: string;
     bookCta: string;
     unbookCta: string;
+    confirmUnbookTitle: string;
+    confirmUnbookDescription: string;
+    confirmUnbookCta: string;
+    confirmKeepBookingCta: string;
     processing: string;
     youAreQueued: string;
     queuedLabel: string;
@@ -175,10 +194,15 @@ type Dictionary = {
     updateStandaloneCta: string;
     deleteStandaloneCta: string;
     deleteLessonCta: string;
+    confirmDeleteLessonTitle: string;
+    confirmDeleteLessonDescription: string;
     restoreLessonCta: string;
     showDeletedCta: string;
     hideDeletedCta: string;
     deletedTag: string;
+    detailsTitle: string;
+    detailsDescription: string;
+    detailsTriggerLabel: string;
     manageTitle: string;
     manageDescription: string;
     manageTriggerLabel: string;
@@ -200,6 +224,10 @@ type Dictionary = {
     noWaitlist: string;
     confirmWaitlistCta: string;
     removeWaitlistCta: string;
+    notifySectionTitle: string;
+    notifyMessageLabel: string;
+    notifyMessagePlaceholder: string;
+    notifySendCta: string;
   };
   usersPage: {
     title: string;
@@ -250,10 +278,15 @@ type Dictionary = {
       reviewUpdate: string;
       cancel: string;
       edit: string;
+      message: string;
+      sendMessage: string;
       delete: string;
       confirm: string;
       processing: string;
     };
+    messageDialogTitle: string;
+    messageDialogDescription: string;
+    messagePlaceholder: string;
     confirmCreateTitle: string;
     confirmCreateDescription: string;
     confirmUpdateTitle: string;
@@ -353,6 +386,8 @@ type Dictionary = {
       numericPositive: string;
       scheduleRequired: string;
       scheduleInvalid: string;
+      scheduleOverlap: string;
+      scheduleClosedWeekday: string;
     };
     schedule: {
       title: string;
@@ -390,6 +425,30 @@ type Dictionary = {
         approveAndUnlockCta: string;
         rejectCta: string;
         closeCta: string;
+      };
+      userInsights: {
+        upcomingTitle: string;
+        upcomingDescription: string;
+        upcomingEmpty: string;
+        roleTrainer: string;
+        roleTrainee: string;
+        bookingPending: string;
+        rankingTitle: string;
+        rankingDescription: string;
+        includeFuture: string;
+        rankingEmpty: string;
+        lessonsCountSuffix: string;
+        totalTimeTitle: string;
+        totalTimeDescription: string;
+        totalTimeEmpty: string;
+        totalTimeHours: string;
+        chartTitle: string;
+        chartDescription: string;
+        chartRangeLabel: string;
+        chartRangeWeek: string;
+        chartRangeMonth: string;
+        chartRangeYear: string;
+        chartEmpty: string;
       };
     };
     lessons: {
@@ -501,6 +560,40 @@ type Dictionary = {
     logoPathInvalid: string;
     closedDatesInvalid: string;
   };
+  dangerZone: {
+    title: string;
+    subtitle: string;
+    backupTitle: string;
+    backupDescription: string;
+    uploadTitle: string;
+    uploadDescription: string;
+    uploadFileLabel: string;
+    uploadCta: string;
+    uploading: string;
+    backupEmpty: string;
+    backupCreateCta: string;
+    backupCreating: string;
+    restoreTitle: string;
+    restoreDescription: string;
+    restoreBackupLabel: string;
+    restoreBackupPlaceholder: string;
+    restoreOtpLabel: string;
+    restoreWarningConfirm: string;
+    restoreBackupPromptConfirm: string;
+    restoreCta: string;
+    restoring: string;
+    resetTitle: string;
+    resetDescription: string;
+    resetConfirmationLabel: string;
+    resetConfirmationHint: string;
+    resetOtpLabel: string;
+    resetWarningConfirm: string;
+    resetBackupPromptConfirm: string;
+    resetCta: string;
+    resetting: string;
+    backupDateLabel: string;
+    backupSizeLabel: string;
+  };
   manualNotifications: {
     title: string;
     subtitle: string;
@@ -587,6 +680,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         manualNotifications: "Notifiche",
         registries: "Registri",
         siteSettings: "Impostazioni sito",
+        dangerZone: "Danger zone",
       },
     },
     profileSettings: {
@@ -685,6 +779,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       nextMonth: "Mese successivo",
       bookCta: "Iscriviti",
       unbookCta: "Disiscriviti",
+      confirmUnbookTitle: "Conferma disiscrizione",
+      confirmUnbookDescription: "Vuoi davvero cancellare la tua prenotazione per questa lezione?",
+      confirmUnbookCta: "Si, disiscrivimi",
+      confirmKeepBookingCta: "Mantieni prenotazione",
       processing: "Elaborazione...",
       youAreQueued: "In coda",
       queuedLabel: "In coda",
@@ -718,15 +816,20 @@ const dictionaries: Record<Locale, Dictionary> = {
       updateStandaloneCta: "Salva modifiche",
       deleteStandaloneCta: "Elimina",
       deleteLessonCta: "Cancella",
+      confirmDeleteLessonTitle: "Conferma cancellazione lezione",
+      confirmDeleteLessonDescription: "Questa azione annullera manualmente la lezione selezionata. Vuoi continuare?",
       restoreLessonCta: "Ripristina",
       showDeletedCta: "Mostra cancellate",
       hideDeletedCta: "Nascondi cancellate",
       deletedTag: "Cancellata",
+      detailsTitle: "Dettaglio lezione",
+      detailsDescription: "Consulta i dati della lezione e gli iscritti.",
+      detailsTriggerLabel: "Dettagli",
       manageTitle: "Gestisci lezione",
       manageDescription: "Modifica dati, trainer e iscritti da questa modale.",
       manageTriggerLabel: "Gestisci lezione",
-      manageTabMain: "Main",
-      manageTabPeople: "People",
+      manageTabMain: "Informazioni",
+      manageTabPeople: "Persone",
       processing: "Elaborazione...",
       closeCta: "Chiudi",
       attendeesLabel: "Iscritti",
@@ -743,6 +846,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       noWaitlist: "Nessuno in coda.",
       confirmWaitlistCta: "Conferma",
       removeWaitlistCta: "Rimuovi dalla coda",
+      notifySectionTitle: "Notifica iscritti",
+      notifyMessageLabel: "Messaggio",
+      notifyMessagePlaceholder: "Scrivi qui il messaggio da inviare...",
+      notifySendCta: "Invia notifica",
     },
     usersPage: {
       title: "Utenti",
@@ -793,10 +900,15 @@ const dictionaries: Record<Locale, Dictionary> = {
         reviewUpdate: "Rivedi aggiornamento",
         cancel: "Annulla",
         edit: "Modifica",
+        message: "Messaggio",
+        sendMessage: "Invia messaggio",
         delete: "Elimina",
         confirm: "Conferma",
         processing: "Elaborazione...",
       },
+      messageDialogTitle: "Invia messaggio",
+      messageDialogDescription: "Scrivi un messaggio da inviare a \"{name}\" come notifica.",
+      messagePlaceholder: "Scrivi qui il messaggio...",
       confirmCreateTitle: "Conferma creazione utente",
       confirmCreateDescription: "Vuoi creare questo utente?",
       confirmUpdateTitle: "Conferma aggiornamento utente",
@@ -829,6 +941,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     auth: {
       loginTitle: "Accedi",
       registerTitle: "Registrazione",
+      tabLogin: "Accedi",
+      tabRegister: "Iscriviti",
       noAccount: "Non hai un account?",
       hasAccount: "Hai gia un account?",
       loginCta: "Accedi",
@@ -836,6 +950,18 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Nome",
       emailLabel: "Email",
       passwordLabel: "Password",
+      loginMethodPassword: "Accedi con password",
+      loginMethodOtp: "Codice OTP (telefono)",
+      loginMethodMagicLink: "Magic link",
+      sendCodeCta: "Invia codice",
+      verifyCodeCta: "Verifica codice",
+      sendMagicLinkCta: "Invia magic link",
+      twoFactorTitle: "Conferma 2FA",
+      twoFactorHint: "Inserisci il codice dell'app authenticator per completare l'accesso con password.",
+      forgotPasswordCta: "Password dimenticata?",
+      resendVerificationCta: "Reinvia email di conferma",
+      resendVerificationLabel: "Email da verificare",
+      resendVerificationSubmitCta: "Reinvia link",
       firstUserHint: "Se sei il primo utente, verrai creato come Admin.",
       invalidCredentials: "Credenziali non valide.",
     },
@@ -910,6 +1036,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         numericPositive: "I campi numerici devono essere maggiori di zero.",
         scheduleRequired: "Aggiungi almeno uno slot di schedulazione.",
         scheduleInvalid: "La schedulazione contiene orari non validi o duplicati.",
+        scheduleOverlap: "Uno o piu orari si sovrappongono nello stesso giorno.",
+        scheduleClosedWeekday: "Non puoi aggiungere orari in un giorno di chiusura palestra.",
       },
       schedule: {
         title: "Schedulazione settimanale",
@@ -947,6 +1075,30 @@ const dictionaries: Record<Locale, Dictionary> = {
           approveAndUnlockCta: "Conferma e non chiedere piu",
           rejectCta: "Non confermare",
           closeCta: "Chiudi",
+        },
+        userInsights: {
+          upcomingTitle: "Le mie prossime lezioni",
+          upcomingDescription: "Le prossime lezioni in cui sei trainer o partecipante.",
+          upcomingEmpty: "Nessuna lezione futura trovata.",
+          roleTrainer: "Trainer",
+          roleTrainee: "Trainee",
+          bookingPending: "In attesa",
+          rankingTitle: "Classifica lezioni per tipo",
+          rankingDescription: "Conteggio lezioni per tipologia, ordinato per frequenza.",
+          includeFuture: "Includi future",
+          rankingEmpty: "Nessun dato disponibile per la classifica.",
+          lessonsCountSuffix: "lezioni",
+          totalTimeTitle: "Tempo totale in palestra",
+          totalTimeDescription: "Somma delle durate delle tue lezioni.",
+          totalTimeEmpty: "Nessuna durata disponibile nel filtro corrente.",
+          totalTimeHours: "ore",
+          chartTitle: "Lezioni per tipo (grafico)",
+          chartDescription: "Distribuzione lezioni completate per tipologia nel periodo selezionato.",
+          chartRangeLabel: "Vista",
+          chartRangeWeek: "Settimanale",
+          chartRangeMonth: "Mensile",
+          chartRangeYear: "Annuale",
+          chartEmpty: "Nessun dato disponibile per il grafico nel periodo selezionato.",
         },
       },
       lessons: {
@@ -1058,6 +1210,41 @@ const dictionaries: Record<Locale, Dictionary> = {
       logoPathInvalid: "Inserisci un path SVG locale valido (es. /logo-nekogym.svg).",
       closedDatesInvalid: "Usa una data reale per riga nel formato YYYY-MM-DD.",
     },
+    dangerZone: {
+      title: "Danger zone",
+      subtitle: "Operazioni critiche sul database: backup, restore e reset completo.",
+      backupTitle: "Backup database",
+      backupDescription: "Crea una copia locale del database SQLite (cartella /data/backups).",
+      uploadTitle: "Carica backup esterno",
+      uploadDescription: "Importa un backup di un altro ambiente (.sqlite, .db, .sqlite3).",
+      uploadFileLabel: "File backup",
+      uploadCta: "Carica backup",
+      uploading: "Caricamento...",
+      backupEmpty: "Nessun backup disponibile.",
+      backupCreateCta: "Crea backup",
+      backupCreating: "Creazione backup...",
+      restoreTitle: "Restore da backup",
+      restoreDescription: "Ripristina un backup esistente. Operazione protetta da OTP.",
+      restoreBackupLabel: "Backup da ripristinare",
+      restoreBackupPlaceholder: "Crea prima un backup",
+      restoreOtpLabel: "OTP (2FA)",
+      restoreWarningConfirm: "Stai per eseguire un restore del database. Vuoi continuare?",
+      restoreBackupPromptConfirm: "Vuoi creare un backup prima del restore?",
+      restoreCta: "Esegui restore",
+      restoring: "Restore in corso...",
+      resetTitle: "Reset definitivo",
+      resetDescription:
+        "Cancella in modo definitivo tutti i dati applicativi tranne: impostazioni di sistema, account admin corrente e sue preferenze.",
+      resetConfirmationLabel: "Conferma reset",
+      resetConfirmationHint: "Per confermare inserisci esattamente RESET.",
+      resetOtpLabel: "OTP (2FA)",
+      resetWarningConfirm: "Il reset elimina definitivamente i dati applicativi. Vuoi continuare?",
+      resetBackupPromptConfirm: "Vuoi creare un backup prima del reset?",
+      resetCta: "Resetta sistema",
+      resetting: "Reset in corso...",
+      backupDateLabel: "Data",
+      backupSizeLabel: "Dimensione",
+    },
     manualNotifications: {
       title: "Notifiche manuali",
       subtitle: "Invia notifiche a tutti gli utenti, solo trainer o solo trainee.",
@@ -1142,6 +1329,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         manualNotifications: "Notifications",
         registries: "Registries",
         siteSettings: "Site settings",
+        dangerZone: "Danger zone",
       },
     },
     profileSettings: {
@@ -1240,6 +1428,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       nextMonth: "Next month",
       bookCta: "Book",
       unbookCta: "Unbook",
+      confirmUnbookTitle: "Confirm unbooking",
+      confirmUnbookDescription: "Do you really want to cancel your booking for this lesson?",
+      confirmUnbookCta: "Yes, unbook me",
+      confirmKeepBookingCta: "Keep booking",
       processing: "Processing...",
       youAreQueued: "Queued",
       queuedLabel: "Queued",
@@ -1273,14 +1465,19 @@ const dictionaries: Record<Locale, Dictionary> = {
       updateStandaloneCta: "Save changes",
       deleteStandaloneCta: "Delete",
       deleteLessonCta: "Cancel",
+      confirmDeleteLessonTitle: "Confirm lesson cancellation",
+      confirmDeleteLessonDescription: "This action manually cancels the selected lesson. Do you want to continue?",
       restoreLessonCta: "Restore",
       showDeletedCta: "Show deleted",
       hideDeletedCta: "Hide deleted",
       deletedTag: "Deleted",
+      detailsTitle: "Lesson details",
+      detailsDescription: "Review lesson data and attendees.",
+      detailsTriggerLabel: "Details",
       manageTitle: "Manage lesson",
       manageDescription: "Update data, trainer and attendees from this modal.",
       manageTriggerLabel: "Manage lesson",
-      manageTabMain: "Main",
+      manageTabMain: "Information",
       manageTabPeople: "People",
       processing: "Processing...",
       closeCta: "Close",
@@ -1298,6 +1495,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       noWaitlist: "No users in waitlist.",
       confirmWaitlistCta: "Confirm",
       removeWaitlistCta: "Remove from waitlist",
+      notifySectionTitle: "Notify attendees",
+      notifyMessageLabel: "Message",
+      notifyMessagePlaceholder: "Write the message to send...",
+      notifySendCta: "Send notification",
     },
     usersPage: {
       title: "Users",
@@ -1348,10 +1549,15 @@ const dictionaries: Record<Locale, Dictionary> = {
         reviewUpdate: "Review update",
         cancel: "Cancel",
         edit: "Edit",
+        message: "Message",
+        sendMessage: "Send message",
         delete: "Delete",
         confirm: "Confirm",
         processing: "Processing...",
       },
+      messageDialogTitle: "Send message",
+      messageDialogDescription: "Write a message to notify \"{name}\".",
+      messagePlaceholder: "Write the message here...",
       confirmCreateTitle: "Confirm user creation",
       confirmCreateDescription: "Do you want to create this user?",
       confirmUpdateTitle: "Confirm user update",
@@ -1384,6 +1590,8 @@ const dictionaries: Record<Locale, Dictionary> = {
     auth: {
       loginTitle: "Sign in",
       registerTitle: "Register",
+      tabLogin: "Sign in",
+      tabRegister: "Register",
       noAccount: "No account yet?",
       hasAccount: "Already have an account?",
       loginCta: "Sign in",
@@ -1391,6 +1599,18 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Name",
       emailLabel: "Email",
       passwordLabel: "Password",
+      loginMethodPassword: "Sign in with password",
+      loginMethodOtp: "OTP code (phone)",
+      loginMethodMagicLink: "Magic link",
+      sendCodeCta: "Send code",
+      verifyCodeCta: "Verify code",
+      sendMagicLinkCta: "Send magic link",
+      twoFactorTitle: "Confirm 2FA",
+      twoFactorHint: "Enter your authenticator app code to complete password sign-in.",
+      forgotPasswordCta: "Forgot password?",
+      resendVerificationCta: "Resend verification email",
+      resendVerificationLabel: "Email to verify",
+      resendVerificationSubmitCta: "Resend link",
       firstUserHint: "If you are the first user, you will become Admin.",
       invalidCredentials: "Invalid credentials.",
     },
@@ -1465,6 +1685,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         numericPositive: "Numeric fields must be greater than 0.",
         scheduleRequired: "Add at least one schedule slot.",
         scheduleInvalid: "Schedule contains invalid or duplicate times.",
+        scheduleOverlap: "One or more start times overlap on the same weekday.",
+        scheduleClosedWeekday: "You cannot add schedule slots on gym-closed weekdays.",
       },
       schedule: {
         title: "Weekly schedule",
@@ -1502,6 +1724,30 @@ const dictionaries: Record<Locale, Dictionary> = {
           approveAndUnlockCta: "Approve and unlock",
           rejectCta: "Reject",
           closeCta: "Close",
+        },
+        userInsights: {
+          upcomingTitle: "My upcoming lessons",
+          upcomingDescription: "Next lessons where you are trainer or attendee.",
+          upcomingEmpty: "No upcoming lessons found.",
+          roleTrainer: "Trainer",
+          roleTrainee: "Trainee",
+          bookingPending: "Pending",
+          rankingTitle: "Lesson type ranking",
+          rankingDescription: "Lesson count by type, sorted by frequency.",
+          includeFuture: "Include future",
+          rankingEmpty: "No data available for ranking.",
+          lessonsCountSuffix: "lessons",
+          totalTimeTitle: "Total time at gym",
+          totalTimeDescription: "Sum of lesson durations for your lessons.",
+          totalTimeEmpty: "No duration available for current filter.",
+          totalTimeHours: "hours",
+          chartTitle: "Lessons by type (chart)",
+          chartDescription: "Completed lessons split by lesson type in selected period.",
+          chartRangeLabel: "View",
+          chartRangeWeek: "Weekly",
+          chartRangeMonth: "Monthly",
+          chartRangeYear: "Yearly",
+          chartEmpty: "No chart data available for selected period.",
         },
       },
       lessons: {
@@ -1612,6 +1858,41 @@ const dictionaries: Record<Locale, Dictionary> = {
       logoPreview: "Logo preview",
       logoPathInvalid: "Use a valid local SVG path (e.g. /logo-nekogym.svg).",
       closedDatesInvalid: "Use one real calendar date per line in YYYY-MM-DD format.",
+    },
+    dangerZone: {
+      title: "Danger zone",
+      subtitle: "Critical database operations: backup, restore and full reset.",
+      backupTitle: "Database backup",
+      backupDescription: "Create a local SQLite database copy (folder /data/backups).",
+      uploadTitle: "Upload external backup",
+      uploadDescription: "Import a backup from another environment (.sqlite, .db, .sqlite3).",
+      uploadFileLabel: "Backup file",
+      uploadCta: "Upload backup",
+      uploading: "Uploading...",
+      backupEmpty: "No backups available.",
+      backupCreateCta: "Create backup",
+      backupCreating: "Creating backup...",
+      restoreTitle: "Restore from backup",
+      restoreDescription: "Restore an existing backup. This operation is OTP-protected.",
+      restoreBackupLabel: "Backup to restore",
+      restoreBackupPlaceholder: "Create a backup first",
+      restoreOtpLabel: "OTP (2FA)",
+      restoreWarningConfirm: "You are about to restore the database. Do you want to continue?",
+      restoreBackupPromptConfirm: "Do you want to create a backup before restore?",
+      restoreCta: "Run restore",
+      restoring: "Restoring...",
+      resetTitle: "Permanent reset",
+      resetDescription:
+        "Permanently deletes all app data except: system settings, current admin account and its preferences.",
+      resetConfirmationLabel: "Reset confirmation",
+      resetConfirmationHint: "Type RESET exactly to confirm.",
+      resetOtpLabel: "OTP (2FA)",
+      resetWarningConfirm: "Reset permanently deletes app data. Do you want to continue?",
+      resetBackupPromptConfirm: "Do you want to create a backup before reset?",
+      resetCta: "Reset system",
+      resetting: "Resetting...",
+      backupDateLabel: "Date",
+      backupSizeLabel: "Size",
     },
     manualNotifications: {
       title: "Manual notifications",

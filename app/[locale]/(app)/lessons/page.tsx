@@ -1,6 +1,8 @@
+import type { CSSProperties } from "react";
+
 import { requireAnyRole } from "@/lib/authorization";
 import { getDictionary, isLocale } from "@/lib/i18n";
-import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
+import { hexToRgba, sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { prisma } from "@/lib/prisma";
 import { AlertTriangle, RotateCcw, Trash2, Users } from "lucide-react";
@@ -10,9 +12,20 @@ import {
   restoreLessonAction,
 } from "@/app/[locale]/(app)/lessons/actions";
 import { BookingBadgeToggle } from "@/components/bookings/booking-badge-toggle";
-import { LessonManageDialog } from "@/app/[locale]/(app)/lessons/lesson-manage-dialog";
+import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
 import { LessonsFlashToast } from "@/app/[locale]/(app)/lessons/lessons-flash-toast";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 
@@ -306,6 +319,21 @@ export default async function LessonsPage({
                   const isPendingByCurrentUser = currentUserBooking?.status === "PENDING";
                   const isQueuedByCurrentUser = lesson.waitlistEntries.some((entry) => entry.trainee.id === currentUser.id);
                   const pendingApprovalsCount = lesson.bookings.filter((booking) => booking.status === "PENDING").length;
+                  const canManageLesson = currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id;
+                  const lessonTypeColor = lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null;
+                  const cardBorderStyle: CSSProperties["borderStyle"] = isBookedByCurrentUser ? "solid" : "dashed";
+                  const cardStyle: CSSProperties | undefined = lessonTypeColor
+                    ? {
+                        backgroundColor: hexToRgba(lessonTypeColor, 0.16),
+                        borderColor: hexToRgba(lessonTypeColor, 0.7),
+                        borderWidth: isBookedByCurrentUser ? 1 : 2,
+                        borderStyle: cardBorderStyle,
+                      }
+                    : {
+                        borderColor: "var(--surface-border)",
+                        borderWidth: isBookedByCurrentUser ? 1 : 2,
+                        borderStyle: cardBorderStyle,
+                      };
                   const isAccessDenied = effectiveAccessMode(lesson.lessonTypeId) === "DENIED";
                   const cancellationDeadline = new Date(lesson.startsAt.getTime() - lesson.cancellationWindowHours * 60 * 60 * 1000);
                   const canBook =
@@ -330,95 +358,50 @@ export default async function LessonsPage({
                       trainerId: lesson.trainerId,
                       course: lesson.course,
                     }).length > 0
-                      ? "border-amber-300 bg-amber-50/60 dark:border-amber-700 dark:bg-amber-950/20"
+                      ? "ring-1 ring-amber-400/70"
                       : "border-[var(--surface-border)]",
                   ].join(" ")}
+                  style={cardStyle}
                 >
                   <div className="flex items-center gap-2">
-                    {lesson.lessonType ? (
-                      <LessonTypeIcon
-                        iconPath={sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)}
-                        colorHex={sanitizeLessonTypeColor(lesson.lessonType.colorHex)}
-                        size={18}
-                        title={lesson.lessonType.name}
-                      />
-                    ) : null}
-                    <p className="font-medium">{lesson.title?.trim() || lesson.course?.name || "-"}</p>
-                    {lesson.course?.id ? (
-                      <Badge variant="info" className="text-[10px]">
-                        {labels.courseTag}
-                      </Badge>
-                    ) : null}
-                    {isDeleted ? (
-                      <Badge variant="warning" className="text-[10px]">
-                        {labels.deletedTag}
-                      </Badge>
-                    ) : null}
-                    {(() => {
-                      const reasons = lessonDifferenceReasons({
-                        isCustomized: lesson.isCustomized,
-                        startsAt: lesson.startsAt,
-                        endsAt: lesson.endsAt,
-                        sourceStartTime: lesson.sourceStartTime,
-                        trainerId: lesson.trainerId,
-                        course: lesson.course,
-                      });
-                      if (reasons.length === 0) return null;
-
-                      return (
-                        <div className="inline-flex items-center gap-1">
-                          <Badge variant="warning" className="text-[10px]">
-                            {labels.modifiedTag}
-                          </Badge>
-                          <span className="text-[10px] text-amber-700 dark:text-amber-300">
-                            {labels.modifiedReasonsLabel}: {reasons
-                              .map((reason) => (reason === "trainer" ? labels.modifiedReasonTrainer : labels.modifiedReasonTime))
-                              .join(", ")}
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    {timeFmt.format(lesson.startsAt)} - {timeFmt.format(lesson.endsAt)} · {lesson.status}
-                  </p>
-                  <p className="text-xs text-[var(--muted-foreground)]">
-                    {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} ·{" "}
-                    <span className="inline-flex items-center gap-1">
-                      {currentUser.role === "ADMIN" && pendingApprovalsCount > 0 ? (
-                        <AlertTriangle
-                          className="h-3.5 w-3.5 text-red-600 dark:text-red-400"
-                          title={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}
-                        />
-                      ) : (
-                        <Users className="h-3.5 w-3.5" />
-                      )}
-                      {labels.bookedLabel}: {lesson._count.bookings}/{lesson.maxAttendees}
-                    </span>
-                  </p>
-                  {lesson.description ? <p className="text-xs text-[var(--muted-foreground)]">{lesson.description}</p> : null}
-                  <div className="mt-2 inline-flex gap-2">
-                    {isAccessDenied ? null : !isQueuedByCurrentUser ? (
-                      <BookingBadgeToggle
+                    <div className="min-w-0 flex-1">
+                      <LessonDetailsDialogTrigger
                         locale={locale}
-                        lessonId={lesson.id}
-                        isBooked={isBookedByCurrentUser}
-                        isPendingApproval={isPendingByCurrentUser}
-                        canBook={canBook}
-                        canUnbook={canUnbook}
-                        labels={{
-                          bookCta: bookingLabels.bookCta,
-                          bookedCta: bookingLabels.youAreBooked,
-                          pendingCta: bookingLabels.awaitingConfirmation,
-                          processing: bookingLabels.processing,
+                        lesson={{
+                          id: lesson.id,
+                          title: lesson.title?.trim() || lesson.course?.name || "-",
+                          description: lesson.description ?? null,
+                          startsAt: lesson.startsAt.toISOString(),
+                          endsAt: lesson.endsAt.toISOString(),
+                          trainerName: lesson.trainer?.name ?? null,
+                          occupancy: `${lesson._count.bookings}/${lesson.maxAttendees}`,
+                          queueLength: lesson.waitlistEntries.length,
+                          canViewWaitlist: true,
+                          isCourseLesson: Boolean(lesson.course?.id),
+                          lessonTypeName: lesson.lessonType?.name ?? null,
+                          lessonTypeIcon: lesson.lessonType
+                            ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)
+                            : null,
+                          lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
+                          canBroadcast: canManageLesson,
                         }}
-                      />
-                    ) : (
-                      <Badge variant="warning">{bookingLabels.youAreQueued}</Badge>
-                    )}
-                    <LessonManageDialog
-                      locale={locale}
-                      lesson={{
+                        labels={{
+                          detailsTitle: labels.detailsTitle,
+                          detailsDescription: labels.detailsDescription,
+                          startsAtLabel: labels.startsAtLabel,
+                          endsAtLabel: bookingLabels.endsAtLabel,
+                          trainerLabel: labels.trainerLabel,
+                          bookedLabel: labels.bookedLabel,
+                          queuedLabel: bookingLabels.queuedLabel,
+                          closeCta: labels.closeCta,
+                          courseTag: labels.courseTag,
+                          lessonDescriptionLabel: labels.lessonDescriptionLabel,
+                          notifySectionTitle: labels.notifySectionTitle,
+                          notifyMessagePlaceholder: labels.notifyMessagePlaceholder,
+                          notifySendCta: labels.notifySendCta,
+                        }}
+                        manage={canManageLesson ? {
+                      lesson: {
                         id: lesson.id,
                         canEditMain: !lesson.course?.id && !isPastOrNow && !isDeleted,
                         title: lesson.title ?? "",
@@ -445,11 +428,12 @@ export default async function LessonsPage({
                           name: entry.trainee.name,
                           email: entry.trainee.email,
                         })),
-                      }}
-                      trainerCandidates={trainerCandidates}
-                      lessonTypeCandidates={lessonTypeCandidates}
-                      attendeeCandidates={attendeeCandidates}
-                      labels={{
+                      },
+                      trainerCandidates,
+                      lessonTypeCandidates,
+                      attendeeCandidates,
+                      canBroadcastToAttendees: true,
+                      labels: {
                         title: labels.manageTitle,
                         description: labels.manageDescription,
                         tabMain: labels.manageTabMain,
@@ -481,37 +465,170 @@ export default async function LessonsPage({
                         processing: labels.processing,
                         closeCta: labels.closeCta,
                         manageTriggerLabel: labels.manageTriggerLabel,
-                      }}
-                    />
-                    {!isDeleted ? (
-                      <form action={deleteStandaloneLessonAction}>
-                        <input type="hidden" name="locale" value={locale} />
-                        <input type="hidden" name="month" value={monthValue(monthStart)} />
-                        {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
-                        <input type="hidden" name="lessonId" value={lesson.id} />
-                        <button
-                          type="submit"
-                          className="inline-flex h-8 items-center gap-1 rounded-md border border-red-300 px-2 text-xs text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>{labels.deleteLessonCta}</span>
-                        </button>
-                      </form>
+                        notifySectionTitle: labels.notifySectionTitle,
+                        notifyMessageLabel: labels.notifyMessageLabel,
+                        notifyMessagePlaceholder: labels.notifyMessagePlaceholder,
+                        notifySendCta: labels.notifySendCta,
+                      },
+                        } : undefined}
+                        trigger={(
+                          <div
+                            className="w-full cursor-pointer rounded text-left hover:opacity-95"
+                            aria-label={labels.detailsTriggerLabel}
+                            title={labels.detailsTriggerLabel}
+                          >
+                            <div className="flex items-center gap-3">
+                              {lesson.lessonType ? (
+                                <LessonTypeIcon
+                                  iconPath={sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)}
+                                  colorHex={sanitizeLessonTypeColor(lesson.lessonType.colorHex)}
+                                  size={22}
+                                  title={lesson.lessonType.name}
+                                />
+                              ) : null}
+                              <div className="min-w-0">
+                                <p className="truncate text-base font-semibold">{lesson.title?.trim() || lesson.course?.name || "-"}</p>
+                                <p className="text-xs text-[var(--muted-foreground)]">
+                                  {timeFmt.format(lesson.startsAt)} - {timeFmt.format(lesson.endsAt)} · {lesson.status}
+                                </p>
+                                <p className="text-xs text-[var(--muted-foreground)]">
+                                  {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} ·{" "}
+                                  <span className="inline-flex items-center gap-1">
+                                    {currentUser.role === "ADMIN" && pendingApprovalsCount > 0 ? (
+                                      <AlertTriangle
+                                        className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400"
+                                        title={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}
+                                      />
+                                    ) : (
+                                      <Users className="h-3.5 w-3.5" />
+                                    )}
+                                    {labels.bookedLabel}: {lesson._count.bookings}/{lesson.maxAttendees}
+                                  </span>
+                                </p>
+                                {lesson.description ? <p className="text-xs text-[var(--muted-foreground)]">{lesson.description}</p> : null}
+                                <div className="mt-1 inline-flex flex-wrap items-center gap-1">
+                                  {lesson.course?.id ? (
+                                    <Badge variant="info" className="text-[10px]">
+                                      {labels.courseTag}
+                                    </Badge>
+                                  ) : null}
+                                  {isDeleted ? (
+                                    <Badge variant="warning" className="text-[10px]">
+                                      {labels.deletedTag}
+                                    </Badge>
+                                  ) : null}
+                                  {(() => {
+                                    const reasons = lessonDifferenceReasons({
+                                      isCustomized: lesson.isCustomized,
+                                      startsAt: lesson.startsAt,
+                                      endsAt: lesson.endsAt,
+                                      sourceStartTime: lesson.sourceStartTime,
+                                      trainerId: lesson.trainerId,
+                                      course: lesson.course,
+                                    });
+                                    if (reasons.length === 0) return null;
+
+                                    return (
+                                      <div className="inline-flex items-center gap-1">
+                                        <Badge variant="warning" className="text-[10px]">
+                                          {labels.modifiedTag}
+                                        </Badge>
+                                        <span className="text-[10px] text-amber-700 dark:text-amber-300">
+                                          {labels.modifiedReasonsLabel}: {reasons
+                                            .map((reason) => (reason === "trainer" ? labels.modifiedReasonTrainer : labels.modifiedReasonTime))
+                                            .join(", ")}
+                                        </span>
+                                      </div>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      />
+                    </div>
+                    <div className="inline-flex shrink-0 items-center gap-1 self-center">
+                    {isAccessDenied ? null : !isQueuedByCurrentUser ? (
+                      <BookingBadgeToggle
+                        locale={locale}
+                        lessonId={lesson.id}
+                        isBooked={isBookedByCurrentUser}
+                        isPendingApproval={isPendingByCurrentUser}
+                        canBook={canBook}
+                        canUnbook={canUnbook}
+                        labels={{
+                          bookCta: bookingLabels.bookCta,
+                          bookedCta: bookingLabels.youAreBooked,
+                          pendingCta: bookingLabels.awaitingConfirmation,
+                          processing: bookingLabels.processing,
+                          confirmUnbookTitle: bookingLabels.confirmUnbookTitle,
+                          confirmUnbookDescription: bookingLabels.confirmUnbookDescription,
+                          confirmUnbookCta: bookingLabels.confirmUnbookCta,
+                          confirmKeepBookingCta: bookingLabels.confirmKeepBookingCta,
+                        }}
+                      />
                     ) : (
-                      <form action={restoreLessonAction}>
-                        <input type="hidden" name="locale" value={locale} />
-                        <input type="hidden" name="month" value={monthValue(monthStart)} />
-                        {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
-                        <input type="hidden" name="lessonId" value={lesson.id} />
-                        <button
-                          type="submit"
-                          className="inline-flex h-8 items-center gap-1 rounded-md border border-emerald-300 px-2 text-xs text-emerald-700 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
-                        >
-                          <RotateCcw className="h-3.5 w-3.5" />
-                          <span>{labels.restoreLessonCta}</span>
-                        </button>
-                      </form>
+                      <Badge variant="warning">{bookingLabels.youAreQueued}</Badge>
                     )}
+                      {canManageLesson && !isDeleted ? (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--danger-hover)] text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+                              title={labels.deleteLessonCta}
+                              aria-label={labels.deleteLessonCta}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>{labels.confirmDeleteLessonTitle}</AlertDialogTitle>
+                              <AlertDialogDescription>{labels.confirmDeleteLessonDescription}</AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel asChild>
+                                <button type="button" className="inline-flex h-9 items-center rounded-md border px-3 text-sm">
+                                  {labels.closeCta}
+                                </button>
+                              </AlertDialogCancel>
+                              <form action={deleteStandaloneLessonAction}>
+                                <input type="hidden" name="locale" value={locale} />
+                                <input type="hidden" name="month" value={monthValue(monthStart)} />
+                                {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
+                                <input type="hidden" name="lessonId" value={lesson.id} />
+                                <AlertDialogAction asChild>
+                                  <button
+                                    type="submit"
+                                    className="inline-flex h-9 items-center rounded-md bg-[var(--destructive-bg)] px-3 text-sm text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]"
+                                  >
+                                    {labels.deleteLessonCta}
+                                  </button>
+                                </AlertDialogAction>
+                              </form>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      ) : null}
+                      {canManageLesson && isDeleted ? (
+                        <form action={restoreLessonAction}>
+                          <input type="hidden" name="locale" value={locale} />
+                          <input type="hidden" name="month" value={monthValue(monthStart)} />
+                          {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
+                          <input type="hidden" name="lessonId" value={lesson.id} />
+                          <button
+                            type="submit"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--success-hover)] text-[var(--success-fg)] hover:bg-[var(--success-bg)] dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+                            title={labels.restoreLessonCta}
+                            aria-label={labels.restoreLessonCta}
+                          >
+                            <RotateCcw className="h-3.5 w-3.5" />
+                          </button>
+                        </form>
+                      ) : null}
+                  </div>
                   </div>
                 </div>
                   );

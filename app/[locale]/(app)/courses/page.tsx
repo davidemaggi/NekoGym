@@ -3,6 +3,7 @@ import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { prisma } from "@/lib/prisma";
+import { getSiteSettings, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
 import { CoursesManager } from "@/app/[locale]/(app)/courses/_components/courses-manager";
 
@@ -33,6 +34,8 @@ export default async function CoursesPage({
   const lessonTypes = await prisma.lessonType.findMany({
     orderBy: { name: "asc" },
   });
+  const siteSettings = await getSiteSettings();
+  const openWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
 
   const iconOptions = await getLessonTypeIconOptions();
 
@@ -91,8 +94,8 @@ export default async function CoursesPage({
       includeDeleted={includeDeleted}
       trainerCandidates={trainerCandidates}
       lessonTypes={safeLessonTypes}
+      availableWeekdays={openWeekdays}
     />
   );
 }
-
 

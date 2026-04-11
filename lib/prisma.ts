@@ -1,21 +1,17 @@
+import { mkdirSync } from "node:fs";
+
 import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
 import { PrismaClient } from "@prisma/client";
+
+import { DATA_DIR, SQLITE_DATABASE_URL } from "@/lib/storage-paths";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
-
-function getDatabaseUrl() {
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL is not defined.");
-  }
-
-  return url;
-}
+mkdirSync(DATA_DIR, { recursive: true });
 
 const adapter = new PrismaBetterSqlite3({
-  url: getDatabaseUrl(),
+  url: SQLITE_DATABASE_URL,
 });
 
 function hasCourseDelegate(client: PrismaClient | undefined): client is PrismaClient {
@@ -41,4 +37,3 @@ export const prisma =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
-
