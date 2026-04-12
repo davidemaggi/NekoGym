@@ -18,9 +18,36 @@ export default async function DashboardPage({
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
   const labels = dictionary.appPages.dashboard;
-  const lessonLabels = dictionary.appPages.lessons;
+  const lessonLabels = dictionary.lessonsPage;
+  const bookingLabels = dictionary.bookings;
   const now = new Date();
   const iconOptions = await getLessonTypeIconOptions();
+  const canManageLessons = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
+
+  const trainerCandidates =
+    currentUser.role === "ADMIN"
+      ? await prisma.user.findMany({
+          where: { role: { in: ["ADMIN", "TRAINER"] } },
+          select: { id: true, name: true, email: true },
+          orderBy: { name: "asc" },
+        })
+      : currentUser.role === "TRAINER"
+        ? [{ id: currentUser.id, name: currentUser.name, email: currentUser.email }]
+        : [];
+
+  const lessonTypeCandidates = canManageLessons
+    ? await prisma.lessonType.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
+
+  const attendeeCandidates = canManageLessons
+    ? await prisma.user.findMany({
+        select: { id: true, name: true, email: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   const pendingWhere = currentUser.role === "ADMIN"
     ? {
@@ -86,14 +113,34 @@ export default async function DashboardPage({
       startsAt: true,
       endsAt: true,
       maxAttendees: true,
+      cancellationWindowHours: true,
       trainerId: true,
-      trainer: { select: { name: true } },
+      trainer: { select: { id: true, name: true } },
       course: { select: { id: true, name: true } },
-      lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
+      lessonType: { select: { id: true, name: true, iconSvg: true, colorHex: true } },
       bookings: {
-        where: { traineeId: currentUser.id },
-        select: { status: true },
-        take: 1,
+        select: {
+          status: true,
+          trainee: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+      },
+      waitlistEntries: {
+        select: {
+          trainee: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
       },
       _count: { select: { bookings: true, waitlistEntries: true } },
     },
@@ -122,7 +169,7 @@ export default async function DashboardPage({
     <section className="space-y-6">
       <PwaInstallBanner labels={dictionary.pwaInstall} />
       <header>
-        <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">Ciao {currentUser.name}!</h2>
         <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
       </header>
 
@@ -176,30 +223,97 @@ export default async function DashboardPage({
           endsAt: lesson.endsAt.toISOString(),
           trainerName: lesson.trainer?.name ?? null,
           occupancy: `${lesson._count.bookings}/${lesson.maxAttendees}`,
+          maxAttendees: lesson.maxAttendees,
+          cancellationWindowHours: lesson.cancellationWindowHours,
           queueLength: lesson._count.waitlistEntries,
           canViewWaitlist: true,
           isCourseLesson: Boolean(lesson.course?.id),
           lessonTypeName: lesson.lessonType?.name ?? "-",
+          lessonTypeId: lesson.lessonType?.id ?? "",
           lessonTypeIcon: lesson.lessonType
             ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)
             : null,
           lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
           canBroadcast: currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id,
+          canManage: currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id,
+          canManageTrainer: currentUser.role === "ADMIN",
+          trainerIdForManage: lesson.trainer?.id ?? "",
+          attendees: lesson.bookings
+            .filter((booking) => booking.status === "CONFIRMED")
+            .map((booking) => ({
+              id: booking.trainee.id,
+              name: booking.trainee.name,
+              email: booking.trainee.email,
+            })),
+          pendingApprovals: lesson.bookings
+            .filter((booking) => booking.status === "PENDING")
+            .map((booking) => ({
+              id: booking.trainee.id,
+              name: booking.trainee.name,
+              email: booking.trainee.email,
+            })),
+          waitlist: lesson.waitlistEntries.map((entry) => ({
+            id: entry.trainee.id,
+            name: entry.trainee.name,
+            email: entry.trainee.email,
+          })),
           roleKind: lesson.trainerId === currentUser.id ? "TRAINER" : "TRAINEE",
-          bookingStatus: lesson.bookings[0]?.status ?? null,
+          bookingStatus: lesson.bookings.find((booking) => booking.trainee.id === currentUser.id)?.status ?? null,
         }))}
+        lessonManageData={{
+          trainerCandidates,
+          lessonTypeCandidates,
+          attendeeCandidates,
+        }}
         lessonDetailsLabels={{
           detailsTitle: lessonLabels.detailsTitle,
           detailsDescription: lessonLabels.detailsDescription,
           startsAtLabel: lessonLabels.startsAtLabel,
-          endsAtLabel: lessonLabels.endsAtLabel,
+          endsAtLabel: bookingLabels.endsAtLabel,
           trainerLabel: lessonLabels.trainerLabel,
           bookedLabel: lessonLabels.bookedLabel,
-          queuedLabel: lessonLabels.queuedLabel,
+          queuedLabel: bookingLabels.queuedLabel,
           closeCta: lessonLabels.closeCta,
           courseTag: lessonLabels.courseTag,
           lessonDescriptionLabel: lessonLabels.lessonDescriptionLabel,
           notifySectionTitle: lessonLabels.notifySectionTitle,
+          notifyMessagePlaceholder: lessonLabels.notifyMessagePlaceholder,
+          notifySendCta: lessonLabels.notifySendCta,
+        }}
+        lessonManageLabels={{
+          title: lessonLabels.manageTitle,
+          description: lessonLabels.manageDescription,
+          tabMain: lessonLabels.manageTabMain,
+          tabPeople: lessonLabels.manageTabPeople,
+          startsAtLabel: lessonLabels.startsAtLabel,
+          trainerLabel: lessonLabels.trainerLabel,
+          standaloneDuration: lessonLabels.standaloneDuration,
+          standaloneMaxAttendees: lessonLabels.standaloneMaxAttendees,
+          standaloneCancellationWindow: lessonLabels.standaloneCancellationWindow,
+          standaloneLessonType: lessonLabels.standaloneLessonType,
+          lessonTitleLabel: lessonLabels.lessonTitleLabel,
+          lessonDescriptionLabel: lessonLabels.lessonDescriptionLabel,
+          updateStandaloneCta: lessonLabels.updateStandaloneCta,
+          updateTrainerCta: lessonLabels.updateTrainerCta,
+          attendeesLabel: lessonLabels.attendeesLabel,
+          noAttendees: lessonLabels.noAttendees,
+          attendeeSelectLabel: lessonLabels.attendeeSelectLabel,
+          addAttendeeCta: lessonLabels.addAttendeeCta,
+          removeAttendeeCta: lessonLabels.removeAttendeeCta,
+          pendingApprovalsLabel: lessonLabels.pendingApprovalsLabel,
+          noPendingApprovals: lessonLabels.noPendingApprovals,
+          confirmPendingCta: lessonLabels.confirmPendingCta,
+          confirmPendingAndGrantAccessCta: lessonLabels.confirmPendingAndGrantAccessCta,
+          rejectPendingCta: lessonLabels.rejectPendingCta,
+          waitlistLabel: lessonLabels.waitlistLabel,
+          noWaitlist: lessonLabels.noWaitlist,
+          confirmWaitlistCta: lessonLabels.confirmWaitlistCta,
+          removeWaitlistCta: lessonLabels.removeWaitlistCta,
+          processing: lessonLabels.processing,
+          closeCta: lessonLabels.closeCta,
+          manageTriggerLabel: lessonLabels.manageTriggerLabel,
+          notifySectionTitle: lessonLabels.notifySectionTitle,
+          notifyMessageLabel: lessonLabels.notifyMessageLabel,
           notifyMessagePlaceholder: lessonLabels.notifyMessagePlaceholder,
           notifySendCta: lessonLabels.notifySendCta,
         }}

@@ -20,13 +20,22 @@ type UserLesson = {
   endsAt: string;
   trainerName: string | null;
   occupancy: string;
+  maxAttendees: number;
+  cancellationWindowHours: number;
   queueLength: number;
   canViewWaitlist: boolean;
   isCourseLesson: boolean;
   lessonTypeName: string;
+  lessonTypeId: string;
   lessonTypeIcon: string | null;
   lessonTypeColor: string | null;
   canBroadcast: boolean;
+  canManage: boolean;
+  canManageTrainer: boolean;
+  trainerIdForManage: string;
+  attendees: Array<{ id: string; name: string; email?: string }>;
+  pendingApprovals: Array<{ id: string; name: string; email?: string }>;
+  waitlist: Array<{ id: string; name: string; email?: string }>;
   roleKind: "TRAINER" | "TRAINEE";
   bookingStatus: "CONFIRMED" | "PENDING" | null;
 };
@@ -36,6 +45,11 @@ type RangeView = "week" | "month" | "year";
 type DashboardUserInsightsProps = {
   locale: string;
   lessons: UserLesson[];
+  lessonManageData: {
+    trainerCandidates: Array<{ id: string; name: string; email?: string }>;
+    lessonTypeCandidates: Array<{ id: string; name: string }>;
+    attendeeCandidates: Array<{ id: string; name: string; email?: string }>;
+  };
   lessonDetailsLabels: {
     detailsTitle: string;
     detailsDescription: string;
@@ -48,6 +62,43 @@ type DashboardUserInsightsProps = {
     courseTag: string;
     lessonDescriptionLabel: string;
     notifySectionTitle: string;
+    notifyMessagePlaceholder: string;
+    notifySendCta: string;
+  };
+  lessonManageLabels: {
+    title: string;
+    description: string;
+    tabMain: string;
+    tabPeople: string;
+    startsAtLabel: string;
+    trainerLabel: string;
+    standaloneDuration: string;
+    standaloneMaxAttendees: string;
+    standaloneCancellationWindow: string;
+    standaloneLessonType: string;
+    lessonTitleLabel: string;
+    lessonDescriptionLabel: string;
+    updateStandaloneCta: string;
+    updateTrainerCta: string;
+    attendeesLabel: string;
+    noAttendees: string;
+    attendeeSelectLabel: string;
+    addAttendeeCta: string;
+    removeAttendeeCta: string;
+    pendingApprovalsLabel: string;
+    noPendingApprovals: string;
+    confirmPendingCta: string;
+    confirmPendingAndGrantAccessCta: string;
+    rejectPendingCta: string;
+    waitlistLabel: string;
+    noWaitlist: string;
+    confirmWaitlistCta: string;
+    removeWaitlistCta: string;
+    processing: string;
+    closeCta: string;
+    manageTriggerLabel: string;
+    notifySectionTitle: string;
+    notifyMessageLabel: string;
     notifyMessagePlaceholder: string;
     notifySendCta: string;
   };
@@ -125,7 +176,25 @@ function toDateKey(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
-export function DashboardUserInsights({ locale, lessons, lessonDetailsLabels, labels }: DashboardUserInsightsProps) {
+function toDateTimeLocalValue(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+export function DashboardUserInsights({
+  locale,
+  lessons,
+  lessonManageData,
+  lessonDetailsLabels,
+  lessonManageLabels,
+  labels,
+}: DashboardUserInsightsProps) {
   const [includeFutureForRanking, setIncludeFutureForRanking] = useState(false);
   const [includeFutureForTime, setIncludeFutureForTime] = useState(false);
   const [rangeView, setRangeView] = useState<RangeView>("month");
@@ -323,6 +392,13 @@ export function DashboardUserInsights({ locale, lessons, lessonDetailsLabels, la
                       : undefined
                   }
                 >
+                  {(() => {
+                    const startsAtDate = new Date(lesson.startsAt);
+                    const endsAtDate = new Date(lesson.endsAt);
+                    const isPastOrNow = startsAtDate <= now;
+                    const durationMinutes = Math.max(1, Math.round((endsAtDate.getTime() - startsAtDate.getTime()) / 60000));
+
+                    return (
                   <LessonDetailsDialogTrigger
                     locale={locale}
                     lesson={{
@@ -342,6 +418,36 @@ export function DashboardUserInsights({ locale, lessons, lessonDetailsLabels, la
                       canBroadcast: lesson.canBroadcast,
                     }}
                     labels={lessonDetailsLabels}
+                    manage={
+                      lesson.canManage
+                        ? {
+                            lesson: {
+                              id: lesson.id,
+                              canEditMain: !lesson.isCourseLesson && !isPastOrNow,
+                              title: lesson.title,
+                              description: lesson.description ?? "",
+                              startsAt: toDateTimeLocalValue(lesson.startsAt),
+                              durationMinutes,
+                              maxAttendees: lesson.maxAttendees,
+                              cancellationWindowHours: lesson.cancellationWindowHours,
+                              trainerId: lesson.trainerIdForManage,
+                              lessonTypeId: lesson.lessonTypeId,
+                              canManageTrainer: lesson.canManageTrainer && !isPastOrNow,
+                              attendees: lesson.attendees,
+                              pendingApprovals: lesson.pendingApprovals,
+                              waitlist: lesson.waitlist,
+                            },
+                            trainerCandidates: lessonManageData.trainerCandidates.map((trainer) => ({
+                              id: trainer.id,
+                              name: trainer.name,
+                            })),
+                            lessonTypeCandidates: lessonManageData.lessonTypeCandidates,
+                            attendeeCandidates: lessonManageData.attendeeCandidates,
+                            canBroadcastToAttendees: true,
+                            labels: lessonManageLabels,
+                          }
+                        : undefined
+                    }
                     trigger={
                       <div className="w-full cursor-pointer rounded text-left hover:opacity-95">
                         <div className="flex items-center gap-3">
@@ -378,6 +484,8 @@ export function DashboardUserInsights({ locale, lessons, lessonDetailsLabels, la
                       </div>
                     }
                   />
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -420,7 +528,7 @@ export function DashboardUserInsights({ locale, lessons, lessonDetailsLabels, la
         </CardContent>
       </Card>
 
-      <Card className="lg:col-span-12">
+      <Card className="min-w-0 lg:col-span-12">
         <CardHeader>
           <CardTitle>{labels.totalTimeTitle}</CardTitle>
           <p className="text-xs text-[var(--muted-foreground)]">{labels.totalTimeDescription}</p>
@@ -465,8 +573,8 @@ export function DashboardUserInsights({ locale, lessons, lessonDetailsLabels, la
           {chartData.rows.length === 0 ? (
             <p className="text-sm text-[var(--muted-foreground)]">{labels.chartEmpty}</p>
           ) : (
-            <ChartContainer config={chartData.config} className="h-80 w-full">
-              <ResponsiveContainer width="100%" height="100%">
+            <ChartContainer config={chartData.config} className="h-80 w-full min-w-0 overflow-hidden">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
                 <BarChart data={chartData.rows}>
                   <defs>
                     {chartData.typeKeys.map((typeKey) => (

@@ -489,7 +489,7 @@ export default async function LessonsPage({
                               <div className="min-w-0">
                                 <p className="truncate text-base font-semibold">{lesson.title?.trim() || lesson.course?.name || "-"}</p>
                                 <p className="text-xs text-[var(--muted-foreground)]">
-                                  {timeFmt.format(lesson.startsAt)} - {timeFmt.format(lesson.endsAt)} · {lesson.status}
+                                  {timeFmt.format(lesson.startsAt)} - {timeFmt.format(lesson.endsAt)}
                                 </p>
                                 <p className="text-xs text-[var(--muted-foreground)]">
                                   {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} ·{" "}
@@ -573,15 +573,12 @@ export default async function LessonsPage({
                     )}
                       {canManageLesson && !isDeleted ? (
                         <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--danger-hover)] text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
-                              title={labels.deleteLessonCta}
-                              aria-label={labels.deleteLessonCta}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </button>
+                          <AlertDialogTrigger
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--danger-hover)] text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
+                            title={labels.deleteLessonCta}
+                            aria-label={labels.deleteLessonCta}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -589,25 +586,21 @@ export default async function LessonsPage({
                               <AlertDialogDescription>{labels.confirmDeleteLessonDescription}</AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel asChild>
-                                <button type="button" className="inline-flex h-9 items-center rounded-md border px-3 text-sm">
-                                  {labels.closeCta}
-                                </button>
+                              <AlertDialogCancel className="inline-flex h-9 items-center rounded-md border px-3 text-sm">
+                                {labels.closeCta}
                               </AlertDialogCancel>
-                              <form action={deleteStandaloneLessonAction}>
+                              <form id={`delete-lesson-${lesson.id}`} action={deleteStandaloneLessonAction}>
                                 <input type="hidden" name="locale" value={locale} />
                                 <input type="hidden" name="month" value={monthValue(monthStart)} />
                                 {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
                                 <input type="hidden" name="lessonId" value={lesson.id} />
-                                <AlertDialogAction asChild>
-                                  <button
-                                    type="submit"
-                                    className="inline-flex h-9 items-center rounded-md bg-[var(--destructive-bg)] px-3 text-sm text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]"
-                                  >
-                                    {labels.deleteLessonCta}
-                                  </button>
-                                </AlertDialogAction>
                               </form>
+                              <AlertDialogAction
+                                form={`delete-lesson-${lesson.id}`}
+                                className="inline-flex h-9 items-center rounded-md bg-[var(--destructive-bg)] px-3 text-sm text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]"
+                              >
+                                {labels.deleteLessonCta}
+                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
