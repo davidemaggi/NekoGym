@@ -1,28 +1,315 @@
 # NekoGym
 
-Base application for gym management built with Next.js App Router.
+Applicazione web per la gestione operativa di una palestra (corsi, lezioni, prenotazioni, no-show, notifiche, report e amministrazione dati), costruita con Next.js App Router e Prisma/SQLite.
 
-## Features implemented
+## 1. Panoramica funzionale
 
-- Sidebar layout with role-based menu visibility
-- Internationalization routing with `it` and `en` locales (`/[locale]/...`)
-- Auth with Prisma + SQLite (register, login, logout)
-- First registered user is automatically assigned role `ADMIN`
-- SQLite path is fixed to `./data/nekogym.db` (no `DATABASE_URL` override)
+NekoGym supporta 3 ruoli:
 
-## Tech stack
+- `ADMIN`
+- `TRAINER`
+- `TRAINEE`
 
-- Next.js 16
-- React 19
-- TypeScript 5
-- Tailwind CSS 4
-- Prisma + SQLite
+La UI è localizzata (`it` / `en`) e tutte le pagine applicative vivono sotto `/{locale}/...`.
 
-## Setup
+Menu per ruolo:
 
-1. Install dependencies
-2. Configure environment
-3. Start dev server
+- `ADMIN`: dashboard, corsi, lezioni, prenotazioni, utenti, report, notifiche personali, impostazioni profilo, impostazioni sito, registri (tipi lezione), notifiche manuali, danger zone.
+- `TRAINER`: dashboard, corsi (solo propri), lezioni (solo proprie), prenotazioni, notifiche personali, impostazioni profilo, registri.
+- `TRAINEE`: dashboard, prenotazioni, notifiche personali, impostazioni profilo.
+
+## 2. Flussi principali per l’utente
+
+## 2.1 Autenticazione e sicurezza
+
+Accessi disponibili in login:
+
+- password classica
+- OTP di login (codice a 6 cifre)
+- magic link via email
+
+Funzionalità aggiuntive:
+
+- verifica email obbligatoria dopo registrazione
+- resend verifica email
+- reset password (forgot/reset)
+- 2FA TOTP opzionale (abilitabile dal profilo)
+
+Regola bootstrap:
+
+- il primo utente registrato nel DB diventa automaticamente `ADMIN`.
+
+## 2.2 Dashboard
+
+La dashboard mostra:
+
+- KPI sintetici (corsi attivi, lezioni del giorno, prenotazioni future)
+- widget richieste pendenti (admin/trainer)
+- calendario/insights lezioni personali
+- grafico affollamento (admin/trainer): media presenze per fascia oraria sul giorno settimana selezionato (default oggi), con navigazione giorno precedente/successivo
+
+## 2.3 Corsi
+
+Un corso contiene:
+
+- nome, descrizione, icona
+- tipo lezione
+- trainer assegnato
+- durata, max partecipanti
+- finestra prenotazione anticipata (`bookingAdvanceMonths`)
+- finestra minima cancellazione (`cancellationWindowHours`)
+- schedulazione settimanale (slot giorno+orario)
+
+Regole principali:
+
+- trainer può creare/modificare/eliminare/ripristinare solo corsi assegnati a lui
+- trainer può assegnare solo sé stesso
+- schedule validata (niente overlap nello stesso giorno)
+- schedule vincolata ai giorni apertura palestra
+
+Quando un corso cambia, parte la **reconcile** delle lezioni future generate (sezione dedicata più sotto).
+
+## 2.4 Lezioni
+
+Pagine staff:
+
+- `/lessons` per gestione operativa (admin/trainer)
+- toggle `Mostra/Nascondi passate` (default: nascoste)
+- admin può anche mostrare/nascondere eliminate
+
+Operazioni disponibili:
+
+- creare lezione standalone (non legata a corso)
+- modificare/cancellare/ripristinare standalone
+- aprire dettaglio lezione con tab `Informazioni` + `Persone`
+- gestire iscritti, pending approvals, waitlist
+- inviare messaggi broadcast agli iscritti della lezione
+
+Regole su lezioni passate:
+
+- per lezioni passate/in corso, la parte `Informazioni` è read-only
+- resta modificabile solo la parte `Persone` (aggiunte/rimozioni/presenze)
+
+Cancellazione da lista lezioni:
+
+- usa dialog di conferma shadcn
+- submit server action diretto
+
+## 2.5 Presenze e no-show
+
+Ogni prenotazione confermata può avere stato presenza:
+
+- `PRESENT`
+- `NO_SHOW`
+- `null` (non marcata)
+
+Regole:
+
+- solo admin/trainer della lezione possono segnare presenza/no-show
+- segnatura consentita dopo la fine della lezione
+- segnare `NO_SHOW` invia notifica al trainee
+- in lezioni passate si può aggiungere/rimuovere persone:
+  - aggiunta in passato: nessuna notifica
+  - rimozione in passato: notifica al trainee
+
+Automazione:
+
+- job automatico marca `PRESENT` tutte le prenotazioni confermate non marcate di lezioni concluse entro fine giornata precedente
+- admin/trainer possono correggere successivamente (anche impostando no-show)
+
+## 2.6 Prenotazioni (trainee + vista staff)
+
+Regole booking:
+
+- solo lezioni `SCHEDULED`, non eliminate, non iniziate
+- no doppia prenotazione stesso corso nello stesso giorno
+- rispetto membership/trial/subscription
+- accessi per tipo lezione (`DENIED`, `REQUIRES_CONFIRMATION`, `ALLOWED`)
+
+Sezione piani:
+
+- `FIXED`: decremento `subscriptionRemaining` alla conferma, rimborso su disiscrizione valida
+- `WEEKLY`/`MONTHLY`: limite prenotazioni nella finestra corrispondente
+- trial attivo bypassa membership inattiva
+- subscription scaduta può forzare membership a inattiva
+
+Waitlist:
+
+- se lezione piena, utente va in coda
+- liberando posto, promozione automatica del primo in coda
+- notifiche a utente promosso + staff
+
+Pending approvals:
+
+- se tipo lezione richiede conferma, booking entra in `PENDING`
+- admin/trainer della lezione può confermare/rifiutare
+- solo admin può “confermare con accesso libero” (apre accesso tipo lezione)
+
+## 2.7 Utenti (solo admin)
+
+Gestione completa utenti:
+
+- creazione, modifica, eliminazione
+- ruolo (`ADMIN`, `TRAINER`, `TRAINEE`)
+- stato membership/trial
+- configurazione piano subscription
+- verifica email manuale
+- matrice accesso per tipo lezione
+
+Effetti automatici:
+
+- se un trainee viene impostato `DENIED` su un tipo lezione, le sue prenotazioni future di quel tipo vengono revocate
+- invio notifica informativa all’utente in caso di cambi accessi
+
+## 2.8 Report (solo admin)
+
+Pagina `/reports` con:
+
+- KPI + trend vs periodo precedente
+- snapshot executive
+- tabelle:
+  - popolarità corsi
+  - orari più affollati
+  - performance trainer
+  - analytics no-show
+- grafico salute corsi (riempimento vs no-show)
+
+Export PDF:
+
+- `/{locale}/reports/export?days=...`
+- layout report con header, tabelle leggibili, zebra rows e paginazione
+
+Invio report automatici via email:
+
+- frequenza: `NEVER`, `WEEKLY`, `MONTHLY`
+- selezione report inclusi
+- invio solo ad admin con email verificata e `notifyByEmail=true`
+
+## 2.9 Notifiche
+
+Canali supportati:
+
+- email
+- Telegram
+- Web Push
+- notifiche locali in-app (sempre registrate)
+
+Preferenze utente:
+
+- toggle canale email/telegram/webpush
+- retention notifiche locali (giorni)
+
+Pagine:
+
+- `my-notifications`: inbox personale locale con delete singolo/totale
+- `settings/notifications` (admin): invio manuale a audience + monitor outbox + retry singolo/multiplo
+
+Comportamento notifiche (alto livello):
+
+- trainee viene notificato se cambia qualcosa che lo riguarda direttamente (es. rimozione, no-show, approvazione/rifiuto, lezione aggiornata/cancellata)
+- cambi non rilevanti per gli altri iscritti (es. altri utenti che si iscrivono) non generano broadcast generale
+- trainer riceve eventi relativi alle proprie lezioni
+- admin riceve visibilità completa tramite outbox e flussi staff
+
+## 2.10 Impostazioni
+
+### Profilo (`/settings/profile`)
+
+- sicurezza account: cambio password, cambio email con verifica
+- 2FA TOTP setup/disable
+- collegamento Telegram (codice + deep link + QR)
+- web push subscribe/unsubscribe + test
+- preferenze canali notifica
+
+### Sito (`/settings/site`, admin)
+
+Tab:
+
+- General: nome palestra, logo SVG, giorno reset piano settimanale
+- Contacts: indirizzo/email/telefono
+- Notifications: stato configurazione SMTP/Telegram da env + test invio
+- Schedule: giorni apertura e date chiusura (usate da planning/reconcile)
+
+### Registri (`/settings/registries`, admin/trainer)
+
+- gestione tipi lezione (nome, descrizione, icona, colore)
+
+### Danger Zone (`/settings/danger-zone`, admin)
+
+Tab:
+
+- `Backup`: crea backup DB, carica backup esterno, lista backup
+- `Restore`: ripristino backup con OTP
+- `Reset`: reset dati applicativi con conferma + OTP
+
+Sicurezze:
+
+- dialog di conferma shadcn (non `window.confirm`)
+- bottoni restore/reset disabilitati finché campi obbligatori non sono compilati
+
+Nella lista backup:
+
+- `Scarica` backup
+- `Cancella` backup con conferma
+
+## 3. Regole business critiche (Course -> Lessons reconcile)
+
+Quando un corso viene creato/aggiornato/ripristinato, NekoGym allinea le lezioni future generate.
+
+Trigger:
+
+- `createCourseAction`
+- `updateCourseAction`
+- `restoreCourseAction`
+- job giornaliero di reconcile
+
+Outcomes per lezione:
+
+- `modified`: lezione aggiornata ai valori del corso
+- `unchanged`: già allineata
+- `cancelled`: non eliminabile silenziosamente (es. con iscritti)
+- `deleted`: rimossa/cancellata senza iscritti
+- `created`: seed mancante creato
+
+Vincoli:
+
+- solo lezioni future `isGenerated=true` e non eliminate
+- `isCustomized=true` trattate separatamente
+- filtri su schedule palestra (giorni aperti/date chiuse)
+- notifiche inviate per cancellazioni automatiche di lezioni con iscritti
+- log server dettagliati per ogni decisione reconcile (id, startsAt, outcome, reason)
+
+## 4. Automazioni server (background jobs)
+
+Avviate dal custom server nello stesso processo applicativo:
+
+- reconcile giornaliera lezioni future (`LESSON_RECONCILE_*`)
+- auto-cancel notice window (`LESSON_NOTICE_WINDOW_POLL_MS`)
+- auto-conferma presenze a fine giornata (`LESSON_ATTENDANCE_AUTOCONFIRM_INTERVAL_MS`)
+- pulizia notifiche locali in base a retention utente (`LOCAL_NOTIFICATIONS_CLEANUP_INTERVAL_MS`)
+- digest report via email (`REPORT_DIGEST_*`)
+- worker outbox notifiche (`OUTBOX_POLL_MS`)
+- bootstrap bot Telegram
+
+## 5. Stack tecnico
+
+- Next.js `16.2.2` (App Router)
+- React `19.2.4`
+- TypeScript `5`
+- Tailwind CSS `4`
+- Prisma `7` + SQLite
+- shadcn/ui + Radix
+- Recharts
+- Nodemailer, Web Push, Telegram bot integration
+
+## 6. Setup locale
+
+Prerequisiti:
+
+- Node.js 20+
+- npm
+
+Installazione:
 
 ```bash
 npm install
@@ -30,246 +317,114 @@ cp .env.example .env
 npm run dev
 ```
 
-At startup, the custom server automatically creates `./data` and `./data/backups` if missing, then runs `prisma migrate deploy`.
+All’avvio del custom server:
 
-Data folders used by the app:
+- crea `./data` e `./data/backups` se mancanti
+- esegue `prisma migrate deploy`
+- avvia Next + background jobs
 
-- `./data` (contains `nekogym.db`)
-- `./data/backups` (contains DB backups/imported backups)
+Cartelle dati:
 
-## Useful commands
+- `./data/nekogym.db`
+- `./data/backups`
+
+## 7. Comandi utili
 
 ```bash
-npm run dev
+npm run dev            # custom server + jobs (dev)
+npm run dev:next       # solo Next.js dev server
 npm run build
-npm run start
+npm run start          # custom server in prod
+npm run start:next     # solo next start
 npm run lint
 npm run prisma:generate
 npm run prisma:migrate
-```
-
-## Custom server
-
-- The app runs with a custom Node server (`server/custom-server.ts`)
-- It starts Next.js request handling and background services in the same process
-- In development you can still use plain Next with `npm run dev:next`
-
-### Local HTTPS (recommended for iOS Web Push tests)
-
-For iOS Web Push, run the custom server in HTTPS and open the app from Home Screen.
-
-Set these env vars in `.env`:
-
-```dotenv
-DEV_HTTPS="true"
-DEV_HTTPS_STRICT="true"
-DEV_HTTPS_CERT_FILE="/absolute/path/to/cert.pem"
-DEV_HTTPS_KEY_FILE="/absolute/path/to/key.pem"
-DEV_HTTPS_PASSPHRASE="" # optional
-APP_URL="https://your-hostname:3000"
-```
-
-Then start as usual:
-
-```bash
-npm run dev
-```
-
-If `DEV_HTTPS_STRICT="false"`, the server falls back to HTTP when cert loading fails.
-
-## Docker
-
-The container runs `npm run start`, which starts the custom server. That single process serves Next.js pages and keeps background services alive (daily lessons reconcile + Telegram bootstrap).
-
-Start everything:
-
-```bash
-docker compose up --build -d
-```
-
-Follow logs:
-
-```bash
-docker compose logs -f nekogym
-```
-
-Stop:
-
-```bash
-docker compose down
-```
-
-## Background services
-
-- Daily lessons reconcile job (in-process scheduler)
-- Notification outbox worker (email always + Telegram when linked)
-- Web Push delivery for users with active browser subscription
-- Telegram bot bootstrap hook (enabled when `TELEGRAM_BOT_TOKEN` is set)
-
-## Course Change Reconcile (Critical)
-
-When a course is created, updated, or restored, NekoGym runs a **future-lessons reconcile** to align generated lessons with course schedule and constraints.
-
-Trigger points:
-
-- `createCourseAction` -> reconcile for the new course
-- `updateCourseAction` -> reconcile for the updated course
-- `restoreCourseAction` -> reconcile for the restored course
-- daily background job -> reconcile all active courses
-
-What reconcile does (future generated lessons only):
-
-1. Build target lesson seeds from course schedule slots + booking window.
-2. Filter seeds using site opening rules (`openWeekdays`, `closedDates`).
-3. Compare existing generated lessons vs seeds.
-4. For each existing lesson, choose one outcome:
-   - `modified`: lesson updated to match course-derived values
-   - `unchanged`: no update needed, lesson already aligned
-   - `cancelled`: lesson cancelled (kept as cancelled/deleted) because it has bookings and cannot be silently removed
-   - `deleted`: lesson cancelled/deleted with no bookings
-5. Create missing lessons from remaining seeds (`created`).
-
-Important constraints:
-
-- Only lessons with `isGenerated=true`, `startsAt > now`, `deletedAt=null` are reconciled.
-- `isCustomized=true` lessons are never treated as standard generated lessons:
-  - with bookings -> cancelled and notifications sent
-  - without bookings -> cancelled/deleted, and seed remains available for fresh generated lesson creation
-- If a schedule slot is removed:
-  - with bookings -> lesson is cancelled + notifications
-  - without bookings -> lesson is deleted
-- Site closures can block seed generation, so expected lessons may be intentionally skipped.
-
-Server logs (verbose):
-
-- Course-triggered reconcile now logs one line per processed lesson with outcome:
-  - `outcome=modified|unchanged|cancelled|deleted|created`
-  - reason/reasons (for modified/cancelled/deleted)
-- Each run prints a summary:
-  - `created`, `updated`, `unchanged`, `cancelled`, `deleted`
-
-Environment variables:
-
-- `LESSON_RECONCILE_DAILY_AT` (default `03:00`)
-- `LESSON_RECONCILE_RUN_ON_STARTUP` (`true`/`false`)
-- `TELEGRAM_BOT_TOKEN`
-- `TELEGRAM_BOT_USERNAME` (without `@`, used to generate QR/deep link)
-- `OUTBOX_POLL_MS` (default `4000`)
-- `APP_URL` (base URL used in email links, e.g. `http://localhost:3000`)
-- `SMTP_HOST`
-- `SMTP_PORT` (default `587`)
-- `SMTP_AUTH_ENABLED` (`true`/`false`)
-- `SMTP_USER`
-- `SMTP_PASSWORD`
-- `SMTP_FROM_EMAIL`
-- `WEB_PUSH_VAPID_SUBJECT` (e.g. `mailto:admin@example.com`)
-- `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`
-- `WEB_PUSH_VAPID_PRIVATE_KEY`
-- `AUTH_OTP_REQUEST_WINDOW_MS` (default `600000`)
-- `AUTH_OTP_REQUEST_MAX_PER_USER` (default `5`)
-- `AUTH_OTP_REQUEST_MAX_PER_IP` (default `20`)
-- `AUTH_OTP_VERIFY_WINDOW_MS` (default `600000`)
-- `AUTH_OTP_VERIFY_MAX_FAILURES_PER_USER` (default `8`)
-- `AUTH_OTP_VERIFY_MAX_FAILURES_PER_IP` (default `25`)
-
-Generate VAPID keys:
-
-```bash
 npm run webpush:vapid
 ```
 
-Copy the printed keys into `.env`:
+## 8. Docker
 
-```dotenv
-NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY="..."
-WEB_PUSH_VAPID_PRIVATE_KEY="..."
-WEB_PUSH_VAPID_SUBJECT="mailto:admin@example.com"
-APP_URL="http://localhost:3000"
-```
-
-Telegram bot commands:
-
-- `/link <32-char-code>` to link Telegram chat with a NekoGym user
-- `/myLessons` to list today's lessons + next 7 days where user is booked or assigned as trainer
-- QR in profile settings is generated locally by `GET /api/telegram/link/qr` (no external QR service)
-
-## Notifications
-
-- Outbox pattern backed by `NotificationOutbox` table
-- Manual admin notifications at `/[locale]/settings/notifications`
-- Audience can be all users, only trainers, or only trainees
-- Each queued notification creates:
-  - one `EMAIL` outbox entry (always)
-  - one `TELEGRAM` outbox entry only when user has linked Telegram chat id
-- one `WEBPUSH` outbox entry only when user has at least one active Web Push subscription
-    - SMTP and Telegram infrastructure settings are read from environment variables only
-    - In `/[locale]/settings/site` you can see readonly values and run test send for Email/Telegram
-
-## PWA + Web Push (dev test)
-
-Prerequisites:
-
-- `.env` configured with VAPID keys (see above)
-- SMTP configured if you also want to test email verification/reset links
-
-Run app:
+Il container usa il custom server (`npm run start`), quindi include anche i background services.
 
 ```bash
-npm install
-npm run prisma:generate
-npm run prisma:migrate
-npm run dev
+docker compose up --build -d
+docker compose logs -f nekogym
+docker compose down
 ```
 
-Test PWA install banner:
+## 9. Variabili ambiente
 
-1. Open `http://localhost:3000/it` (or `/en`) and login.
-2. In authenticated area, check the install banner.
-3. Click `Install` and verify the app appears as installed (browser dependent).
+Base (vedi `.env.example`):
 
-Test Web Push subscription:
+- `CRON_SECRET`
+- `APP_URL`
+- `APP_DATETIME_LOCALE`
+- `APP_DATETIME_TIMEZONE`
+- `NEXT_PUBLIC_APP_DATETIME_LOCALE`
+- `NEXT_PUBLIC_APP_DATETIME_TIMEZONE`
 
-1. Go to profile settings (`/[locale]/settings/profile`).
-2. In "Web push notifications", click enable and allow browser permission.
-3. Verify status becomes enabled.
+Reconcile / jobs:
 
-Test outbox `WEBPUSH` delivery:
+- `LESSON_RECONCILE_DAILY_AT` (default `03:00`)
+- `LESSON_RECONCILE_RUN_ON_STARTUP`
+- `LESSON_NOTICE_WINDOW_POLL_MS`
+- `LESSON_ATTENDANCE_AUTOCONFIRM_INTERVAL_MS`
+- `LOCAL_NOTIFICATIONS_CLEANUP_INTERVAL_MS`
+- `REPORT_DIGEST_DAILY_AT` (default `08:00`)
+- `REPORT_DIGEST_LOCALE` (`it`/`en`)
+- `REPORT_DIGEST_RUN_ON_STARTUP`
 
-1. As admin, open `/[locale]/settings/notifications`.
-2. Send a manual notification to an audience that includes your user.
-3. In outbox filters, set channel to `WEBPUSH` and verify entries.
-4. Keep browser open/backgrounded and check push notification arrival.
+Notifiche:
 
-If delivery fails, inspect outbox errors and retry from the same page.
+- `OUTBOX_POLL_MS`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_AUTH_ENABLED`
+- `SMTP_USER`
+- `SMTP_PASSWORD`
+- `SMTP_FROM_EMAIL`
+- `TELEGRAM_BOT_TOKEN`
+- `TELEGRAM_BOT_USERNAME`
+- `WEB_PUSH_VAPID_SUBJECT`
+- `NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY`
+- `WEB_PUSH_VAPID_PRIVATE_KEY`
 
-## Email verification and password flows
+Auth OTP rate limiting:
 
-- New registrations require email verification before login.
-- Users created by admin receive verification email too.
-- Admin can still mark email as verified manually.
-- Until email is verified, users cannot login and standard notifications are blocked.
-- User email change is pending until new address is confirmed via link.
-- Password can be changed from profile, and reset via forgot/reset pages.
+- `AUTH_OTP_REQUEST_WINDOW_MS`
+- `AUTH_OTP_REQUEST_MAX_PER_USER`
+- `AUTH_OTP_REQUEST_MAX_PER_IP`
+- `AUTH_OTP_VERIFY_WINDOW_MS`
+- `AUTH_OTP_VERIFY_MAX_FAILURES_PER_USER`
+- `AUTH_OTP_VERIFY_MAX_FAILURES_PER_IP`
 
-## Auth flow
+Dev HTTPS (test iOS Web Push):
 
-- Open `/it/register` (or `/en/register`) to create an account
-- If DB is empty, this first user becomes `ADMIN`
-- Next users are created as `TRAINEE` by default
-- Login at `/it/login` or `/en/login`
+- `DEV_HTTPS`
+- `DEV_HTTPS_STRICT`
+- `DEV_HTTPS_CERT_FILE`
+- `DEV_HTTPS_KEY_FILE`
+- `DEV_HTTPS_PASSPHRASE`
 
-## Notes
+## 10. API/endpoint operativi
 
-- Locale redirect is handled via `proxy.ts`
-- Session is stored in SQLite (`Session` table) and cookie `neko_session`
+- `POST /api/cron/lessons/reconcile`
+  - auth con `x-cron-secret` o `Authorization: Bearer`
+- `POST /api/push/subscribe`
+- `POST /api/push/unsubscribe`
+- `GET /api/local-notifications/summary`
+- `GET /api/telegram/link/qr`
 
-## Daily lesson reconciliation (cron)
-
-- Endpoint: `POST /api/cron/lessons/reconcile` (optional manual/external trigger)
-- Auth: header `x-cron-secret: $CRON_SECRET` (or `Authorization: Bearer $CRON_SECRET`)
-- Purpose: iterate all courses and generate/update/cancel future lessons when needed
+Esempio reconcile manuale:
 
 ```bash
 curl -X POST "http://localhost:3000/api/cron/lessons/reconcile" \
   -H "x-cron-secret: $CRON_SECRET"
 ```
+
+## 11. Note operative importanti
+
+- Le policy più sensibili (reconcile, cancellazioni automatiche, no-show, notifiche) sono governate da server actions + job schedulati.
+- Le pagine staff usano controlli role-based server-side, non solo client-side.
+- Le operazioni distruttive in danger zone richiedono 2FA OTP.
+
