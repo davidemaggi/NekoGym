@@ -11,6 +11,7 @@ import {
   confirmLessonWaitlistEntryMutationAction,
   removeLessonWaitlistEntryMutationAction,
   removeLessonAttendeeMutationAction,
+  setLessonAttendeeAttendanceMutationAction,
   updateLessonMainMutationAction,
   updateLessonTrainerMutationAction,
 } from "./standalone-create-action";
@@ -64,6 +65,12 @@ type LessonManageDialogProps = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    markAttendancePresentCta: string;
+    markAttendanceNoShowCta: string;
+    attendanceStatusLabel: string;
+    attendanceStatusPresent: string;
+    attendanceStatusNoShow: string;
+    attendanceStatusUnmarked: string;
     pendingApprovalsLabel: string;
     noPendingApprovals: string;
     confirmPendingCta: string;
@@ -93,7 +100,9 @@ type LessonManageDialogProps = {
     trainerId: string;
     lessonTypeId: string;
     canManageTrainer: boolean;
+    canManageAttendance: boolean;
     attendees: AttendeeOption[];
+    attendeeAttendance: Record<string, "PRESENT" | "NO_SHOW" | null>;
     pendingApprovals: AttendeeOption[];
     waitlist: AttendeeOption[];
   };
@@ -104,6 +113,7 @@ type LessonManageDialogProps = {
   closedDates?: string[];
   allowPeopleActions?: boolean;
   canBroadcastToAttendees?: boolean;
+  canGrantOpenAccess?: boolean;
 };
 
 type ActiveTab = "main" | "people";
@@ -129,6 +139,7 @@ export function LessonManageDialog({
   closedDates,
   allowPeopleActions = true,
   canBroadcastToAttendees = false,
+  canGrantOpenAccess = false,
 }: LessonManageDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -274,6 +285,24 @@ export function LessonManageDialog({
 
     startTransition(async () => {
       const result = await removeLessonAttendeeMutationAction(formData);
+      if (result.ok) {
+        toast.success(result.message);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
+  }
+
+  function handleSetAttendance(attendeeId: string, attendanceStatus: "PRESENT" | "NO_SHOW") {
+    const formData = new FormData();
+    formData.set("locale", locale);
+    formData.set("lessonId", lesson.id);
+    formData.set("attendeeId", attendeeId);
+    formData.set("attendanceStatus", attendanceStatus);
+
+    startTransition(async () => {
+      const result = await setLessonAttendeeAttendanceMutationAction(formData);
       if (result.ok) {
         toast.success(result.message);
         router.refresh();
@@ -522,32 +551,65 @@ export function LessonManageDialog({
               {lesson.attendees.length === 0 ? (
                 <p className="text-xs text-[var(--muted-foreground)]">{labels.noAttendees}</p>
               ) : (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {lesson.attendees.map((attendee) => (
-                    allowPeopleActions ? (
-                      <button
-                        key={`attendee-${lesson.id}-${attendee.id}`}
-                        type="button"
-                        onClick={() => handleRemoveAttendee(attendee.id)}
-                        className="inline-flex items-center gap-1 rounded border border-[var(--surface-border)] px-2 py-1 text-xs hover:bg-[var(--muted)]"
-                        disabled={isPending}
-                        title={labels.removeAttendeeCta}
-                      >
+                    <div
+                      key={`attendee-${lesson.id}-${attendee.id}`}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded border border-[var(--surface-border)] px-2 py-1 text-xs"
+                    >
+                      <span className="inline-flex items-center gap-2">
                         <UserQuickProfileTooltip userId={attendee.id} locale={locale}>
                           {attendee.name}
                         </UserQuickProfileTooltip>
-                        <span className="text-[var(--danger-fg)] dark:text-red-300">x</span>
-                      </button>
-                    ) : (
-                      <span
-                        key={`attendee-${lesson.id}-${attendee.id}`}
-                        className="inline-flex items-center rounded border border-[var(--surface-border)] px-2 py-1 text-xs"
-                      >
-                        <UserQuickProfileTooltip userId={attendee.id} locale={locale}>
-                          {attendee.name}
-                        </UserQuickProfileTooltip>
+                        <span className="rounded border border-[var(--surface-border)] px-1.5 py-0.5 text-[10px]">
+                          {labels.attendanceStatusLabel}:{" "}
+                          {lesson.attendeeAttendance[attendee.id] === "PRESENT"
+                            ? labels.attendanceStatusPresent
+                            : lesson.attendeeAttendance[attendee.id] === "NO_SHOW"
+                              ? labels.attendanceStatusNoShow
+                              : labels.attendanceStatusUnmarked}
+                        </span>
                       </span>
-                    )
+
+                      {allowPeopleActions ? (
+                        <span className="inline-flex items-center gap-1">
+                          {lesson.canManageAttendance ? (
+                            <>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleSetAttendance(attendee.id, "PRESENT")}
+                                disabled={isPending}
+                                title={labels.markAttendancePresentCta}
+                              >
+                                {labels.markAttendancePresentCta}
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleSetAttendance(attendee.id, "NO_SHOW")}
+                                disabled={isPending}
+                                title={labels.markAttendanceNoShowCta}
+                              >
+                                {labels.markAttendanceNoShowCta}
+                              </Button>
+                            </>
+                          ) : null}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleRemoveAttendee(attendee.id)}
+                            disabled={isPending}
+                            title={labels.removeAttendeeCta}
+                          >
+                            {labels.removeAttendeeCta}
+                          </Button>
+                        </span>
+                      ) : null}
+                    </div>
                   ))}
                 </div>
               )}
@@ -590,17 +652,19 @@ export function LessonManageDialog({
                       </span>
                       {allowPeopleActions ? (
                         <div className="inline-flex items-center gap-1">
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="h-8 w-8 bg-[var(--info-bg)] p-0 text-[var(--info-fg)] hover:bg-[var(--info-hover)]"
-                            onClick={() => handleConfirmPending(pendingUser.id, true)}
-                            disabled={isPending}
-                            title={labels.confirmPendingAndGrantAccessCta}
-                            aria-label={labels.confirmPendingAndGrantAccessCta}
-                          >
-                            <ListChecks className="h-4 w-4" />
-                          </Button>
+                          {canGrantOpenAccess ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="h-8 w-8 bg-[var(--info-bg)] p-0 text-[var(--info-fg)] hover:bg-[var(--info-hover)]"
+                              onClick={() => handleConfirmPending(pendingUser.id, true)}
+                              disabled={isPending}
+                              title={labels.confirmPendingAndGrantAccessCta}
+                              aria-label={labels.confirmPendingAndGrantAccessCta}
+                            >
+                              <ListChecks className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                           <Button
                             type="button"
                             size="sm"

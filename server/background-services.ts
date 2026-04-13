@@ -1,8 +1,10 @@
 import { startDailyLessonsReconcileJob } from "@/server/jobs/daily-lessons-reconcile";
 import { startLocalNotificationsRetentionJob } from "@/server/jobs/local-notifications-retention";
 import { startLessonsNoticeWindowJob } from "@/server/jobs/lessons-notice-window";
+import { startLessonAttendanceAutoConfirmJob } from "@/server/jobs/lesson-attendance-autoconfirm";
 import { startOutboxWorker } from "@/server/outbox/worker";
 import { startTelegramBot } from "@/server/telegram/bootstrap";
+import { startReportsDigestJob } from "@/server/jobs/reports-digest";
 
 type StopFn = () => void;
 
@@ -13,7 +15,9 @@ export function startBackgroundServices(log: Logger): StopFn {
 
   stops.push(startDailyLessonsReconcileJob(log));
   stops.push(startLessonsNoticeWindowJob(log));
+  stops.push(startLessonAttendanceAutoConfirmJob(log));
   stops.push(startLocalNotificationsRetentionJob(log));
+  stops.push(startReportsDigestJob(log));
   stops.push(startOutboxWorker(log));
   stops.push(startTelegramBot(log));
 

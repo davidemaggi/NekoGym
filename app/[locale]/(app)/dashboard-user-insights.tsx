@@ -31,9 +31,11 @@ type UserLesson = {
   lessonTypeColor: string | null;
   canBroadcast: boolean;
   canManage: boolean;
+  canGrantOpenAccess: boolean;
   canManageTrainer: boolean;
   trainerIdForManage: string;
   attendees: Array<{ id: string; name: string; email?: string }>;
+  attendeeAttendance: Record<string, "PRESENT" | "NO_SHOW" | null>;
   pendingApprovals: Array<{ id: string; name: string; email?: string }>;
   waitlist: Array<{ id: string; name: string; email?: string }>;
   roleKind: "TRAINER" | "TRAINEE";
@@ -85,6 +87,12 @@ type DashboardUserInsightsProps = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    markAttendancePresentCta: string;
+    markAttendanceNoShowCta: string;
+    attendanceStatusLabel: string;
+    attendanceStatusPresent: string;
+    attendanceStatusNoShow: string;
+    attendanceStatusUnmarked: string;
     pendingApprovalsLabel: string;
     noPendingApprovals: string;
     confirmPendingCta: string;
@@ -433,7 +441,9 @@ export function DashboardUserInsights({
                               trainerId: lesson.trainerIdForManage,
                               lessonTypeId: lesson.lessonTypeId,
                               canManageTrainer: lesson.canManageTrainer && !isPastOrNow,
+                              canManageAttendance: new Date(lesson.endsAt) <= new Date(),
                               attendees: lesson.attendees,
+                              attendeeAttendance: lesson.attendeeAttendance,
                               pendingApprovals: lesson.pendingApprovals,
                               waitlist: lesson.waitlist,
                             },
@@ -444,6 +454,7 @@ export function DashboardUserInsights({
                             lessonTypeCandidates: lessonManageData.lessonTypeCandidates,
                             attendeeCandidates: lessonManageData.attendeeCandidates,
                             canBroadcastToAttendees: true,
+                            canGrantOpenAccess: lesson.canGrantOpenAccess,
                             labels: lessonManageLabels,
                           }
                         : undefined

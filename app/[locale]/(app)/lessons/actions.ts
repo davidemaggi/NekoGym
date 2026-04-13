@@ -276,6 +276,7 @@ function redirectWithFlash(input: {
   month?: string;
   week?: string;
   showDeleted?: string;
+  showPast?: string;
   message: string;
   type: "success" | "error";
 }) {
@@ -287,6 +288,7 @@ function redirectWithFlash(input: {
     params.set("week", input.week);
   }
   if (input.showDeleted === "1") params.set("showDeleted", "1");
+  if (input.showPast === "1") params.set("showPast", "1");
   params.set("flash", input.message);
   params.set("flashType", input.type);
   redirect(`/${input.locale}/lessons?${params.toString()}`);
@@ -571,6 +573,7 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
   const locale = getField(formData, "locale") || "it";
   const { month, week } = readNavigationCursor(formData);
   const showDeleted = getField(formData, "showDeleted");
+  const showPast = getField(formData, "showPast");
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
   let flashMessage = t.standaloneDeleted;
@@ -633,13 +636,14 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, month, week, showDeleted, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, showDeleted, showPast, message: flashMessage, type: flashType });
 }
 
 export async function restoreLessonAction(formData: FormData): Promise<void> {
   const locale = getField(formData, "locale") || "it";
   const { month, week } = readNavigationCursor(formData);
   const showDeleted = getField(formData, "showDeleted");
+  const showPast = getField(formData, "showPast");
   const lessonId = getField(formData, "lessonId");
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
@@ -686,7 +690,7 @@ export async function restoreLessonAction(formData: FormData): Promise<void> {
     flashMessage = error instanceof Error ? error.message : t.lessonRestoreFailed;
   }
 
-  redirectWithFlash({ locale, month, week, showDeleted, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, showDeleted, showPast, message: flashMessage, type: flashType });
 }
 
 export async function addLessonAttendeeAction(formData: FormData): Promise<void> {
@@ -852,5 +856,4 @@ export async function removeLessonAttendeeAction(formData: FormData): Promise<vo
 
   redirectWithFlash({ locale, month, week, message: flashMessage, type: flashType });
 }
-
 

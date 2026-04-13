@@ -23,6 +23,7 @@ type DashboardPendingApprovalsProps = {
   locale: string;
   count: number;
   items: PendingApprovalItem[];
+  canGrantOpenAccess: boolean;
   labels: {
     statLabel: string;
     openCta: string;
@@ -40,6 +41,7 @@ export function DashboardPendingApprovals({
   locale,
   count,
   items,
+  canGrantOpenAccess,
   labels,
 }: DashboardPendingApprovalsProps) {
   const router = useRouter();
@@ -113,16 +115,18 @@ export function DashboardPendingApprovals({
                   </UserQuickProfileTooltip>
                 </p>
                 <div className="mt-2 inline-flex flex-wrap gap-1">
-                  <Button
-                    size="sm"
-                    className="h-8 w-8 bg-[var(--info-bg)] p-0 text-[var(--info-fg)] hover:bg-[var(--info-hover)]"
-                    onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "approveUnlock" })}
-                    disabled={isPending || busyKey !== null}
-                    title={labels.approveAndUnlockCta}
-                    aria-label={labels.approveAndUnlockCta}
-                  >
-                    <ListChecks className="h-4 w-4" />
-                  </Button>
+                  {canGrantOpenAccess ? (
+                    <Button
+                      size="sm"
+                      className="h-8 w-8 bg-[var(--info-bg)] p-0 text-[var(--info-fg)] hover:bg-[var(--info-hover)]"
+                      onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "approveUnlock" })}
+                      disabled={isPending || busyKey !== null}
+                      title={labels.approveAndUnlockCta}
+                      aria-label={labels.approveAndUnlockCta}
+                    >
+                      <ListChecks className="h-4 w-4" />
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     className="h-8 w-8 bg-[var(--success-bg)] p-0 text-[var(--success-fg)] hover:bg-[var(--success-hover)] dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"

@@ -46,6 +46,10 @@ function courseMessages(locale: string) {
     lessonTypeRequired: isIt ? "Seleziona un tipo lezione." : "Select a lesson type.",
     trainerForbidden:
       isIt ? "Come trainer puoi assegnare solo te stesso." : "As trainer you can only assign yourself.",
+    courseManageForbidden:
+      isIt
+        ? "Come trainer puoi gestire solo corsi assegnati a te."
+        : "As trainer you can manage only courses assigned to you.",
     trainerNotFound: isIt ? "Trainer non valido." : "Invalid trainer.",
     lessonTypeNotFound: isIt ? "Tipo lezione non trovato." : "Lesson type not found.",
     idRequired: isIt ? "Id corso obbligatorio." : "Course id is required.",
@@ -242,7 +246,7 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
     const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
     const input = validateCourseInput(formData, locale);
 
-    if (currentUser.role === "TRAINER" && input.trainerId && input.trainerId !== currentUser.id) {
+    if (currentUser.role === "TRAINER" && input.trainerId !== currentUser.id) {
       throw new Error(messages.trainerForbidden);
     }
 
@@ -326,8 +330,18 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
 
     const input = validateCourseInput(formData, locale);
 
-    if (currentUser.role === "TRAINER" && input.trainerId && input.trainerId !== currentUser.id) {
+    if (currentUser.role === "TRAINER" && input.trainerId !== currentUser.id) {
       throw new Error(messages.trainerForbidden);
+    }
+
+    if (currentUser.role === "TRAINER") {
+      const existingCourse = await prisma.course.findUnique({
+        where: { id },
+        select: { trainerId: true },
+      });
+      if (!existingCourse || existingCourse.trainerId !== currentUser.id) {
+        throw new Error(messages.courseManageForbidden);
+      }
     }
 
     const [trainer, lessonType, siteSettings] = await Promise.all([
@@ -521,10 +535,20 @@ export async function deleteCourseAction(formData: FormData): Promise<CourseMuta
   const cancelBookedLessons = bookedFuturePolicy === "cancel";
 
   try {
-    await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
 
     if (!id) {
       throw new Error(messages.idRequired);
+    }
+
+    if (currentUser.role === "TRAINER") {
+      const existingCourse = await prisma.course.findUnique({
+        where: { id },
+        select: { trainerId: true },
+      });
+      if (!existingCourse || existingCourse.trainerId !== currentUser.id) {
+        throw new Error(messages.courseManageForbidden);
+      }
     }
 
     await prisma.$transaction(async (tx) => {
@@ -565,6 +589,16 @@ export async function restoreCourseAction(formData: FormData): Promise<CourseMut
 
     if (!id) {
       throw new Error(messages.idRequired);
+    }
+
+    if (currentUser.role === "TRAINER") {
+      const existingCourse = await prisma.course.findUnique({
+        where: { id },
+        select: { trainerId: true },
+      });
+      if (!existingCourse || existingCourse.trainerId !== currentUser.id) {
+        throw new Error(messages.courseManageForbidden);
+      }
     }
 
     await prisma.$transaction(async (tx) => {

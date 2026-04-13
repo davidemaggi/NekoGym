@@ -79,6 +79,10 @@ function bookingMessages(locale: string) {
     confirmFailed: isIt ? "Impossibile confermare la prenotazione." : "Unable to confirm booking.",
     rejected: isIt ? "Prenotazione rifiutata." : "Booking rejected.",
     rejectFailed: isIt ? "Impossibile rifiutare la prenotazione." : "Unable to reject booking.",
+    grantAccessAdminOnly:
+      isIt
+        ? "Solo un admin puo confermare con accesso libero."
+        : "Only an admin can confirm with open access.",
   };
 }
 
@@ -703,6 +707,9 @@ export async function confirmLessonBookingAction(formData: FormData): Promise<Bo
 
   try {
     const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    if (grantOpenAccess && currentUser.role !== "ADMIN") {
+      throw new Error(messages.grantAccessAdminOnly);
+    }
 
     await prisma.$transaction(async (tx) => {
       const booking = await tx.lessonBooking.findUnique({
@@ -765,6 +772,7 @@ export async function confirmLessonBookingAction(formData: FormData): Promise<Bo
               status: "SCHEDULED",
               deletedAt: null,
               startsAt: { gt: now },
+              ...(currentUser.role === "TRAINER" ? { trainerId: currentUser.id } : {}),
             },
           },
           select: { id: true, lessonId: true },

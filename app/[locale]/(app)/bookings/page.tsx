@@ -74,6 +74,7 @@ export default async function BookingsPage({
         select: {
           traineeId: true,
           status: true,
+          attendanceStatus: true,
           trainee: {
             select: { id: true, name: true, email: true },
           },
@@ -169,6 +170,14 @@ export default async function BookingsPage({
             email: booking.trainee.email,
           }))
         : [],
+      attendeeAttendance: canManageLesson
+        ? Object.fromEntries(
+            lesson.bookings
+              .filter((booking) => booking.status === "CONFIRMED")
+              .map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])
+          )
+        : {},
+      canManageAttendance: canManageLesson && lesson.endsAt <= new Date(),
       pendingApprovals: canManageLesson
         ? lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => ({
             id: booking.trainee.id,

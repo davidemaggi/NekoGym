@@ -6,6 +6,7 @@ import { requireAnyRole } from "@/lib/authorization";
 import { prisma } from "@/lib/prisma";
 import {
   createBackup,
+  deleteBackupFile,
   hardResetGymData,
   importUploadedBackup,
   restoreFromBackupFileName,
@@ -27,6 +28,8 @@ function t(locale: string) {
   return {
     backupDone: isIt ? "Backup creato con successo." : "Backup created successfully.",
     backupFailed: isIt ? "Impossibile creare il backup." : "Unable to create backup.",
+    backupDeleteDone: isIt ? "Backup eliminato con successo." : "Backup deleted successfully.",
+    backupDeleteFailed: isIt ? "Impossibile eliminare il backup." : "Unable to delete backup.",
     uploadDone: isIt ? "Backup caricato con successo." : "Backup uploaded successfully.",
     uploadMissingFile: isIt ? "Seleziona un file backup da caricare." : "Select a backup file to upload.",
     uploadFailed: isIt ? "Impossibile caricare il backup." : "Unable to upload backup.",
@@ -83,6 +86,31 @@ export async function createBackupAction(formData: FormData): Promise<DangerZone
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.backupFailed,
+    };
+  }
+}
+
+export async function deleteBackupAction(formData: FormData): Promise<DangerZoneActionResult> {
+  const locale = getField(formData, "locale") || "it";
+  const messages = t(locale);
+
+  try {
+    await requireAnyRole(["ADMIN"], locale);
+    const backupFileName = getField(formData, "backupFileName");
+    if (!backupFileName) {
+      throw new Error(locale === "it" ? "Backup non valido." : "Invalid backup file.");
+    }
+
+    await deleteBackupFile(backupFileName);
+    revalidatePath(`/${locale}/settings/danger-zone`);
+    return {
+      ok: true,
+      message: `${messages.backupDeleteDone} (${backupFileName})`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : messages.backupDeleteFailed,
     };
   }
 }

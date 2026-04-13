@@ -44,6 +44,11 @@ enum LessonBookingStatus {
   CONFIRMED
 }
 
+enum LessonAttendanceStatus {
+  PRESENT
+  NO_SHOW
+}
+
 enum LessonTypeAccessMode {
   DENIED
   REQUIRES_CONFIRMATION
@@ -61,6 +66,12 @@ enum NotificationStatus {
   PROCESSING
   SENT
   FAILED
+}
+
+enum ReportDigestFrequency {
+  NEVER
+  WEEKLY
+  MONTHLY
 }
 
 enum AuthTokenType {
@@ -88,6 +99,9 @@ model User {
   notifyByWebPush       Boolean              @default(true)
   notificationsLastSeenAt DateTime?
   notificationsRetentionDays Int             @default(15)
+  reportDigestFrequency ReportDigestFrequency @default(NEVER)
+  reportDigestReportsCsv String              @default("COURSE_POPULARITY,TIME_CROWDING,TRAINER_PERFORMANCE")
+  reportDigestLastSentAt DateTime?
   totpEnabled           Boolean              @default(false)
   totpSecret            String?
   membershipStatus      MembershipStatus     @default(INACTIVE)
@@ -276,6 +290,9 @@ model LessonBooking {
   lessonId      String
   traineeId     String
   status        LessonBookingStatus @default(CONFIRMED)
+  attendanceStatus LessonAttendanceStatus?
+  attendanceMarkedAt DateTime?
+  attendanceMarkedById String?
   confirmedAt   DateTime?
   confirmedById String?
   createdAt     DateTime           @default(now())
@@ -286,6 +303,8 @@ model LessonBooking {
   @@unique([lessonId, traineeId])
   @@index([traineeId])
   @@index([status])
+  @@index([attendanceStatus])
+  @@index([attendanceMarkedById])
   @@index([confirmedById])
 }
 

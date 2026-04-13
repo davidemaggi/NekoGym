@@ -49,6 +49,7 @@ type ScheduleSlot = {
 
 type CourseItem = {
   id: string;
+  canManage: boolean;
   deletedAt: Date | null;
   name: string;
   description: string | null;
@@ -786,7 +787,7 @@ export function CoursesManager({
                       </td>
                       <td className="py-3 text-right">
                         <div className="inline-flex gap-2">
-                          {course.deletedAt ? (
+                          {course.deletedAt && course.canManage ? (
                             <Button
                               variant="outline"
                               size="sm"
@@ -796,7 +797,7 @@ export function CoursesManager({
                               <RotateCcw className="h-4 w-4" />
                               <span>{labels.actions.restore}</span>
                             </Button>
-                          ) : (
+                          ) : !course.deletedAt && course.canManage ? (
                             <>
                               <Button
                                 variant="outline"
@@ -820,6 +821,8 @@ export function CoursesManager({
                                 <span>{labels.actions.delete}</span>
                               </Button>
                             </>
+                          ) : (
+                            <span className="text-xs text-[var(--muted-foreground)]">-</span>
                           )}
                         </div>
                       </td>

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { Prisma } from "@prisma/client";
+import type { LessonAttendanceStatus, Prisma } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
 import { parseDateTimeLocalInputToUtc } from "@/lib/date-time";
@@ -48,12 +48,29 @@ function messages(locale: string) {
     trainerUpdated: isIt ? "Trainer aggiornato." : "Trainer updated.",
     attendeeAdded: isIt ? "Iscritto aggiunto." : "Attendee added.",
     attendeeRemoved: isIt ? "Iscritto rimosso." : "Attendee removed.",
+    attendancePresentMarked: isIt ? "Presenza segnata." : "Attendance marked as present.",
+    attendanceNoShowMarked: isIt ? "No-show segnato." : "Attendance marked as no-show.",
     failed: isIt ? "Impossibile creare la lezione." : "Unable to create lesson.",
     updateFailed: isIt ? "Impossibile aggiornare la lezione." : "Unable to update lesson.",
     mainUpdateFailed: isIt ? "Impossibile aggiornare i dettagli lezione." : "Unable to update lesson details.",
     trainerUpdateFailed: isIt ? "Impossibile aggiornare il trainer." : "Unable to update trainer.",
     attendeeAddFailed: isIt ? "Impossibile aggiungere iscritto." : "Unable to add attendee.",
     attendeeRemoveFailed: isIt ? "Impossibile rimuovere iscritto." : "Unable to remove attendee.",
+    attendanceMarkFailed: isIt ? "Impossibile aggiornare presenza." : "Unable to update attendance.",
+    attendanceOnlyAfterEnd:
+      isIt
+        ? "Puoi segnare presenza/no-show solo dopo la fine della lezione."
+        : "You can mark attendance/no-show only after lesson end.",
+    noShowSubject: isIt ? "Lezione persa (no-show)" : "Missed lesson (no-show)",
+    noShowBody: (courseName: string | null, startsAt: Date) =>
+      isIt
+        ? `La tua presenza alla lezione ${courseName ?? "-"} del ${formatDateForNotification(startsAt, locale)} e stata segnata come no-show.`
+        : `Your attendance for lesson ${courseName ?? "-"} on ${formatDateForNotification(startsAt, locale)} was marked as no-show.`,
+    removedPastSubject: isIt ? "Prenotazione rimossa da lezione passata" : "Booking removed from past lesson",
+    removedPastBody: (courseName: string | null, startsAt: Date) =>
+      isIt
+        ? `La tua prenotazione alla lezione ${courseName ?? "-"} del ${formatDateForNotification(startsAt, locale)} e stata rimossa. Puoi prenotare un'altra lezione.`
+        : `Your booking for lesson ${courseName ?? "-"} on ${formatDateForNotification(startsAt, locale)} has been removed. You can book another lesson.`,
     pastLocked:
       isIt
         ? "Lezioni passate o in corso non modificabili (solo gestione partecipanti)."
@@ -190,6 +207,10 @@ async function promoteOldestWaitlistEntry(input: {
 
 function isPastOrNow(startsAt: Date): boolean {
   return startsAt.getTime() <= Date.now();
+}
+
+function hasLessonEnded(endsAt: Date): boolean {
+  return endsAt.getTime() <= Date.now();
 }
 
 function parsePositiveInt(raw: string): number | null {
@@ -415,6 +436,66 @@ async function notifyWaitlistSeatAvailable(input: {
           : `A seat is now available for lesson ${input.courseName ?? "-"} on ${formatDateForNotification(input.startsAt, input.locale)}.`,
     }
   );
+}
+
+async function refundFixedPlanOneUnitIfEligible(input: {
+  tx: Prisma.TransactionClient;
+  traineeId: string;
+}) {
+  const trainee = await input.tx.user.findUnique({
+    where: { id: input.traineeId },
+    select: {
+      role: true,
+      subscriptionType: true,
+      subscriptionRemaining: true,
+      subscriptionLessons: true,
+    },
+  });
+
+  if (!trainee || trainee.role !== "TRAINEE" || trainee.subscriptionType !== "FIXED") return;
+
+  const currentRemaining = trainee.subscriptionRemaining ?? 0;
+  const maxLessons = trainee.subscriptionLessons ?? currentRemaining + 1;
+  await input.tx.user.update({
+    where: { id: input.traineeId },
+    data: {
+      subscriptionRemaining: Math.min(maxLessons, currentRemaining + 1),
+    },
+  });
+}
+
+async function consumeFixedPlanOneUnitIfEligible(input: {
+  tx: Prisma.TransactionClient;
+  traineeId: string;
+}) {
+  const trainee = await input.tx.user.findUnique({
+    where: { id: input.traineeId },
+    select: {
+      role: true,
+      membershipStatus: true,
+      subscriptionType: true,
+      subscriptionRemaining: true,
+    },
+  });
+
+  if (
+    !trainee ||
+    trainee.role !== "TRAINEE" ||
+    trainee.membershipStatus !== "ACTIVE" ||
+    trainee.subscriptionType !== "FIXED"
+  ) {
+    return;
+  }
+
+  await input.tx.user.update({
+    where: { id: input.traineeId },
+    data: {
+      subscriptionRemaining:
+        trainee.subscriptionRemaining === null
+          ? null
+          : Math.max(0, trainee.subscriptionRemaining - 1),
+    },
+  });
 }
 
 export async function createStandaloneLessonMutationAction(formData: FormData): Promise<LessonMutationResult> {
@@ -764,6 +845,10 @@ export async function addLessonAttendeeMutationAction(formData: FormData): Promi
           confirmedById: currentUser.id,
         },
       });
+      await consumeFixedPlanOneUnitIfEligible({
+        tx,
+        traineeId: attendeeId,
+      });
 
       if (!pastOrNow) {
         await enqueueAttendeeChangedNotification({
@@ -821,6 +906,10 @@ export async function removeLessonAttendeeMutationAction(formData: FormData): Pr
       if (!booking) throw new Error(t.attendeeMissing);
 
       await tx.lessonBooking.delete({ where: { id: booking.id } });
+      await refundFixedPlanOneUnitIfEligible({
+        tx,
+        traineeId: booking.trainee.id,
+      });
 
       const promotedFromQueue = await promoteOldestWaitlistEntry({
         tx,
@@ -875,6 +964,15 @@ export async function removeLessonAttendeeMutationAction(formData: FormData): Pr
             data: { status: "CANCELLED", deletedAt: new Date() },
           });
         }
+      } else {
+        await enqueueNotificationForUsers(
+          tx,
+          [{ id: booking.trainee.id, telegramChatId: booking.trainee.telegramChatId }],
+          {
+            subject: t.removedPastSubject,
+            body: t.removedPastBody(lesson.course?.name ?? null, lesson.startsAt),
+          }
+        );
       }
     });
 
@@ -885,6 +983,82 @@ export async function removeLessonAttendeeMutationAction(formData: FormData): Pr
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.attendeeRemoveFailed,
+    };
+  }
+}
+
+export async function setLessonAttendeeAttendanceMutationAction(formData: FormData): Promise<LessonMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const t = messages(locale);
+
+  try {
+    const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    const lessonId = getField(formData, "lessonId");
+    const attendeeId = getField(formData, "attendeeId");
+    const attendanceStatusRaw = getField(formData, "attendanceStatus");
+    const attendanceStatus: LessonAttendanceStatus | null =
+      attendanceStatusRaw === "PRESENT" || attendanceStatusRaw === "NO_SHOW"
+        ? attendanceStatusRaw
+        : null;
+
+    if (!lessonId) throw new Error(t.lessonRequired);
+    if (!attendeeId) throw new Error(t.attendeeRequired);
+    if (!attendanceStatus) throw new Error(t.attendanceMarkFailed);
+
+    await prisma.$transaction(async (tx) => {
+      const lesson = await loadManagedLessonOrThrow({ tx, lessonId, locale, currentUser });
+      if (!hasLessonEnded(lesson.endsAt)) {
+        throw new Error(t.attendanceOnlyAfterEnd);
+      }
+
+      const booking = await tx.lessonBooking.findUnique({
+        where: {
+          lessonId_traineeId: {
+            lessonId,
+            traineeId: attendeeId,
+          },
+        },
+        select: {
+          id: true,
+          attendanceStatus: true,
+          trainee: {
+            select: { id: true, telegramChatId: true },
+          },
+        },
+      });
+      if (!booking) throw new Error(t.attendeeMissing);
+
+      await tx.lessonBooking.update({
+        where: { id: booking.id },
+        data: {
+          attendanceStatus,
+          attendanceMarkedAt: new Date(),
+          attendanceMarkedById: currentUser.id,
+        },
+      });
+
+      if (attendanceStatus === "NO_SHOW" && booking.attendanceStatus !== "NO_SHOW") {
+        await enqueueNotificationForUsers(
+          tx,
+          [{ id: booking.trainee.id, telegramChatId: booking.trainee.telegramChatId }],
+          {
+            subject: t.noShowSubject,
+            body: t.noShowBody(lesson.course?.name ?? null, lesson.startsAt),
+          }
+        );
+      }
+    });
+
+    revalidatePath(`/${locale}/lessons`);
+    revalidatePath(`/${locale}/bookings`);
+    return {
+      ok: true,
+      message: attendanceStatus === "NO_SHOW" ? t.attendanceNoShowMarked : t.attendancePresentMarked,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : t.attendanceMarkFailed,
     };
   }
 }

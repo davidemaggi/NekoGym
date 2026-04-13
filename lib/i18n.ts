@@ -199,6 +199,8 @@ type Dictionary = {
     restoreLessonCta: string;
     showDeletedCta: string;
     hideDeletedCta: string;
+    showPastCta: string;
+    hidePastCta: string;
     deletedTag: string;
     detailsTitle: string;
     detailsDescription: string;
@@ -215,6 +217,12 @@ type Dictionary = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    markAttendancePresentCta: string;
+    markAttendanceNoShowCta: string;
+    attendanceStatusLabel: string;
+    attendanceStatusPresent: string;
+    attendanceStatusNoShow: string;
+    attendanceStatusUnmarked: string;
     pendingApprovalsLabel: string;
     noPendingApprovals: string;
     confirmPendingCta: string;
@@ -426,6 +434,15 @@ type Dictionary = {
         rejectCta: string;
         closeCta: string;
       };
+      crowding: {
+        title: string;
+        description: string;
+        contextLabel: string;
+        previousDay: string;
+        nextDay: string;
+        empty: string;
+        avgAttendees: string;
+      };
       userInsights: {
         upcomingTitle: string;
         upcomingDescription: string;
@@ -466,6 +483,70 @@ type Dictionary = {
     reports: {
       title: string;
       description: string;
+      empty: string;
+      trendLabel: string;
+      executiveTitle: string;
+      executiveTopCourse: string;
+      executiveBusiestSlot: string;
+      executiveTopNoShow: string;
+      exportPdfCta: string;
+      filters: {
+        periodLabel: string;
+        last7Days: string;
+        last30Days: string;
+        last90Days: string;
+        applyCta: string;
+      };
+      kpis: {
+        lessonsCount: string;
+        totalBookings: string;
+        avgFillRate: string;
+      };
+      sections: {
+        coursePopularityTitle: string;
+        timeCrowdingTitle: string;
+        trainerPerformanceTitle: string;
+        noShowAnalyticsTitle: string;
+        courseHealthChartTitle: string;
+        courseHealthChartDescription: string;
+      };
+      columns: {
+        course: string;
+        trainer: string;
+        trainee: string;
+        weekday: string;
+        time: string;
+        lessons: string;
+        bookings: string;
+        markedAttendances: string;
+        present: string;
+        noShow: string;
+        noShowRate: string;
+        avgAttendees: string;
+        fillRate: string;
+        uniqueTrainees: string;
+      };
+      weekdays: {
+        MONDAY: string;
+        TUESDAY: string;
+        WEDNESDAY: string;
+        THURSDAY: string;
+        FRIDAY: string;
+        SATURDAY: string;
+        SUNDAY: string;
+      };
+      settings: {
+        title: string;
+        description: string;
+        frequencyLabel: string;
+        frequencyNever: string;
+        frequencyWeekly: string;
+        frequencyMonthly: string;
+        reportsLabel: string;
+        lastSentLabel: string;
+        saveCta: string;
+        savedMessage: string;
+      };
     };
     myNotifications: {
       title: string;
@@ -821,6 +902,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       restoreLessonCta: "Ripristina",
       showDeletedCta: "Mostra cancellate",
       hideDeletedCta: "Nascondi cancellate",
+      showPastCta: "Mostra passate",
+      hidePastCta: "Nascondi passate",
       deletedTag: "Cancellata",
       detailsTitle: "Dettaglio lezione",
       detailsDescription: "Consulta i dati della lezione e gli iscritti.",
@@ -837,6 +920,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       attendeeSelectLabel: "Utente",
       addAttendeeCta: "Aggiungi",
       removeAttendeeCta: "Rimuovi",
+      markAttendancePresentCta: "Presente",
+      markAttendanceNoShowCta: "No-show",
+      attendanceStatusLabel: "Stato",
+      attendanceStatusPresent: "Presente",
+      attendanceStatusNoShow: "No-show",
+      attendanceStatusUnmarked: "Non segnato",
       pendingApprovalsLabel: "In attesa di conferma",
       noPendingApprovals: "Nessuna iscrizione in attesa.",
       confirmPendingCta: "Conferma",
@@ -1076,6 +1165,15 @@ const dictionaries: Record<Locale, Dictionary> = {
           rejectCta: "Non confermare",
           closeCta: "Chiudi",
         },
+        crowding: {
+          title: "Affollamento giornaliero",
+          description: "Media presenze per fascia oraria sullo stesso giorno della settimana.",
+          contextLabel: "Calcolato sugli ultimi {days} giorni omologhi.",
+          previousDay: "Giorno precedente",
+          nextDay: "Giorno successivo",
+          empty: "Nessuna lezione nel giorno selezionato.",
+          avgAttendees: "Media presenze",
+        },
         userInsights: {
           upcomingTitle: "Le mie prossime lezioni",
           upcomingDescription: "Le prossime lezioni in cui sei trainer o partecipante.",
@@ -1115,7 +1213,71 @@ const dictionaries: Record<Locale, Dictionary> = {
       },
       reports: {
         title: "Report",
-        description: "Qui potrai analizzare frequenze, popolarita dei corsi e metriche.",
+        description: "Analizza report su corsi, orari, trainer e no-show.",
+        empty: "Nessun dato disponibile nel periodo selezionato.",
+        trendLabel: "Trend vs periodo precedente",
+        executiveTitle: "Executive snapshot",
+        executiveTopCourse: "Corso top: {course} con {bookings} prenotazioni.",
+        executiveBusiestSlot: "Slot piu affollato: {weekday} {time} con riempimento medio {fill}.",
+        executiveTopNoShow: "No-show piu alto: {name} ({rate}, {count} assenze).",
+        exportPdfCta: "Esporta PDF",
+        filters: {
+          periodLabel: "Periodo",
+          last7Days: "Ultimi 7 giorni",
+          last30Days: "Ultimi 30 giorni",
+          last90Days: "Ultimi 90 giorni",
+          applyCta: "Applica",
+        },
+        kpis: {
+          lessonsCount: "Lezioni",
+          totalBookings: "Prenotazioni",
+          avgFillRate: "Riempimento medio",
+        },
+        sections: {
+          coursePopularityTitle: "Report 1 - Corsi piu seguiti",
+          timeCrowdingTitle: "Report 2 - Orari piu affollati",
+          trainerPerformanceTitle: "Report 3 - Trainer piu seguiti",
+          noShowAnalyticsTitle: "Report 4 - No-show per trainee",
+          courseHealthChartTitle: "Riempimento vs no-show (corsi)",
+          courseHealthChartDescription: "Confronto tra riempimento medio e tasso no-show dei corsi piu frequentati.",
+        },
+        columns: {
+          course: "Corso",
+          trainer: "Trainer",
+          trainee: "Trainee",
+          weekday: "Giorno",
+          time: "Orario",
+          lessons: "Lezioni",
+          bookings: "Prenotazioni",
+          markedAttendances: "Presenze segnate",
+          present: "Presenti",
+          noShow: "No-show",
+          noShowRate: "Tasso no-show",
+          avgAttendees: "Media partecipanti",
+          fillRate: "Riempimento",
+          uniqueTrainees: "Trainee unici",
+        },
+        weekdays: {
+          MONDAY: "Lunedi",
+          TUESDAY: "Martedi",
+          WEDNESDAY: "Mercoledi",
+          THURSDAY: "Giovedi",
+          FRIDAY: "Venerdi",
+          SATURDAY: "Sabato",
+          SUNDAY: "Domenica",
+        },
+        settings: {
+          title: "Invio report via email",
+          description: "Configura frequenza (settimanale o mensile) e quali report ricevere.",
+          frequencyLabel: "Frequenza",
+          frequencyNever: "Disattivato",
+          frequencyWeekly: "Settimanale",
+          frequencyMonthly: "Mensile",
+          reportsLabel: "Report da inviare",
+          lastSentLabel: "Ultimo invio",
+          saveCta: "Salva impostazioni",
+          savedMessage: "Impostazioni report salvate.",
+        },
       },
       myNotifications: {
         title: "Le mie notifiche",
@@ -1470,6 +1632,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       restoreLessonCta: "Restore",
       showDeletedCta: "Show deleted",
       hideDeletedCta: "Hide deleted",
+      showPastCta: "Show past",
+      hidePastCta: "Hide past",
       deletedTag: "Deleted",
       detailsTitle: "Lesson details",
       detailsDescription: "Review lesson data and attendees.",
@@ -1486,6 +1650,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       attendeeSelectLabel: "User",
       addAttendeeCta: "Add",
       removeAttendeeCta: "Remove",
+      markAttendancePresentCta: "Present",
+      markAttendanceNoShowCta: "No-show",
+      attendanceStatusLabel: "Status",
+      attendanceStatusPresent: "Present",
+      attendanceStatusNoShow: "No-show",
+      attendanceStatusUnmarked: "Unmarked",
       pendingApprovalsLabel: "Pending approvals",
       noPendingApprovals: "No pending booking requests.",
       confirmPendingCta: "Confirm",
@@ -1725,6 +1895,15 @@ const dictionaries: Record<Locale, Dictionary> = {
           rejectCta: "Reject",
           closeCta: "Close",
         },
+        crowding: {
+          title: "Daily crowding",
+          description: "Average attendees by hour for the same weekday pattern.",
+          contextLabel: "Computed from the last {days} matching days.",
+          previousDay: "Previous day",
+          nextDay: "Next day",
+          empty: "No lessons on the selected day.",
+          avgAttendees: "Average attendees",
+        },
         userInsights: {
           upcomingTitle: "My upcoming lessons",
           upcomingDescription: "Next lessons where you are trainer or attendee.",
@@ -1764,7 +1943,71 @@ const dictionaries: Record<Locale, Dictionary> = {
       },
       reports: {
         title: "Reports",
-        description: "Here you can analyze attendance, course popularity and metrics.",
+        description: "Analyze reports for courses, time slots, trainers and no-shows.",
+        empty: "No data available in the selected range.",
+        trendLabel: "Trend vs previous period",
+        executiveTitle: "Executive snapshot",
+        executiveTopCourse: "Top course: {course} with {bookings} bookings.",
+        executiveBusiestSlot: "Busiest slot: {weekday} {time} with average fill {fill}.",
+        executiveTopNoShow: "Highest no-show: {name} ({rate}, {count} absences).",
+        exportPdfCta: "Export PDF",
+        filters: {
+          periodLabel: "Period",
+          last7Days: "Last 7 days",
+          last30Days: "Last 30 days",
+          last90Days: "Last 90 days",
+          applyCta: "Apply",
+        },
+        kpis: {
+          lessonsCount: "Lessons",
+          totalBookings: "Bookings",
+          avgFillRate: "Average fill rate",
+        },
+        sections: {
+          coursePopularityTitle: "Report 1 - Most attended courses",
+          timeCrowdingTitle: "Report 2 - Most crowded time slots",
+          trainerPerformanceTitle: "Report 3 - Most attended trainers",
+          noShowAnalyticsTitle: "Report 4 - No-show by trainee",
+          courseHealthChartTitle: "Fill rate vs no-show (courses)",
+          courseHealthChartDescription: "Compare average fill rate and no-show rate for the most booked courses.",
+        },
+        columns: {
+          course: "Course",
+          trainer: "Trainer",
+          trainee: "Trainee",
+          weekday: "Weekday",
+          time: "Time",
+          lessons: "Lessons",
+          bookings: "Bookings",
+          markedAttendances: "Marked attendances",
+          present: "Present",
+          noShow: "No-show",
+          noShowRate: "No-show rate",
+          avgAttendees: "Avg attendees",
+          fillRate: "Fill rate",
+          uniqueTrainees: "Unique trainees",
+        },
+        weekdays: {
+          MONDAY: "Monday",
+          TUESDAY: "Tuesday",
+          WEDNESDAY: "Wednesday",
+          THURSDAY: "Thursday",
+          FRIDAY: "Friday",
+          SATURDAY: "Saturday",
+          SUNDAY: "Sunday",
+        },
+        settings: {
+          title: "Email report delivery",
+          description: "Configure weekly or monthly delivery and choose which reports to receive.",
+          frequencyLabel: "Frequency",
+          frequencyNever: "Disabled",
+          frequencyWeekly: "Weekly",
+          frequencyMonthly: "Monthly",
+          reportsLabel: "Reports to send",
+          lastSentLabel: "Last delivery",
+          saveCta: "Save settings",
+          savedMessage: "Report settings saved.",
+        },
       },
       myNotifications: {
         title: "My notifications",

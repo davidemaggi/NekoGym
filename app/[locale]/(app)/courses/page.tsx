@@ -72,6 +72,7 @@ export default async function CoursesPage({
 
   const safeCourses = courses.map((course) => ({
     ...course,
+    canManage: currentUser.role === "ADMIN" || course.trainerId === currentUser.id,
     futureBookedLessonsCount: course.lessons.filter((lesson) => lesson._count.bookings > 0).length,
     lessonType: course.lessonType
       ? {
@@ -98,4 +99,3 @@ export default async function CoursesPage({
     />
   );
 }
-

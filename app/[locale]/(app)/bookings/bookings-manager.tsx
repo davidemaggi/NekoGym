@@ -40,6 +40,8 @@ type LessonCalendarItem = {
   trainerId: string;
   trainerName: string | null;
   attendees: Array<{ id: string; name: string; email: string }>;
+  attendeeAttendance: Record<string, "PRESENT" | "NO_SHOW" | null>;
+  canManageAttendance: boolean;
   pendingApprovals: Array<{ id: string; name: string; email: string }>;
   waitlist: Array<{ id: string; name: string; email: string }>;
 };
@@ -101,6 +103,12 @@ type BookingsManagerProps = {
     attendeeSelectLabel: string;
     addAttendeeCta: string;
     removeAttendeeCta: string;
+    markAttendancePresentCta: string;
+    markAttendanceNoShowCta: string;
+    attendanceStatusLabel: string;
+    attendanceStatusPresent: string;
+    attendanceStatusNoShow: string;
+    attendanceStatusUnmarked: string;
     pendingApprovalsLabel: string;
     noPendingApprovals: string;
     confirmPendingCta: string;
@@ -351,6 +359,7 @@ export function BookingsManager({
                         1,
                         Math.round((new Date(lesson.endsAt).getTime() - new Date(lesson.startsAt).getTime()) / 60000)
                       );
+                      const isPastOrNow = new Date(lesson.startsAt) <= new Date();
                       const timeTooltip = `${labels.startsAtLabel}: ${formatTime(lesson.startsAt, locale)} · ${labels.endsAtLabel}: ${formatTime(lesson.endsAt, locale)}`;
                       const bookedTooltip = isAdmin
                         ? `${labels.bookedLabel}: ${lesson.occupancy} · ${labels.queuedLabel}: ${lesson.queueLength} · ${lessonCreateLabels.pendingApprovalsLabel}: ${lesson.pendingApprovalsCount}`
@@ -394,7 +403,7 @@ export function BookingsManager({
                           manage={lesson.canManageLesson ? {
                             lesson: {
                               id: lesson.id,
-                              canEditMain: !lesson.isCourseLesson,
+                              canEditMain: !lesson.isCourseLesson && !isPastOrNow,
                               title: lesson.title ?? "",
                               description: lesson.description ?? "",
                               startsAt: toDateTimeLocalValue(new Date(lesson.startsAt)),
@@ -403,8 +412,10 @@ export function BookingsManager({
                               cancellationWindowHours: lesson.cancellationWindowHours,
                               trainerId: lesson.trainerId,
                               lessonTypeId: lesson.lessonTypeId,
-                              canManageTrainer: canUpdateTrainer,
+                              canManageTrainer: canUpdateTrainer && !isPastOrNow,
                               attendees: lesson.attendees,
+                              attendeeAttendance: lesson.attendeeAttendance,
+                              canManageAttendance: lesson.canManageAttendance,
                               pendingApprovals: lesson.pendingApprovals,
                               waitlist: lesson.waitlist,
                             },
@@ -412,6 +423,7 @@ export function BookingsManager({
                             lessonTypeCandidates,
                             attendeeCandidates,
                             canBroadcastToAttendees: lesson.canManageLesson,
+                            canGrantOpenAccess: isAdmin && lesson.canManageLesson,
                             labels: {
                               title: lessonCreateLabels.manageTitle,
                               description: lessonCreateLabels.manageDescription,
@@ -432,6 +444,12 @@ export function BookingsManager({
                               attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
                               addAttendeeCta: lessonCreateLabels.addAttendeeCta,
                               removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
+                              markAttendancePresentCta: lessonCreateLabels.markAttendancePresentCta,
+                              markAttendanceNoShowCta: lessonCreateLabels.markAttendanceNoShowCta,
+                              attendanceStatusLabel: lessonCreateLabels.attendanceStatusLabel,
+                              attendanceStatusPresent: lessonCreateLabels.attendanceStatusPresent,
+                              attendanceStatusNoShow: lessonCreateLabels.attendanceStatusNoShow,
+                              attendanceStatusUnmarked: lessonCreateLabels.attendanceStatusUnmarked,
                               pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
                               noPendingApprovals: lessonCreateLabels.noPendingApprovals,
                               confirmPendingCta: lessonCreateLabels.confirmPendingCta,
@@ -609,6 +627,7 @@ export function BookingsManager({
                         1,
                         Math.round((new Date(lesson.endsAt).getTime() - new Date(lesson.startsAt).getTime()) / 60000)
                       );
+                      const isPastOrNow = new Date(lesson.startsAt) <= new Date();
                       const timeTooltip = `${labels.startsAtLabel}: ${formatTime(lesson.startsAt, locale)} · ${labels.endsAtLabel}: ${formatTime(lesson.endsAt, locale)}`;
                       const bookedTooltip = isAdmin
                         ? `${labels.bookedLabel}: ${lesson.occupancy} · ${labels.queuedLabel}: ${lesson.queueLength} · ${lessonCreateLabels.pendingApprovalsLabel}: ${lesson.pendingApprovalsCount}`
@@ -652,7 +671,7 @@ export function BookingsManager({
                           manage={lesson.canManageLesson ? {
                             lesson: {
                               id: lesson.id,
-                              canEditMain: !lesson.isCourseLesson,
+                              canEditMain: !lesson.isCourseLesson && !isPastOrNow,
                               title: lesson.title ?? "",
                               description: lesson.description ?? "",
                               startsAt: toDateTimeLocalValue(new Date(lesson.startsAt)),
@@ -661,8 +680,10 @@ export function BookingsManager({
                               cancellationWindowHours: lesson.cancellationWindowHours,
                               trainerId: lesson.trainerId,
                               lessonTypeId: lesson.lessonTypeId,
-                              canManageTrainer: canUpdateTrainer,
+                              canManageTrainer: canUpdateTrainer && !isPastOrNow,
                               attendees: lesson.attendees,
+                              attendeeAttendance: lesson.attendeeAttendance,
+                              canManageAttendance: lesson.canManageAttendance,
                               pendingApprovals: lesson.pendingApprovals,
                               waitlist: lesson.waitlist,
                             },
@@ -670,6 +691,7 @@ export function BookingsManager({
                             lessonTypeCandidates,
                             attendeeCandidates,
                             canBroadcastToAttendees: lesson.canManageLesson,
+                            canGrantOpenAccess: isAdmin && lesson.canManageLesson,
                             labels: {
                               title: lessonCreateLabels.manageTitle,
                               description: lessonCreateLabels.manageDescription,
@@ -690,6 +712,12 @@ export function BookingsManager({
                               attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
                               addAttendeeCta: lessonCreateLabels.addAttendeeCta,
                               removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
+                              markAttendancePresentCta: lessonCreateLabels.markAttendancePresentCta,
+                              markAttendanceNoShowCta: lessonCreateLabels.markAttendanceNoShowCta,
+                              attendanceStatusLabel: lessonCreateLabels.attendanceStatusLabel,
+                              attendanceStatusPresent: lessonCreateLabels.attendanceStatusPresent,
+                              attendanceStatusNoShow: lessonCreateLabels.attendanceStatusNoShow,
+                              attendanceStatusUnmarked: lessonCreateLabels.attendanceStatusUnmarked,
                               pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
                               noPendingApprovals: lessonCreateLabels.noPendingApprovals,
                               confirmPendingCta: lessonCreateLabels.confirmPendingCta,

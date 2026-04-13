@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/authorization";
-import { createAppDateTimeFormatter } from "@/lib/date-time";
+import { createAppDateTimeFormatter, getAppDateTimeConfig, parseDateInputToUtc } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
@@ -7,13 +7,42 @@ import { prisma } from "@/lib/prisma";
 import { PwaInstallBanner } from "@/components/pwa/install-banner";
 import { DashboardPendingApprovals } from "@/app/[locale]/(app)/dashboard-pending-approvals";
 import { DashboardUserInsights } from "@/app/[locale]/(app)/dashboard-user-insights";
+import { DashboardCrowdingChart } from "@/app/[locale]/(app)/dashboard-crowding-chart";
+
+function toDateKey(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function weekdayInAppTimeZone(date: Date): number {
+  const { timeZone } = getAppDateTimeConfig();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  }).format(date);
+  const map: Record<string, number> = {
+    Sun: 0,
+    Mon: 1,
+    Tue: 2,
+    Wed: 3,
+    Thu: 4,
+    Fri: 5,
+    Sat: 6,
+  };
+  return map[parts] ?? date.getDay();
+}
 
 export default async function DashboardPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ locale: string }>;
+  searchParams: Promise<{ crowdingDay?: string }>;
 }) {
   const { locale } = await params;
+  const { crowdingDay } = await searchParams;
   const currentUser = await requireAuth(locale);
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
@@ -90,6 +119,66 @@ export default async function DashboardPage({
       })
     : [];
 
+  const todayKey = toDateKey(now);
+  const selectedCrowdingDayKey =
+    crowdingDay && /^\d{4}-\d{2}-\d{2}$/.test(crowdingDay) ? crowdingDay : todayKey;
+  const selectedCrowdingDayStart =
+    parseDateInputToUtc(selectedCrowdingDayKey) ??
+    (() => {
+      const fallback = new Date(now);
+      fallback.setHours(0, 0, 0, 0);
+      return fallback;
+    })();
+  const selectedCrowdingDayEnd = new Date(selectedCrowdingDayStart.getTime() + 24 * 60 * 60 * 1000);
+  const crowdingWindowStart = new Date(selectedCrowdingDayStart.getTime() - 84 * 24 * 60 * 60 * 1000);
+  const targetWeekday = weekdayInAppTimeZone(selectedCrowdingDayStart);
+  const prevCrowdingDate = new Date(selectedCrowdingDayStart);
+  prevCrowdingDate.setDate(prevCrowdingDate.getDate() - 1);
+  const nextCrowdingDate = new Date(selectedCrowdingDayStart);
+  nextCrowdingDate.setDate(nextCrowdingDate.getDate() + 1);
+
+  const crowdingLessons =
+    currentUser.role === "ADMIN" || currentUser.role === "TRAINER"
+      ? await prisma.lesson.findMany({
+          where: {
+            deletedAt: null,
+            status: "SCHEDULED",
+            startsAt: {
+              gte: crowdingWindowStart,
+              lt: selectedCrowdingDayEnd,
+            },
+            ...(currentUser.role === "TRAINER" ? { trainerId: currentUser.id } : {}),
+          },
+          select: {
+            startsAt: true,
+            bookings: {
+              where: { status: "CONFIRMED" },
+              select: { id: true },
+            },
+          },
+          orderBy: { startsAt: "asc" },
+        })
+      : [];
+
+  const crowdingByHour = new Map<number, { lessonsCount: number; totalBookings: number }>();
+  const sampleDayKeys = new Set<string>();
+  for (const lesson of crowdingLessons) {
+    if (weekdayInAppTimeZone(lesson.startsAt) !== targetWeekday) continue;
+    const hour = lesson.startsAt.getHours();
+    const current = crowdingByHour.get(hour) ?? { lessonsCount: 0, totalBookings: 0 };
+    current.lessonsCount += 1;
+    current.totalBookings += lesson.bookings.length;
+    crowdingByHour.set(hour, current);
+    sampleDayKeys.add(toDateKey(lesson.startsAt));
+  }
+  const crowdingRows = Array.from(crowdingByHour.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([hour, value]) => ({
+      hourLabel: `${String(hour).padStart(2, "0")}:00`,
+      avgAttendees: Math.round((value.totalBookings / Math.max(1, value.lessonsCount)) * 10) / 10,
+      lessonsCount: value.lessonsCount,
+    }));
+
   const personalLessons = await prisma.lesson.findMany({
     where: {
       deletedAt: null,
@@ -121,6 +210,7 @@ export default async function DashboardPage({
       bookings: {
         select: {
           status: true,
+          attendanceStatus: true,
           trainee: {
             select: {
               id: true,
@@ -190,6 +280,7 @@ export default async function DashboardPage({
           <DashboardPendingApprovals
             locale={locale}
             count={pendingApprovals.length}
+            canGrantOpenAccess={currentUser.role === "ADMIN"}
             items={pendingApprovals.map((entry) => ({
               lessonId: entry.lessonId,
               traineeId: entry.traineeId,
@@ -212,6 +303,29 @@ export default async function DashboardPage({
           />
         ) : null}
       </div>
+
+      {currentUser.role === "ADMIN" || currentUser.role === "TRAINER" ? (
+        <DashboardCrowdingChart
+          dayLabel={createAppDateTimeFormatter({
+            weekday: "long",
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          })(selectedCrowdingDayStart)}
+          contextLabel={labels.crowding.contextLabel.replace("{days}", String(sampleDayKeys.size))}
+          prevHref={`/${locale}?crowdingDay=${toDateKey(prevCrowdingDate)}`}
+          nextHref={`/${locale}?crowdingDay=${toDateKey(nextCrowdingDate)}`}
+          rows={crowdingRows}
+          labels={{
+            title: labels.crowding.title,
+            description: labels.crowding.description,
+            previousDay: labels.crowding.previousDay,
+            nextDay: labels.crowding.nextDay,
+            empty: labels.crowding.empty,
+            avgAttendees: labels.crowding.avgAttendees,
+          }}
+        />
+      ) : null}
 
       <DashboardUserInsights
         locale={locale}
@@ -236,6 +350,7 @@ export default async function DashboardPage({
           lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
           canBroadcast: currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id,
           canManage: currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id,
+          canGrantOpenAccess: currentUser.role === "ADMIN",
           canManageTrainer: currentUser.role === "ADMIN",
           trainerIdForManage: lesson.trainer?.id ?? "",
           attendees: lesson.bookings
@@ -245,6 +360,11 @@ export default async function DashboardPage({
               name: booking.trainee.name,
               email: booking.trainee.email,
             })),
+          attendeeAttendance: Object.fromEntries(
+            lesson.bookings
+              .filter((booking) => booking.status === "CONFIRMED")
+              .map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])
+          ),
           pendingApprovals: lesson.bookings
             .filter((booking) => booking.status === "PENDING")
             .map((booking) => ({
@@ -300,6 +420,12 @@ export default async function DashboardPage({
           attendeeSelectLabel: lessonLabels.attendeeSelectLabel,
           addAttendeeCta: lessonLabels.addAttendeeCta,
           removeAttendeeCta: lessonLabels.removeAttendeeCta,
+          markAttendancePresentCta: lessonLabels.markAttendancePresentCta,
+          markAttendanceNoShowCta: lessonLabels.markAttendanceNoShowCta,
+          attendanceStatusLabel: lessonLabels.attendanceStatusLabel,
+          attendanceStatusPresent: lessonLabels.attendanceStatusPresent,
+          attendanceStatusNoShow: lessonLabels.attendanceStatusNoShow,
+          attendanceStatusUnmarked: lessonLabels.attendanceStatusUnmarked,
           pendingApprovalsLabel: lessonLabels.pendingApprovalsLabel,
           noPendingApprovals: lessonLabels.noPendingApprovals,
           confirmPendingCta: lessonLabels.confirmPendingCta,

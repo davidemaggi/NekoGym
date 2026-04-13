@@ -17,7 +17,6 @@ import { LessonsFlashToast } from "@/app/[locale]/(app)/lessons/lessons-flash-to
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -111,16 +110,17 @@ export default async function LessonsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ month?: string; flash?: string; flashType?: "success" | "error"; showDeleted?: string }>;
+  searchParams: Promise<{ month?: string; flash?: string; flashType?: "success" | "error"; showDeleted?: string; showPast?: string }>;
 }) {
   const { locale } = await params;
-  const { month, flash, flashType, showDeleted } = await searchParams;
+  const { month, flash, flashType, showDeleted, showPast } = await searchParams;
   const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
   const labels = dictionary.lessonsPage;
   const bookingLabels = dictionary.bookings;
   const includeDeleted = currentUser.role === "ADMIN" && showDeleted === "1";
+  const includePast = showPast === "1";
 
   const trainerCandidates =
     currentUser.role === "ADMIN"
@@ -147,12 +147,18 @@ export default async function LessonsPage({
   const monthEnd = new Date(selectedMonth.year, selectedMonth.month + 1, 1, 0, 0, 0, 0);
   const previousMonth = new Date(selectedMonth.year, selectedMonth.month - 1, 1);
   const nextMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 1);
+  const now = new Date();
+  const startsAtFrom = includePast
+    ? monthStart
+    : monthStart > now
+      ? monthStart
+      : now;
 
   const lessons = await prisma.lesson.findMany({
     where: {
       deletedAt: includeDeleted ? undefined : null,
       startsAt: {
-        gte: monthStart,
+        gte: startsAtFrom,
         lt: monthEnd,
       },
     },
@@ -164,6 +170,7 @@ export default async function LessonsPage({
         select: {
           traineeId: true,
           status: true,
+          attendanceStatus: true,
           trainee: {
             select: { id: true, name: true, email: true },
           },
@@ -236,10 +243,10 @@ export default async function LessonsPage({
     minute: "2-digit",
   });
   const monthLabel = monthFmt.format(monthStart);
-  const now = new Date();
-  const prevMonthHref = `/${locale}/lessons?month=${monthValue(previousMonth)}${includeDeleted ? "&showDeleted=1" : ""}`;
-  const nextMonthHref = `/${locale}/lessons?month=${monthValue(nextMonth)}${includeDeleted ? "&showDeleted=1" : ""}`;
-  const toggleDeletedHref = `/${locale}/lessons?month=${monthValue(monthStart)}${includeDeleted ? "" : "&showDeleted=1"}`;
+  const prevMonthHref = `/${locale}/lessons?month=${monthValue(previousMonth)}${includeDeleted ? "&showDeleted=1" : ""}${includePast ? "&showPast=1" : ""}`;
+  const nextMonthHref = `/${locale}/lessons?month=${monthValue(nextMonth)}${includeDeleted ? "&showDeleted=1" : ""}${includePast ? "&showPast=1" : ""}`;
+  const toggleDeletedHref = `/${locale}/lessons?month=${monthValue(monthStart)}${includeDeleted ? "" : "&showDeleted=1"}${includePast ? "&showPast=1" : ""}`;
+  const togglePastHref = `/${locale}/lessons?month=${monthValue(monthStart)}${includeDeleted ? "&showDeleted=1" : ""}${includePast ? "" : "&showPast=1"}`;
 
   return (
     <section className="space-y-4">
@@ -264,6 +271,9 @@ export default async function LessonsPage({
               {includeDeleted ? labels.hideDeletedCta : labels.showDeletedCta}
             </a>
           ) : null}
+          <a className="rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs hover:bg-[var(--muted)]" href={togglePastHref}>
+            {includePast ? labels.hidePastCta : labels.showPastCta}
+          </a>
         </div>
       </header>
 
@@ -413,11 +423,17 @@ export default async function LessonsPage({
                         trainerId: lesson.trainer?.id ?? "",
                         lessonTypeId: lesson.lessonTypeId ?? "",
                         canManageTrainer: currentUser.role === "ADMIN" && !isPastOrNow && !isDeleted,
+                        canManageAttendance: lesson.endsAt <= now && !isDeleted,
                         attendees: lesson.bookings.filter((booking) => booking.status === "CONFIRMED").map((booking) => ({
                           id: booking.trainee.id,
                           name: booking.trainee.name,
                           email: booking.trainee.email,
                         })),
+                        attendeeAttendance: Object.fromEntries(
+                          lesson.bookings
+                            .filter((booking) => booking.status === "CONFIRMED")
+                            .map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])
+                        ),
                         pendingApprovals: lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => ({
                           id: booking.trainee.id,
                           name: booking.trainee.name,
@@ -433,6 +449,7 @@ export default async function LessonsPage({
                       lessonTypeCandidates,
                       attendeeCandidates,
                       canBroadcastToAttendees: true,
+                      canGrantOpenAccess: currentUser.role === "ADMIN",
                       labels: {
                         title: labels.manageTitle,
                         description: labels.manageDescription,
@@ -453,6 +470,12 @@ export default async function LessonsPage({
                         attendeeSelectLabel: labels.attendeeSelectLabel,
                         addAttendeeCta: labels.addAttendeeCta,
                         removeAttendeeCta: labels.removeAttendeeCta,
+                        markAttendancePresentCta: labels.markAttendancePresentCta,
+                        markAttendanceNoShowCta: labels.markAttendanceNoShowCta,
+                        attendanceStatusLabel: labels.attendanceStatusLabel,
+                        attendanceStatusPresent: labels.attendanceStatusPresent,
+                        attendanceStatusNoShow: labels.attendanceStatusNoShow,
+                        attendanceStatusUnmarked: labels.attendanceStatusUnmarked,
                         pendingApprovalsLabel: labels.pendingApprovalsLabel,
                         noPendingApprovals: labels.noPendingApprovals,
                         confirmPendingCta: labels.confirmPendingCta,
@@ -593,14 +616,15 @@ export default async function LessonsPage({
                                 <input type="hidden" name="locale" value={locale} />
                                 <input type="hidden" name="month" value={monthValue(monthStart)} />
                                 {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
+                                {includePast ? <input type="hidden" name="showPast" value="1" /> : null}
                                 <input type="hidden" name="lessonId" value={lesson.id} />
+                                <button
+                                  type="submit"
+                                  className="inline-flex h-9 items-center rounded-md bg-[var(--destructive-bg)] px-3 text-sm text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]"
+                                >
+                                  {labels.deleteLessonCta}
+                                </button>
                               </form>
-                              <AlertDialogAction
-                                form={`delete-lesson-${lesson.id}`}
-                                className="inline-flex h-9 items-center rounded-md bg-[var(--destructive-bg)] px-3 text-sm text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]"
-                              >
-                                {labels.deleteLessonCta}
-                              </AlertDialogAction>
                             </AlertDialogFooter>
                           </AlertDialogContent>
                         </AlertDialog>
@@ -610,6 +634,7 @@ export default async function LessonsPage({
                           <input type="hidden" name="locale" value={locale} />
                           <input type="hidden" name="month" value={monthValue(monthStart)} />
                           {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
+                          {includePast ? <input type="hidden" name="showPast" value="1" /> : null}
                           <input type="hidden" name="lessonId" value={lesson.id} />
                           <button
                             type="submit"

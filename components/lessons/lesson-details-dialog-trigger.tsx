@@ -63,7 +63,9 @@ type LessonDetailsDialogTriggerProps = {
       trainerId: string;
       lessonTypeId: string;
       canManageTrainer: boolean;
+      canManageAttendance: boolean;
       attendees: Array<{ id: string; name: string; email?: string }>;
+      attendeeAttendance: Record<string, "PRESENT" | "NO_SHOW" | null>;
       pendingApprovals: Array<{ id: string; name: string; email?: string }>;
       waitlist: Array<{ id: string; name: string; email?: string }>;
     };
@@ -90,6 +92,12 @@ type LessonDetailsDialogTriggerProps = {
       attendeeSelectLabel: string;
       addAttendeeCta: string;
       removeAttendeeCta: string;
+      markAttendancePresentCta: string;
+      markAttendanceNoShowCta: string;
+      attendanceStatusLabel: string;
+      attendanceStatusPresent: string;
+      attendanceStatusNoShow: string;
+      attendanceStatusUnmarked: string;
       pendingApprovalsLabel: string;
       noPendingApprovals: string;
       confirmPendingCta: string;
@@ -108,6 +116,7 @@ type LessonDetailsDialogTriggerProps = {
       notifySendCta: string;
     };
     canBroadcastToAttendees?: boolean;
+    canGrantOpenAccess?: boolean;
   };
 };
 
@@ -352,6 +361,7 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
           lessonTypeCandidates={manage.lessonTypeCandidates}
           attendeeCandidates={manage.attendeeCandidates}
           canBroadcastToAttendees={manage.canBroadcastToAttendees}
+          canGrantOpenAccess={manage.canGrantOpenAccess}
           labels={manage.labels}
         />
       ) : null}
