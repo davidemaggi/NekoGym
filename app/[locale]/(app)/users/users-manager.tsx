@@ -3,9 +3,16 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { MessageSquare, Pencil, Plus, Trash2 } from "lucide-react";
+import { Lock, LockOpen, LogOut, MessageSquare, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
 
-import { createUserAction, deleteUserAction, sendUserMessageAction, updateUserAction } from "@/app/[locale]/(app)/users/actions";
+import {
+  createUserAction,
+  deleteUserAction,
+  sendUserMessageAction,
+  terminateUserSessionsAction,
+  toggleUserActivationAction,
+  updateUserAction,
+} from "@/app/[locale]/(app)/users/actions";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,6 +37,7 @@ type UserItem = {
   name: string;
   email: string;
   emailVerifiedAt: string | null;
+  isDisabled: boolean;
   role: "ADMIN" | "TRAINER" | "TRAINEE";
   membershipStatus: "ACTIVE" | "INACTIVE";
   trialEndsAt: string | null;
@@ -142,7 +151,9 @@ type UsersManagerProps = {
 type ConfirmationState =
   | { kind: "create"; payload: FormPayload }
   | { kind: "update"; payload: FormPayload }
-  | { kind: "delete"; payload: { id: string; name: string } };
+  | { kind: "delete"; payload: { id: string; name: string } }
+  | { kind: "toggleActivation"; payload: { id: string; name: string; disable: boolean } }
+  | { kind: "terminateSessions"; payload: { id: string; name: string } };
 
 function toFormData(payload: FormPayload): FormData {
   const formData = new FormData();
@@ -194,15 +205,42 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<UserItem["role"] | "ALL">("ALL");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "DISABLED">("ALL");
+  const localActions = {
+    activate: locale === "it" ? "Attiva" : "Activate",
+    deactivate: locale === "it" ? "Disattiva" : "Deactivate",
+    terminateSessions: locale === "it" ? "Termina sessioni" : "Terminate sessions",
+    confirmDeactivateTitle: locale === "it" ? "Conferma disattivazione" : "Confirm deactivation",
+    confirmDeactivateDescription:
+      locale === "it"
+        ? "Disattivando {name} verranno terminate tutte le sue sessioni e non potra piu effettuare il login."
+        : "Deactivating {name} will terminate all sessions and block future logins.",
+    confirmActivateTitle: locale === "it" ? "Conferma attivazione" : "Confirm activation",
+    confirmActivateDescription:
+      locale === "it"
+        ? "Vuoi riattivare {name}? L'utente potra nuovamente effettuare il login."
+        : "Do you want to re-activate {name}? The user will be able to sign in again.",
+    confirmTerminateSessionsTitle: locale === "it" ? "Conferma terminazione sessioni" : "Confirm session termination",
+    confirmTerminateSessionsDescription:
+      locale === "it"
+        ? "Terminare tutte le sessioni attive di {name}?"
+        : "Terminate all active sessions for {name}?",
+    disabledBadge: locale === "it" ? "Disattivato" : "Disabled",
+    allStatuses: locale === "it" ? "Tutti gli stati" : "All statuses",
+    statusActive: locale === "it" ? "Attivi" : "Active",
+    statusDisabled: locale === "it" ? "Disattivati" : "Disabled",
+  };
 
   const filteredUsers = useMemo(() => {
     const query = search.trim().toLowerCase();
     return users.filter((user) => {
       if (roleFilter !== "ALL" && user.role !== roleFilter) return false;
+      if (statusFilter === "ACTIVE" && user.isDisabled) return false;
+      if (statusFilter === "DISABLED" && !user.isDisabled) return false;
       if (!query) return true;
       return user.name.toLowerCase().includes(query) || user.email.toLowerCase().includes(query);
     });
-  }, [users, search, roleFilter]);
+  }, [users, search, roleFilter, statusFilter]);
 
   function askCreateConfirmation(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -272,6 +310,17 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
         result = await createUserAction(toFormData(confirmation.payload));
       } else if (confirmation.kind === "update") {
         result = await updateUserAction(toFormData(confirmation.payload));
+      } else if (confirmation.kind === "toggleActivation") {
+        const formData = new FormData();
+        formData.set("locale", locale);
+        formData.set("id", confirmation.payload.id);
+        formData.set("disable", confirmation.payload.disable ? "true" : "false");
+        result = await toggleUserActivationAction(formData);
+      } else if (confirmation.kind === "terminateSessions") {
+        const formData = new FormData();
+        formData.set("locale", locale);
+        formData.set("id", confirmation.payload.id);
+        result = await terminateUserSessionsAction(formData);
       } else {
         const formData = new FormData();
         formData.set("id", confirmation.payload.id);
@@ -371,6 +420,15 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
               <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
               <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
             </select>
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "DISABLED")}
+              className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+            >
+              <option value="ALL">{localActions.allStatuses}</option>
+              <option value="ACTIVE">{localActions.statusActive}</option>
+              <option value="DISABLED">{localActions.statusDisabled}</option>
+            </select>
           </div>
 
           {filteredUsers.length === 0 ? (
@@ -390,11 +448,22 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
                 </thead>
                 <tbody>
                   {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b border-[var(--surface-border)]/70">
-                      <td className="py-3 pr-2 font-medium">{user.name}</td>
+                    <tr
+                      key={user.id}
+                      className={`border-b border-[var(--surface-border)]/70 ${user.isDisabled ? "bg-[var(--muted)]/35 text-[var(--muted-foreground)]" : ""}`}
+                    >
+                      <td className="py-3 pr-2 font-medium">
+                        <div className="inline-flex items-center gap-2">
+                          {user.isDisabled ? <Lock className="h-4 w-4" /> : null}
+                          <span>{user.name}</span>
+                        </div>
+                      </td>
                       <td className="py-3 pr-2">{user.email}</td>
                       <td className="py-3 pr-2">
-                        <Badge variant="info">{labels.roleOptions[user.role]}</Badge>
+                        <div className="inline-flex gap-2">
+                          <Badge variant="info">{labels.roleOptions[user.role]}</Badge>
+                          {user.isDisabled ? <Badge variant="warning">{localActions.disabledBadge}</Badge> : null}
+                        </div>
                       </td>
                       <td className="py-3 pr-2">
                         <Badge variant={user.membershipStatus === "ACTIVE" ? "success" : "warning"}>
@@ -408,35 +477,68 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
                         </Badge>
                       </td>
                       <td className="py-3 text-right">
-                        <div className="inline-flex gap-2">
-                          <Button variant="outline" size="sm" onClick={() => setEditUser(user)}>
-                            <Pencil className="h-4 w-4" />
-                            <span>{labels.actions.edit}</span>
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-[#BEE3F8] bg-[#E6F4FF] text-[#1E5D85] hover:bg-[#D8EEFF] dark:border-[#2B5D86] dark:bg-[#123A56] dark:text-[#BFE6FF] dark:hover:bg-[#184666]"
-                            onClick={() => {
-                              setMessageUser(user);
-                              setMessageBody("");
-                            }}
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                            <span>{labels.actions.message}</span>
-                          </Button>
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => {
-                              setDeleteUser(user);
-                              setConfirmation({ kind: "delete", payload: { id: user.id, name: user.name } });
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span>{labels.actions.delete}</span>
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md p-0 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">{labels.columns.actions}</span>
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onSelect={() => setEditUser(user)}>
+                              <Pencil className="h-4 w-4" />
+                              <span>{labels.actions.edit}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                setConfirmation({
+                                  kind: "toggleActivation",
+                                  payload: {
+                                    id: user.id,
+                                    name: user.name,
+                                    disable: !user.isDisabled,
+                                  },
+                                })
+                              }
+                            >
+                              {user.isDisabled ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                              <span>{user.isDisabled ? localActions.activate : localActions.deactivate}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() =>
+                                setConfirmation({
+                                  kind: "terminateSessions",
+                                  payload: { id: user.id, name: user.name },
+                                })
+                              }
+                            >
+                              <LogOut className="h-4 w-4" />
+                              <span>{localActions.terminateSessions}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onSelect={() => {
+                                setMessageUser(user);
+                                setMessageBody("");
+                              }}
+                            >
+                              <MessageSquare className="h-4 w-4" />
+                              <span>{labels.actions.message}</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              className="text-red-600 focus:bg-red-100 dark:text-red-400 dark:focus:bg-red-900/40"
+                              onSelect={() => {
+                                setDeleteUser(user);
+                                setConfirmation({ kind: "delete", payload: { id: user.id, name: user.name } });
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                              <span>{labels.actions.delete}</span>
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </td>
                     </tr>
                   ))}
@@ -554,14 +656,26 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
                 ? labels.confirmCreateTitle
                 : confirmation?.kind === "update"
                   ? labels.confirmUpdateTitle
-                  : labels.deleteConfirmTitle}
+                  : confirmation?.kind === "toggleActivation"
+                    ? confirmation.payload.disable
+                      ? localActions.confirmDeactivateTitle
+                      : localActions.confirmActivateTitle
+                    : confirmation?.kind === "terminateSessions"
+                      ? localActions.confirmTerminateSessionsTitle
+                      : labels.deleteConfirmTitle}
             </AlertDialogTitle>
             <AlertDialogDescription>
               {confirmation?.kind === "create"
                 ? labels.confirmCreateDescription
                 : confirmation?.kind === "update"
                   ? labels.confirmUpdateDescription
-                  : labels.deleteConfirmDescription.replace("{name}", deleteUser?.name ?? "")}
+                  : confirmation?.kind === "toggleActivation"
+                    ? confirmation.payload.disable
+                      ? localActions.confirmDeactivateDescription.replace("{name}", confirmation.payload.name)
+                      : localActions.confirmActivateDescription.replace("{name}", confirmation.payload.name)
+                    : confirmation?.kind === "terminateSessions"
+                      ? localActions.confirmTerminateSessionsDescription.replace("{name}", confirmation.payload.name)
+                      : labels.deleteConfirmDescription.replace("{name}", deleteUser?.name ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

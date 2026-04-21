@@ -2,6 +2,7 @@ import { createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto
 
 import type { AuthTokenType, Prisma, UserRole as PrismaUserRole } from "@prisma/client";
 import { cookies } from "next/headers";
+import { cache } from "react";
 
 import { hashPassword, verifyPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
@@ -81,9 +82,6 @@ const OTP_VERIFY_MAX_FAILURES_PER_IP = parsePositiveIntEnv(
   5_000
 );
 
-const otpRequestIpRateLimit = new Map<string, { count: number; expiresAt: number }>();
-const otpVerifyFailureRateLimit = new Map<string, { count: number; expiresAt: number }>();
-
 function buildSessionExpiry() {
   return new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 }
@@ -115,29 +113,54 @@ function sanitizeClientIp(raw?: string | null) {
   return value.split(",")[0]?.trim() || null;
 }
 
-function consumeLocalRateLimit(
-  store: Map<string, { count: number; expiresAt: number }>,
-  key: string,
-  max: number,
-  windowMs: number
-) {
-  const now = Date.now();
-  const current = store.get(key);
-  if (!current || current.expiresAt <= now) {
-    store.set(key, { count: 1, expiresAt: now + windowMs });
-    return true;
-  }
-
-  if (current.count >= max) {
-    return false;
-  }
-
-  store.set(key, { ...current, count: current.count + 1 });
-  return true;
+function otpRateLimitKey(input: { flow: "request" | "verify"; scope: "ip" | "user"; value: string }) {
+  return `otp:${input.flow}:${input.scope}:${input.value}`;
 }
 
-function clearLocalRateLimit(store: Map<string, { count: number; expiresAt: number }>, key: string) {
-  store.delete(key);
+async function consumeOtpRateLimit(key: string, max: number, windowMs: number): Promise<boolean> {
+  const now = new Date();
+  const nextExpiresAt = new Date(now.getTime() + windowMs);
+
+  return prisma.$transaction(async (tx) => {
+    const current = await tx.otpRateLimit.findUnique({
+      where: { key },
+      select: { count: true, expiresAt: true },
+    });
+
+    if (!current || current.expiresAt <= now) {
+      await tx.otpRateLimit.upsert({
+        where: { key },
+        create: {
+          key,
+          count: 1,
+          expiresAt: nextExpiresAt,
+        },
+        update: {
+          count: 1,
+          expiresAt: nextExpiresAt,
+        },
+      });
+      return true;
+    }
+
+    if (current.count >= max) {
+      return false;
+    }
+
+    await tx.otpRateLimit.update({
+      where: { key },
+      data: {
+        count: {
+          increment: 1,
+        },
+      },
+    });
+    return true;
+  });
+}
+
+async function clearOtpRateLimit(key: string) {
+  await prisma.otpRateLimit.deleteMany({ where: { key } });
 }
 
 function generateSixDigitCode() {
@@ -184,18 +207,35 @@ async function createSession(userId: string) {
   await setSessionCookie(token, expiresAt);
 }
 
+const getSessionWithUserByToken = cache(async (token: string) => {
+  return prisma.session.findUnique({
+    where: { token },
+    select: {
+      expiresAt: true,
+      user: {
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          isDisabled: true,
+          role: true,
+          emailVerifiedAt: true,
+        },
+      },
+    },
+  });
+});
+
 export async function getCurrentUser(): Promise<CurrentUser | null> {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
   if (!token) return null;
 
-  const session = await prisma.session.findUnique({
-    where: { token },
-    include: { user: true },
-  });
+  const session = await getSessionWithUserByToken(token);
 
   if (!session) return null;
   if (session.expiresAt <= new Date()) return null;
+  if (session.user.isDisabled) return null;
 
   if (!session.user.emailVerifiedAt) return null;
 
@@ -286,6 +326,7 @@ type LoginTargetUser = {
   id: string;
   email: string;
   name: string;
+  isDisabled: boolean;
   emailVerifiedAt: Date | null;
   passwordHash: string;
   totpEnabled: boolean;
@@ -309,6 +350,7 @@ async function getLoginTargetUserByEmail(email: string): Promise<LoginTargetUser
       id: true,
       email: true,
       name: true,
+      isDisabled: true,
       emailVerifiedAt: true,
       passwordHash: true,
       totpEnabled: true,
@@ -496,9 +538,14 @@ export async function changePassword(input: { userId: string; locale: string; cu
     throw new Error(msg.currentPasswordInvalid);
   }
 
-  await prisma.user.update({
-    where: { id: input.userId },
-    data: { passwordHash: hashPassword(input.newPassword) },
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({
+      where: { id: input.userId },
+      data: { passwordHash: hashPassword(input.newPassword) },
+    });
+    await tx.session.deleteMany({
+      where: { userId: input.userId },
+    });
   });
 }
 
@@ -526,32 +573,12 @@ export async function registerUser(input: {
   return user;
 }
 
-export async function loginUser(input: { email: string; password: string; locale: string }) {
-  const msg = authMessages(input.locale);
-  const user = await prisma.user.findUnique({ where: { email: input.email } });
-  if (!user) {
-    throw new Error("Invalid credentials.");
-  }
-
-  const isValid = verifyPassword(input.password, user.passwordHash);
-  if (!isValid) {
-    throw new Error("Invalid credentials.");
-  }
-
-  if (!user.emailVerifiedAt) {
-    throw new Error(msg.emailNotVerified);
-  }
-
-  await createSession(user.id);
-  return user;
-}
-
 export async function loginWithPassword(input: { email: string; password: string; locale: string }) {
   const msg = authMessages(input.locale);
   const normalizedEmail = input.email.trim().toLowerCase();
   const user = await getLoginTargetUserByEmail(normalizedEmail);
 
-  if (!user || !verifyPassword(input.password, user.passwordHash)) {
+  if (!user || user.isDisabled || !verifyPassword(input.password, user.passwordHash)) {
     throw new Error("Invalid credentials.");
   }
 
@@ -595,6 +622,7 @@ export async function completePasswordLoginWithTotp(input: {
       user: {
         select: {
           id: true,
+          isDisabled: true,
           emailVerifiedAt: true,
           totpEnabled: true,
           totpSecret: true,
@@ -604,6 +632,9 @@ export async function completePasswordLoginWithTotp(input: {
   });
 
   if (!challenge || challenge.type !== "LOGIN_2FA_CHALLENGE" || !isUsableLoginToken(challenge)) {
+    throw new Error(msg.tokenInvalid);
+  }
+  if (challenge.user.isDisabled) {
     throw new Error(msg.tokenInvalid);
   }
 
@@ -641,25 +672,28 @@ export async function requestLoginOtp(input: { locale: string; email: string; cl
   const normalizedEmail = input.email.trim().toLowerCase();
   const user = await getLoginTargetUserByEmail(normalizedEmail);
 
-  if (!user || !user.emailVerifiedAt) {
+  if (!user || user.isDisabled || !user.emailVerifiedAt) {
     return null;
   }
 
   const clientIp = sanitizeClientIp(input.clientIp);
-  if (clientIp && !consumeLocalRateLimit(otpRequestIpRateLimit, `request:${hashIp(clientIp)}`, OTP_REQUEST_MAX_PER_IP, OTP_REQUEST_WINDOW_MS)) {
+  const requestUserKey = otpRateLimitKey({
+    flow: "request",
+    scope: "user",
+    value: user.id,
+  });
+  if (!(await consumeOtpRateLimit(requestUserKey, OTP_REQUEST_MAX_PER_USER, OTP_REQUEST_WINDOW_MS))) {
     throw new Error(msg.loginCodeRateLimited);
   }
-
-  const recentRequestsByUser = await prisma.authToken.count({
-    where: {
-      userId: user.id,
-      type: "LOGIN_OTP",
-      createdAt: { gt: new Date(Date.now() - OTP_REQUEST_WINDOW_MS) },
-    },
-  });
-
-  if (recentRequestsByUser >= OTP_REQUEST_MAX_PER_USER) {
-    throw new Error(msg.loginCodeRateLimited);
+  if (clientIp) {
+    const requestIpKey = otpRateLimitKey({
+      flow: "request",
+      scope: "ip",
+      value: hashIp(clientIp),
+    });
+    if (!(await consumeOtpRateLimit(requestIpKey, OTP_REQUEST_MAX_PER_IP, OTP_REQUEST_WINDOW_MS))) {
+      throw new Error(msg.loginCodeRateLimited);
+    }
   }
 
   const code = generateSixDigitCode();
@@ -723,11 +757,17 @@ export async function verifyLoginOtp(input: {
   const cleanCode = input.code.trim();
 
   const clientIp = sanitizeClientIp(input.clientIp);
-  const ipKey = clientIp ? `verify:ip:${hashIp(clientIp)}` : null;
+  const ipKey = clientIp
+    ? otpRateLimitKey({
+        flow: "verify",
+        scope: "ip",
+        value: hashIp(clientIp),
+      })
+    : null;
 
   if (!/^\d{6}$/.test(cleanCode)) {
     if (ipKey) {
-      consumeLocalRateLimit(otpVerifyFailureRateLimit, ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS);
+      await consumeOtpRateLimit(ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS);
     }
     throw new Error(msg.loginCodeInvalid);
   }
@@ -735,26 +775,33 @@ export async function verifyLoginOtp(input: {
   const hashedToken = hashOneTimeToken(input.challengeToken);
   const token = await prisma.authToken.findUnique({
     where: { tokenHash: hashedToken },
-    include: { user: { select: { id: true, emailVerifiedAt: true } } },
+    include: { user: { select: { id: true, isDisabled: true, emailVerifiedAt: true } } },
   });
 
   if (!token || token.type !== "LOGIN_OTP" || !isUsableLoginToken(token)) {
     if (ipKey) {
-      consumeLocalRateLimit(otpVerifyFailureRateLimit, ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS);
+      await consumeOtpRateLimit(ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS);
     }
     throw new Error(msg.loginCodeInvalid);
   }
 
-  const userKey = `verify:user:${token.userId}`;
-  if (!consumeLocalRateLimit(otpVerifyFailureRateLimit, userKey, OTP_VERIFY_MAX_FAILURES_PER_USER, OTP_VERIFY_WINDOW_MS)) {
+  const userKey = otpRateLimitKey({
+    flow: "verify",
+    scope: "user",
+    value: token.userId,
+  });
+  if (!(await consumeOtpRateLimit(userKey, OTP_VERIFY_MAX_FAILURES_PER_USER, OTP_VERIFY_WINDOW_MS))) {
     throw new Error(msg.loginCodeRateLimited);
   }
 
-  if (ipKey && !consumeLocalRateLimit(otpVerifyFailureRateLimit, ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS)) {
+  if (ipKey && !(await consumeOtpRateLimit(ipKey, OTP_VERIFY_MAX_FAILURES_PER_IP, OTP_VERIFY_WINDOW_MS))) {
     throw new Error(msg.loginCodeRateLimited);
   }
 
   if (!token.targetEmail || !safeEqualString(token.targetEmail, hashLoginCode(cleanCode))) {
+    throw new Error(msg.loginCodeInvalid);
+  }
+  if (token.user.isDisabled) {
     throw new Error(msg.loginCodeInvalid);
   }
 
@@ -776,10 +823,7 @@ export async function verifyLoginOtp(input: {
     throw new Error(msg.loginCodeInvalid);
   }
 
-  clearLocalRateLimit(otpVerifyFailureRateLimit, userKey);
-  if (ipKey) {
-    clearLocalRateLimit(otpVerifyFailureRateLimit, ipKey);
-  }
+  await Promise.all([clearOtpRateLimit(userKey), ...(ipKey ? [clearOtpRateLimit(ipKey)] : [])]);
 
   await createSession(token.user.id);
 }
@@ -789,7 +833,7 @@ export async function requestMagicLoginLink(input: { locale: string; email: stri
   const normalizedEmail = input.email.trim().toLowerCase();
   const user = await getLoginTargetUserByEmail(normalizedEmail);
 
-  if (!user || !user.emailVerifiedAt) {
+  if (!user || user.isDisabled || !user.emailVerifiedAt) {
     return;
   }
 
@@ -821,6 +865,7 @@ export async function loginWithMagicLinkToken(input: { locale: string; token: st
       user: {
         select: {
           id: true,
+          isDisabled: true,
           emailVerifiedAt: true,
         },
       },
@@ -828,6 +873,9 @@ export async function loginWithMagicLinkToken(input: { locale: string; token: st
   });
 
   if (!token || token.type !== "LOGIN_MAGIC_LINK" || !isUsableLoginToken(token)) {
+    throw new Error(msg.tokenInvalid);
+  }
+  if (token.user.isDisabled) {
     throw new Error(msg.tokenInvalid);
   }
 
@@ -916,5 +964,3 @@ export async function logoutCurrentUser() {
 
   await clearSessionCookie();
 }
-
-

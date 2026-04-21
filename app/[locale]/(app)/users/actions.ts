@@ -42,10 +42,16 @@ function t(locale: string) {
     created: isIt ? "Utente creato." : "User created.",
     updated: isIt ? "Utente aggiornato." : "User updated.",
     deleted: isIt ? "Utente eliminato." : "User deleted.",
+    accountDisabled: isIt ? "Utente disattivato e sessioni terminate." : "User deactivated and sessions terminated.",
+    accountEnabled: isIt ? "Utente riattivato." : "User re-activated.",
+    sessionsTerminated: isIt ? "Sessioni utente terminate." : "User sessions terminated.",
     createFailed: isIt ? "Impossibile creare utente." : "Unable to create user.",
     updateFailed: isIt ? "Impossibile aggiornare utente." : "Unable to update user.",
     deleteFailed: isIt ? "Impossibile eliminare utente." : "Unable to delete user.",
+    accountToggleFailed: isIt ? "Impossibile aggiornare lo stato utente." : "Unable to update user status.",
+    terminateSessionsFailed: isIt ? "Impossibile terminare le sessioni utente." : "Unable to terminate user sessions.",
     cannotDeleteSelf: isIt ? "Non puoi eliminare il tuo utente." : "You cannot delete your own user.",
+    cannotDisableSelf: isIt ? "Non puoi disattivare il tuo utente." : "You cannot deactivate your own user.",
     messageQueued: isIt ? "Notifica accodata." : "Notification queued.",
     futureBookingsRevoked:
       isIt
@@ -425,6 +431,78 @@ export async function deleteUserAction(formData: FormData): Promise<UserMutation
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.deleteFailed,
+    };
+  }
+}
+
+export async function toggleUserActivationAction(formData: FormData): Promise<UserMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const msg = t(locale);
+
+  try {
+    const currentUser = await requireAnyRole(["ADMIN"], locale);
+    const id = getField(formData, "id");
+    const disable = getBooleanField(formData, "disable");
+
+    if (!id) throw new Error(msg.idRequired);
+    if (id === currentUser.id && disable) throw new Error(msg.cannotDisableSelf);
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, isDisabled: true },
+    });
+    if (!target) throw new Error(msg.userNotFound);
+
+    await prisma.$transaction(async (tx) => {
+      if (target.isDisabled !== disable) {
+        await tx.user.update({
+          where: { id },
+          data: { isDisabled: disable },
+        });
+      }
+
+      if (disable) {
+        await tx.session.deleteMany({
+          where: { userId: id },
+        });
+      }
+    });
+
+    revalidatePath(`/${locale}/users`);
+    return { ok: true, message: disable ? msg.accountDisabled : msg.accountEnabled };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : msg.accountToggleFailed,
+    };
+  }
+}
+
+export async function terminateUserSessionsAction(formData: FormData): Promise<UserMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const msg = t(locale);
+
+  try {
+    await requireAnyRole(["ADMIN"], locale);
+    const id = getField(formData, "id");
+    if (!id) throw new Error(msg.idRequired);
+
+    const target = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!target) throw new Error(msg.userNotFound);
+
+    await prisma.session.deleteMany({
+      where: { userId: id },
+    });
+
+    revalidatePath(`/${locale}/users`);
+    return { ok: true, message: msg.sessionsTerminated };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : msg.terminateSessionsFailed,
     };
   }
 }

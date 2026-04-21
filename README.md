@@ -398,6 +398,11 @@ Auth OTP rate limiting:
 - `AUTH_OTP_VERIFY_MAX_FAILURES_PER_USER`
 - `AUTH_OTP_VERIFY_MAX_FAILURES_PER_IP`
 
+Auth cleanup:
+
+- `AUTH_CLEANUP_INTERVAL_MS`
+- `AUTH_TOKEN_CONSUMED_RETENTION_MS`
+
 Dev HTTPS (test iOS Web Push):
 
 - `DEV_HTTPS`
@@ -427,4 +432,3 @@ curl -X POST "http://localhost:3000/api/cron/lessons/reconcile" \
 - Le policy più sensibili (reconcile, cancellazioni automatiche, no-show, notifiche) sono governate da server actions + job schedulati.
 - Le pagine staff usano controlli role-based server-side, non solo client-side.
 - Le operazioni distruttive in danger zone richiedono 2FA OTP.
-

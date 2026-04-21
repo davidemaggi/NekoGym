@@ -84,65 +84,66 @@ enum AuthTokenType {
 }
 
 model User {
-  id                    String               @id @default(cuid())
-  name                  String
-  email                 String               @unique
-  emailVerifiedAt       DateTime?
-  pendingEmail          String?              @unique
-  passwordHash          String
-  role                  UserRole             @default(TRAINEE)
-  telegramChatId        String?              @unique
-  telegramUsername      String?
-  telegramLinkedAt      DateTime?
-  notifyByEmail         Boolean              @default(true)
-  notifyByTelegram      Boolean              @default(true)
-  notifyByWebPush       Boolean              @default(true)
-  notificationsLastSeenAt DateTime?
-  notificationsRetentionDays Int             @default(15)
-  reportDigestFrequency ReportDigestFrequency @default(NEVER)
-  reportDigestReportsCsv String              @default("COURSE_POPULARITY,TIME_CROWDING,TRAINER_PERFORMANCE")
-  reportDigestLastSentAt DateTime?
-  totpEnabled           Boolean              @default(false)
-  totpSecret            String?
-  membershipStatus      MembershipStatus     @default(INACTIVE)
-  trialEndsAt           DateTime?
-  subscriptionType      SubscriptionPlanType @default(NONE)
-  subscriptionLessons   Int?
-  subscriptionRemaining Int?
-  subscriptionResetAt   DateTime?
-  subscriptionEndsAt    DateTime?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-  sessions              Session[]
-  courses               Course[]             @relation("CourseTrainer")
-  lessons               Lesson[]             @relation("LessonTrainer")
-  lessonBookings        LessonBooking[]
-  lessonWaitlistEntries LessonWaitlistEntry[]
-  telegramLinkTokens    TelegramLinkToken[]
-  notificationOutbox    NotificationOutbox[]
-  authTokens            AuthToken[]
-  webPushSubscriptions  WebPushSubscription[]
-  lessonTypeAccesses    UserLessonTypeAccess[]
-  confirmedBookings     LessonBooking[]       @relation("LessonBookingConfirmedBy")
-  localNotifications    LocalNotification[]
+  id                         String                 @id @default(cuid())
+  name                       String
+  email                      String                 @unique
+  emailVerifiedAt            DateTime?
+  pendingEmail               String?                @unique
+  passwordHash               String
+  isDisabled                 Boolean                @default(false)
+  role                       UserRole               @default(TRAINEE)
+  telegramChatId             String?                @unique
+  telegramUsername           String?
+  telegramLinkedAt           DateTime?
+  notifyByEmail              Boolean                @default(true)
+  notifyByTelegram           Boolean                @default(true)
+  notifyByWebPush            Boolean                @default(true)
+  notificationsLastSeenAt    DateTime?
+  notificationsRetentionDays Int                    @default(15)
+  reportDigestFrequency      ReportDigestFrequency  @default(NEVER)
+  reportDigestReportsCsv     String                 @default("COURSE_POPULARITY,TIME_CROWDING,TRAINER_PERFORMANCE")
+  reportDigestLastSentAt     DateTime?
+  totpEnabled                Boolean                @default(false)
+  totpSecret                 String?
+  membershipStatus           MembershipStatus       @default(INACTIVE)
+  trialEndsAt                DateTime?
+  subscriptionType           SubscriptionPlanType   @default(NONE)
+  subscriptionLessons        Int?
+  subscriptionRemaining      Int?
+  subscriptionResetAt        DateTime?
+  subscriptionEndsAt         DateTime?
+  createdAt                  DateTime               @default(now())
+  updatedAt                  DateTime               @updatedAt
+  sessions                   Session[]
+  courses                    Course[]               @relation("CourseTrainer")
+  lessons                    Lesson[]               @relation("LessonTrainer")
+  lessonBookings             LessonBooking[]
+  lessonWaitlistEntries      LessonWaitlistEntry[]
+  telegramLinkTokens         TelegramLinkToken[]
+  notificationOutbox         NotificationOutbox[]
+  authTokens                 AuthToken[]
+  webPushSubscriptions       WebPushSubscription[]
+  lessonTypeAccesses         UserLessonTypeAccess[]
+  confirmedBookings          LessonBooking[]        @relation("LessonBookingConfirmedBy")
+  localNotifications         LocalNotification[]
 }
 
 model NotificationOutbox {
-  id          String              @id @default(cuid())
-  userId      String
-  recipientEmail String?
-  allowUnverifiedEmail Boolean @default(false)
-  channel     NotificationChannel
-  subject     String?
-  body        String
-  status      NotificationStatus  @default(PENDING)
-  attempts    Int                 @default(0)
-  availableAt DateTime            @default(now())
-  lastError   String?
-  sentAt      DateTime?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String              @id @default(cuid())
+  userId               String
+  recipientEmail       String?
+  allowUnverifiedEmail Boolean             @default(false)
+  channel              NotificationChannel
+  subject              String?
+  body                 String
+  status               NotificationStatus  @default(PENDING)
+  attempts             Int                 @default(0)
+  availableAt          DateTime            @default(now())
+  lastError            String?
+  sentAt               DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([status, availableAt, createdAt])
   @@index([userId, createdAt])
@@ -160,17 +161,30 @@ model LocalNotification {
 }
 
 model AuthToken {
-  id          String       @id @default(cuid())
+  id          String        @id @default(cuid())
   type        AuthTokenType
-  tokenHash   String       @unique
+  tokenHash   String        @unique
   targetEmail String?
   expiresAt   DateTime
   consumedAt  DateTime?
-  createdAt   DateTime     @default(now())
+  createdAt   DateTime      @default(now())
   userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, type])
+  @@index([userId, type, createdAt])
+  @@index([type, expiresAt])
+  @@index([consumedAt])
+  @@index([expiresAt])
+}
+
+model OtpRateLimit {
+  key       String   @id
+  count     Int
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
   @@index([expiresAt])
 }
 
@@ -210,6 +224,7 @@ model Session {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
 }
 
 model Course {
@@ -239,40 +254,40 @@ model Course {
 }
 
 model LessonType {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String?
-  iconSvg     String
-  colorHex    String   @default("#2563EB")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  courses     Course[]
-  lessons     Lesson[]
+  id           String                 @id @default(cuid())
+  name         String                 @unique
+  description  String?
+  iconSvg      String
+  colorHex     String                 @default("#2563EB")
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+  courses      Course[]
+  lessons      Lesson[]
   userAccesses UserLessonTypeAccess[]
 }
 
 model Lesson {
-  id                      String          @id @default(cuid())
+  id                      String                @id @default(cuid())
   title                   String?
   description             String?
   startsAt                DateTime
   endsAt                  DateTime
-  status                  LessonStatus    @default(SCHEDULED)
+  status                  LessonStatus          @default(SCHEDULED)
   deletedAt               DateTime?
   maxAttendees            Int
-  cancellationWindowHours Int             @default(24)
+  cancellationWindowHours Int                   @default(24)
   sourceWeekday           Weekday?
   sourceStartTime         String?
-  isGenerated             Boolean         @default(true)
-  isCustomized            Boolean         @default(false)
-  createdAt               DateTime        @default(now())
-  updatedAt               DateTime        @updatedAt
+  isGenerated             Boolean               @default(true)
+  isCustomized            Boolean               @default(false)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
   courseId                String?
   lessonTypeId            String?
   trainerId               String?
-  course                  Course?         @relation(fields: [courseId], references: [id], onDelete: SetNull)
-  lessonType              LessonType?     @relation(fields: [lessonTypeId], references: [id], onDelete: SetNull)
-  trainer                 User?           @relation("LessonTrainer", fields: [trainerId], references: [id], onDelete: SetNull)
+  course                  Course?               @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  lessonType              LessonType?           @relation(fields: [lessonTypeId], references: [id], onDelete: SetNull)
+  trainer                 User?                 @relation("LessonTrainer", fields: [trainerId], references: [id], onDelete: SetNull)
   bookings                LessonBooking[]
   waitlistEntries         LessonWaitlistEntry[]
 
@@ -283,22 +298,23 @@ model Lesson {
   @@index([startsAt])
   @@index([status])
   @@index([deletedAt])
+  @@index([status, deletedAt, startsAt])
 }
 
 model LessonBooking {
-  id            String             @id @default(cuid())
-  lessonId      String
-  traineeId     String
-  status        LessonBookingStatus @default(CONFIRMED)
-  attendanceStatus LessonAttendanceStatus?
-  attendanceMarkedAt DateTime?
+  id                   String                  @id @default(cuid())
+  lessonId             String
+  traineeId            String
+  status               LessonBookingStatus     @default(CONFIRMED)
+  attendanceStatus     LessonAttendanceStatus?
+  attendanceMarkedAt   DateTime?
   attendanceMarkedById String?
-  confirmedAt   DateTime?
-  confirmedById String?
-  createdAt     DateTime           @default(now())
-  lesson        Lesson             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  trainee       User               @relation(fields: [traineeId], references: [id], onDelete: Cascade)
-  confirmedBy   User?              @relation("LessonBookingConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
+  confirmedAt          DateTime?
+  confirmedById        String?
+  createdAt            DateTime                @default(now())
+  lesson               Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  trainee              User                    @relation(fields: [traineeId], references: [id], onDelete: Cascade)
+  confirmedBy          User?                   @relation("LessonBookingConfirmedBy", fields: [confirmedById], references: [id], onDelete: SetNull)
 
   @@unique([lessonId, traineeId])
   @@index([traineeId])
@@ -309,14 +325,14 @@ model LessonBooking {
 }
 
 model UserLessonTypeAccess {
-  id          String               @id @default(cuid())
-  userId      String
+  id           String               @id @default(cuid())
+  userId       String
   lessonTypeId String
-  mode        LessonTypeAccessMode @default(REQUIRES_CONFIRMATION)
-  createdAt   DateTime             @default(now())
-  updatedAt   DateTime             @updatedAt
-  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lessonType  LessonType           @relation(fields: [lessonTypeId], references: [id], onDelete: Cascade)
+  mode         LessonTypeAccessMode @default(REQUIRES_CONFIRMATION)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonType   LessonType           @relation(fields: [lessonTypeId], references: [id], onDelete: Cascade)
 
   @@unique([userId, lessonTypeId])
   @@index([lessonTypeId])

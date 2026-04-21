@@ -7,7 +7,6 @@ import {
   completePasswordLoginWithTotp,
   loginWithMagicLinkToken,
   loginWithPassword,
-  loginUser,
   registerUser,
   requestLoginOtp,
   requestMagicLoginLink,
@@ -62,24 +61,6 @@ export async function registerAction(formData: FormData) {
   }
 
   redirect(`/${locale}/login?info=${encodeURIComponent(locale === "it" ? "Controlla la tua email per confermare l'account." : "Check your email to verify your account.")}`);
-}
-
-export async function loginAction(formData: FormData) {
-  const locale = sanitizeLocale(asString(formData, "locale"));
-  const email = asString(formData, "email").toLowerCase();
-  const password = asString(formData, "password");
-
-  if (!email || !password) {
-    redirect(`/${locale}/login?error=Invalid%20input`);
-  }
-
-  try {
-    await loginUser({ email, password, locale });
-  } catch (error) {
-    redirect(`/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}`);
-  }
-
-  redirect(`/${locale}`);
 }
 
 export async function loginWithPasswordAction(formData: FormData) {
@@ -292,4 +273,3 @@ export async function resetPasswordAction(formData: FormData) {
 
   redirect(`/${locale}/login?info=${encodeURIComponent(locale === "it" ? "Password aggiornata. Effettua il login." : "Password updated. Please sign in.")}`);
 }
-

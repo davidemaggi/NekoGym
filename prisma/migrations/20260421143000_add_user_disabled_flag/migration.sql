@@ -1,0 +1,3 @@
+-- User account activation/deactivation flag.
+
+ALTER TABLE "User" ADD COLUMN "isDisabled" BOOLEAN NOT NULL DEFAULT false;

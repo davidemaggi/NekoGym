@@ -21,6 +21,7 @@ export default async function UsersPage({
       name: true,
       email: true,
       emailVerifiedAt: true,
+      isDisabled: true,
       role: true,
       membershipStatus: true,
       trialEndsAt: true,

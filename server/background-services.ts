@@ -2,6 +2,7 @@ import { startDailyLessonsReconcileJob } from "@/server/jobs/daily-lessons-recon
 import { startLocalNotificationsRetentionJob } from "@/server/jobs/local-notifications-retention";
 import { startLessonsNoticeWindowJob } from "@/server/jobs/lessons-notice-window";
 import { startLessonAttendanceAutoConfirmJob } from "@/server/jobs/lesson-attendance-autoconfirm";
+import { startAuthCleanupJob } from "@/server/jobs/auth-cleanup";
 import { startOutboxWorker } from "@/server/outbox/worker";
 import { startTelegramBot } from "@/server/telegram/bootstrap";
 import { startReportsDigestJob } from "@/server/jobs/reports-digest";
@@ -16,6 +17,7 @@ export function startBackgroundServices(log: Logger): StopFn {
   stops.push(startDailyLessonsReconcileJob(log));
   stops.push(startLessonsNoticeWindowJob(log));
   stops.push(startLessonAttendanceAutoConfirmJob(log));
+  stops.push(startAuthCleanupJob(log));
   stops.push(startLocalNotificationsRetentionJob(log));
   stops.push(startReportsDigestJob(log));
   stops.push(startOutboxWorker(log));
