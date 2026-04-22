@@ -1,8 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { Tooltip as RechartsTooltip, type TooltipProps } from "recharts";
-import type { NameType, ValueType } from "recharts/types/component/DefaultTooltipContent";
+import {
+  Tooltip as RechartsTooltip,
+  type TooltipContentProps,
+  type TooltipPayloadEntry,
+} from "recharts";
 
 import { cn } from "@/lib/utils";
 
@@ -36,9 +39,9 @@ export function ChartContainer({ id, className, children, config, style, ...prop
   const chartId = React.useId().replace(/:/g, "");
   const resolvedId = id ?? `chart-${chartId}`;
 
-  const chartVars: React.CSSProperties = {};
+  const chartVars: Record<`--color-${string}`, string> = {};
   for (const [key, value] of Object.entries(config)) {
-    chartVars[`--color-${key}` as keyof React.CSSProperties] = value.color;
+    chartVars[`--color-${key}`] = value.color;
   }
 
   return (
@@ -52,7 +55,7 @@ export function ChartContainer({ id, className, children, config, style, ...prop
           "[&_.recharts-text]:fill-[var(--muted-foreground)]",
           className
         )}
-        style={{ ...chartVars, ...style }}
+        style={{ ...(chartVars as React.CSSProperties), ...style }}
         {...props}
       >
         {children}
@@ -63,7 +66,7 @@ export function ChartContainer({ id, className, children, config, style, ...prop
 
 export const ChartTooltip = RechartsTooltip;
 
-type ChartTooltipContentProps = TooltipProps<ValueType, NameType> & {
+type ChartTooltipContentProps = Partial<TooltipContentProps> & {
   hideLabel?: boolean;
 };
 
@@ -78,7 +81,7 @@ export function ChartTooltipContent({ active, payload, label, hideLabel = false 
     <div className="min-w-40 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] p-2 text-xs shadow-sm">
       {!hideLabel ? <p className="mb-1 font-medium text-[var(--foreground)]">{String(label ?? "")}</p> : null}
       <div className="space-y-1">
-        {payload.map((item) => {
+        {payload.map((item: TooltipPayloadEntry) => {
           const key = String(item.dataKey ?? "");
           const conf = config[key];
           if (!conf) return null;

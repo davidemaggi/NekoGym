@@ -274,11 +274,12 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
                         {formatBytes(backup.sizeBytes, locale)}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
-                        <Button type="button" variant="outline" asChild>
-                          <a href={`/${locale}/settings/danger-zone/download?file=${encodeURIComponent(backup.fileName)}`}>
-                            {confirmLabels.download}
-                          </a>
-                        </Button>
+                        <a
+                          href={`/${locale}/settings/danger-zone/download?file=${encodeURIComponent(backup.fileName)}`}
+                          className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--surface-border)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
+                        >
+                          {confirmLabels.download}
+                        </a>
                         <Button
                           type="button"
                           variant="destructive"

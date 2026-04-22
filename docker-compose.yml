@@ -3,30 +3,36 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: nekogym:latest
     container_name: nekogym
+    env_file:
+      - .env
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3000}:3000"
     environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: 3000
+      APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-3000}}
       CRON_SECRET: ${CRON_SECRET:-change-me}
       LESSON_RECONCILE_DAILY_AT: ${LESSON_RECONCILE_DAILY_AT:-03:00}
       LESSON_RECONCILE_RUN_ON_STARTUP: ${LESSON_RECONCILE_RUN_ON_STARTUP:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
     volumes:
-      # Default: named volume for full data folder (DB + backups).
+      # Persistenza DB SQLite + backup.
       - nekogym_data:/app/data
-      # Alternative (bind mounts to local folders):
+      # Alternative (bind mount cartella locale):
       # - ./data:/app/data
-      # Alternative (single DB file + backups subfolder):
+      # Alternative (file singolo DB + cartella backup):
       # - ./data/nekogym.db:/app/data/nekogym.db
       # - ./data/backups:/app/data/backups
-      # Alternative (named volumes split by subpath):
-      # - nekogym_data_db:/app/data
-      # - nekogym_data_backups:/app/data/backups
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/').then((res)=>process.exit(res.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
     restart: unless-stopped
-
-
 
 volumes:
   nekogym_data:
-  # nekogym_data_db:
-  # nekogym_data_backups:

@@ -164,8 +164,9 @@ export async function GET(
     sections,
   });
   const fileName = `nekogym-reports-${days}d.pdf`;
+  const body = new Uint8Array(pdf).buffer;
 
-  return new Response(pdf, {
+  return new Response(body, {
     headers: {
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${fileName}"`,

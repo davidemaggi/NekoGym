@@ -518,10 +518,12 @@ export default async function LessonsPage({
                                   {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} ·{" "}
                                   <span className="inline-flex items-center gap-1">
                                     {currentUser.role === "ADMIN" && pendingApprovalsCount > 0 ? (
-                                      <AlertTriangle
-                                        className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400"
-                                        title={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}
-                                      />
+                                      <span title={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}>
+                                        <AlertTriangle
+                                          className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400"
+                                          aria-label={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}
+                                        />
+                                      </span>
                                     ) : (
                                       <Users className="h-3.5 w-3.5" />
                                     )}

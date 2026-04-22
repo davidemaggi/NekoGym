@@ -344,19 +344,81 @@ npm run webpush:vapid
 
 ## 8. Docker
 
-Il container usa il custom server (`npm run start`), quindi include anche i background services.
+Il container usa il custom server (`npm run start`), quindi include anche:
+
+- bootstrap DB (`prisma migrate deploy`)
+- background jobs (reconcile, outbox worker, digest report, ecc.)
+- bot Telegram (se configurato)
+
+### 8.1 Deploy con Docker Compose
+
+1. Prepara le variabili ambiente:
+
+```bash
+cp .env.example .env
+```
+
+2. Aggiorna almeno:
+
+- `CRON_SECRET`
+- `APP_URL` (es. `https://tuo-dominio.tld` oppure `http://server:3000`)
+- SMTP / Telegram / Web Push se vuoi usare i canali di notifica
+- `DEV_HTTPS="false"` (in container, salvo setup certificati dedicato con mount)
+
+3. Avvia in background:
 
 ```bash
 docker compose up --build -d
+```
+
+4. Verifica stato e log:
+
+```bash
+docker compose ps
 docker compose logs -f nekogym
+```
+
+5. Stop:
+
+```bash
 docker compose down
 ```
+
+### 8.2 Persistenza dati
+
+Di default Compose monta un volume nominato:
+
+- `nekogym_data` -> `/app/data`
+
+Quindi vengono persistiti:
+
+- `/app/data/nekogym.db`
+- `/app/data/backups/*`
+
+Per usare una cartella locale host, abilita il bind mount già commentato in `docker-compose.yml`:
+
+- `./data:/app/data`
+
+### 8.3 Aggiornamento applicazione
+
+```bash
+git pull
+docker compose up --build -d
+docker compose logs -f nekogym
+```
+
+### 8.4 Porte e healthcheck
+
+- Porta host configurabile con `APP_PORT` (default `3000`)
+- Container in ascolto su `3000`
+- Healthcheck HTTP incluso sia in Dockerfile che in Compose
 
 ## 9. Variabili ambiente
 
 Base (vedi `.env.example`):
 
 - `CRON_SECRET`
+- `APP_PORT` (solo Docker Compose, default `3000`)
 - `APP_URL`
 - `APP_DATETIME_LOCALE`
 - `APP_DATETIME_TIMEZONE`

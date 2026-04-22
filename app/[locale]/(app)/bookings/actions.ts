@@ -86,6 +86,47 @@ function bookingMessages(locale: string) {
   };
 }
 
+function isLessonFullError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("LESSON_FULL");
+}
+
+async function consumeFixedPlanUnitsIfEligible(input: {
+  tx: Prisma.TransactionClient;
+  traineeId: string;
+  units: number;
+}) {
+  if (input.units <= 0) return;
+
+  const trainee = await input.tx.user.findUnique({
+    where: { id: input.traineeId },
+    select: {
+      role: true,
+      membershipStatus: true,
+      subscriptionType: true,
+      subscriptionRemaining: true,
+    },
+  });
+
+  if (
+    !trainee ||
+    trainee.role !== "TRAINEE" ||
+    trainee.membershipStatus !== "ACTIVE" ||
+    trainee.subscriptionType !== "FIXED"
+  ) {
+    return;
+  }
+
+  await input.tx.user.update({
+    where: { id: input.traineeId },
+    data: {
+      subscriptionRemaining:
+        trainee.subscriptionRemaining === null
+          ? null
+          : Math.max(0, trainee.subscriptionRemaining - input.units),
+    },
+  });
+}
+
 async function promoteOldestWaitlistEntry(input: {
   tx: Prisma.TransactionClient;
   lessonId: string;
@@ -501,15 +542,36 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
 
       const requiresConfirmation = accessMode === "REQUIRES_CONFIRMATION";
 
-      await tx.lessonBooking.create({
-        data: {
-          lessonId,
-          traineeId: user.id,
-          status: requiresConfirmation ? "PENDING" : "CONFIRMED",
-          confirmedAt: requiresConfirmation ? null : new Date(),
-          confirmedById: requiresConfirmation ? null : user.id,
-        },
-      });
+      try {
+        await tx.lessonBooking.create({
+          data: {
+            lessonId,
+            traineeId: user.id,
+            status: requiresConfirmation ? "PENDING" : "CONFIRMED",
+            confirmedAt: requiresConfirmation ? null : new Date(),
+            confirmedById: requiresConfirmation ? null : user.id,
+          },
+        });
+      } catch (error) {
+        if (!isLessonFullError(error)) {
+          throw error;
+        }
+
+        await tx.lessonWaitlistEntry.upsert({
+          where: {
+            lessonId_traineeId: {
+              lessonId,
+              traineeId: user.id,
+            },
+          },
+          create: {
+            lessonId,
+            traineeId: user.id,
+          },
+          update: {},
+        });
+        return "QUEUED" as const;
+      }
 
       if (requiresConfirmation) {
         const staffTargets = await getLessonStaffTargets({ tx, lessonId });
@@ -534,13 +596,11 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         });
       }
 
-      if (fullUser.role === "TRAINEE" && fullUser.membershipStatus === "ACTIVE" && fullUser.subscriptionType === "FIXED") {
-        await tx.user.update({
-          where: { id: user.id },
-          data: {
-            subscriptionRemaining:
-              fullUser.subscriptionRemaining === null ? null : Math.max(0, fullUser.subscriptionRemaining - 1),
-          },
+      if (!requiresConfirmation) {
+        await consumeFixedPlanUnitsIfEligible({
+          tx,
+          traineeId: user.id,
+          units: 1,
         });
       }
 
@@ -561,7 +621,11 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : messages.failed,
+      message: isLessonFullError(error)
+        ? messages.noSeats
+        : error instanceof Error
+          ? error.message
+          : messages.failed,
     };
   }
 }
@@ -802,6 +866,12 @@ export async function confirmLessonBookingAction(formData: FormData): Promise<Bo
         autoApprovedCount = 1;
       }
 
+      await consumeFixedPlanUnitsIfEligible({
+        tx,
+        traineeId: booking.trainee.id,
+        units: autoApprovedCount,
+      });
+
       const staffTargets = await getStaffTargetsForLessonIds({ tx, lessonIds: affectedLessonIds });
       if (staffTargets.length > 0) {
         await enqueueNotificationForUsers(tx, staffTargets, {
@@ -882,6 +952,7 @@ export async function rejectLessonBookingAction(formData: FormData): Promise<Boo
       if (!canManage) throw new Error(messages.cannotConfirm);
       if (booking.lesson.status !== "SCHEDULED" || booking.lesson.deletedAt) throw new Error(messages.lessonUnavailable);
       if (booking.lesson.startsAt <= new Date()) throw new Error(messages.lessonStarted);
+      if (booking.status !== "PENDING") throw new Error(messages.alreadyConfirmed);
 
       await tx.lessonBooking.delete({ where: { id: booking.id } });
 

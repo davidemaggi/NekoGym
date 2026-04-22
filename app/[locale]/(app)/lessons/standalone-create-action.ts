@@ -98,6 +98,10 @@ function messages(locale: string) {
   };
 }
 
+function isLessonFullError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("LESSON_FULL");
+}
+
 async function getLessonStaffTargets(input: {
   tx: Prisma.TransactionClient;
   lessonId: string;
@@ -836,15 +840,22 @@ export async function addLessonAttendeeMutationAction(formData: FormData): Promi
         if (sameCourseDay) throw new Error(t.sameCourseDay);
       }
 
-      await tx.lessonBooking.create({
-        data: {
-          lessonId,
-          traineeId: attendeeId,
-          status: "CONFIRMED",
-          confirmedAt: new Date(),
-          confirmedById: currentUser.id,
-        },
-      });
+      try {
+        await tx.lessonBooking.create({
+          data: {
+            lessonId,
+            traineeId: attendeeId,
+            status: "CONFIRMED",
+            confirmedAt: new Date(),
+            confirmedById: currentUser.id,
+          },
+        });
+      } catch (error) {
+        if (isLessonFullError(error)) {
+          throw new Error(t.lessonFull);
+        }
+        throw error;
+      }
       await consumeFixedPlanOneUnitIfEligible({
         tx,
         traineeId: attendeeId,
@@ -1107,16 +1118,27 @@ export async function confirmLessonWaitlistEntryMutationAction(formData: FormDat
       const attendee = await tx.user.findUnique({ where: { id: attendeeId }, select: { id: true, name: true, telegramChatId: true } });
       if (!attendee) throw new Error(t.attendeeNotFound);
 
-      await tx.lessonBooking.create({
-        data: {
-          lessonId,
-          traineeId: attendeeId,
-          status: "CONFIRMED",
-          confirmedAt: new Date(),
-          confirmedById: currentUser.id,
-        },
-      });
+      try {
+        await tx.lessonBooking.create({
+          data: {
+            lessonId,
+            traineeId: attendeeId,
+            status: "CONFIRMED",
+            confirmedAt: new Date(),
+            confirmedById: currentUser.id,
+          },
+        });
+      } catch (error) {
+        if (isLessonFullError(error)) {
+          throw new Error(t.lessonFull);
+        }
+        throw error;
+      }
       await tx.lessonWaitlistEntry.delete({ where: { id: waitlistEntry.id } });
+      await consumeFixedPlanOneUnitIfEligible({
+        tx,
+        traineeId: attendeeId,
+      });
 
       await enqueueAttendeeChangedNotification({
         tx,
