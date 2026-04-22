@@ -97,6 +97,17 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+button,
+[role="button"],
+summary {
+  cursor: pointer;
+}
+
+button:disabled,
+[role="button"][aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
 /* Keep action icons clearly visible by inheriting button/link foreground color. */
 button svg,
 a svg {

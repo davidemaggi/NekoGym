@@ -1,8 +1,12 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { KeyRound, Smartphone, WandSparkles } from "lucide-react";
 
 import { getDictionary, isLocale } from "@/lib/i18n";
+import { prisma } from "@/lib/prisma";
+import { DEFAULT_SITE_LOGO_SVG, sanitizeSiteLogoSvg } from "@/lib/site-logo";
+import { getSiteSettings } from "@/lib/site-settings";
 import { cn } from "@/lib/utils";
 
 import {
@@ -37,6 +41,14 @@ export default async function LoginPage({
   if (!isLocale(locale)) notFound();
 
   const t = getDictionary(locale);
+  const [siteSettings, registeredUser] = await Promise.all([
+    getSiteSettings(),
+    prisma.user.findFirst({
+      select: { id: true },
+    }),
+  ]);
+  const hasRegisteredUsers = Boolean(registeredUser);
+  const siteLogoSrc = sanitizeSiteLogoSvg(siteSettings?.siteLogoSvg ?? DEFAULT_SITE_LOGO_SVG);
   const activeTab = tab === "register" ? "register" : "login";
   const activeMethod = method === "otp" || method === "magic" ? method : "password";
   const isPassword2faStep = activeMethod === "password" && step === "2fa" && Boolean(challenge);
@@ -60,6 +72,9 @@ export default async function LoginPage({
 
   return (
     <section className="space-y-4">
+      <div className="flex items-center justify-center">
+        <Image src={siteLogoSrc} alt={`${t.appName} logo`} width={150} height={150} priority />
+      </div>
       <h1 className="text-2xl font-semibold">{activeTab === "login" ? t.auth.loginTitle : t.auth.registerTitle}</h1>
 
       <Tabs value={activeTab}>
@@ -274,9 +289,11 @@ export default async function LoginPage({
         </>
       ) : (
         <>
-          <p className="rounded-md bg-[var(--muted)] px-3 py-2 text-sm text-[var(--foreground)]">
-            {t.auth.firstUserHint}
-          </p>
+          {!hasRegisteredUsers ? (
+            <p className="rounded-md bg-[var(--muted)] px-3 py-2 text-sm text-[var(--foreground)]">
+              {t.auth.firstUserHint}
+            </p>
+          ) : null}
 
           <form action={registerAction} className="space-y-3">
             <input type="hidden" name="locale" value={locale} />
@@ -325,4 +342,3 @@ export default async function LoginPage({
     </section>
   );
 }
-

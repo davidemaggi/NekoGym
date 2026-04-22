@@ -222,7 +222,7 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="w-full text-left">
+      <button type="button" onClick={() => setOpen(true)} className="w-full cursor-pointer text-left">
         {trigger}
       </button>
       <Dialog open={open} onOpenChange={(next) => (!next ? closeDialog() : setOpen(next))}>

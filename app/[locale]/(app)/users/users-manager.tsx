@@ -69,6 +69,7 @@ type FormPayload = {
 
 type UsersManagerProps = {
   locale: string;
+  currentUserId: string;
   users: UserItem[];
   lessonTypes: Array<{ id: string; name: string }>;
   labels: {
@@ -194,7 +195,7 @@ function dateTimeInputValue(value: string | null): string {
   return `${y}-${m}-${d}T${hh}:${mm}`;
 }
 
-export function UsersManager({ locale, users, lessonTypes, labels }: UsersManagerProps) {
+export function UsersManager({ locale, currentUserId, users, lessonTypes, labels }: UsersManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [createOpen, setCreateOpen] = useState(false);
@@ -493,6 +494,7 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
                               <span>{labels.actions.edit}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem
+                              disabled={user.id === currentUserId}
                               onSelect={() =>
                                 setConfirmation({
                                   kind: "toggleActivation",
@@ -561,6 +563,7 @@ export function UsersManager({ locale, users, lessonTypes, labels }: UsersManage
               <UserFormFields
                 labels={labels}
                 lessonTypes={lessonTypes}
+                disableRoleSelection={editUser.id === currentUserId}
                 defaults={{
                   name: editUser.name,
                   email: editUser.email,
@@ -698,9 +701,11 @@ function UserFormFields({
   labels,
   lessonTypes,
   defaults,
+  disableRoleSelection = false,
 }: {
   labels: UsersManagerProps["labels"];
   lessonTypes: UsersManagerProps["lessonTypes"];
+  disableRoleSelection?: boolean;
   defaults?: {
     name: string;
     email: string;
@@ -802,16 +807,32 @@ function UserFormFields({
             </div>
             <div className="space-y-1">
               <Label htmlFor="role">{labels.fields.role}</Label>
-              <select
-                id="role"
-                name="role"
-                defaultValue={defaults?.role ?? "TRAINEE"}
-                className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
-              >
-                <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
-                <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
-                <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
-              </select>
+              {disableRoleSelection && defaults?.role ? (
+                <>
+                  <input type="hidden" name="role" value={defaults.role} />
+                  <select
+                    id="role"
+                    defaultValue={defaults.role}
+                    disabled
+                    className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--muted)] px-3 text-sm"
+                  >
+                    <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
+                    <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
+                    <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
+                  </select>
+                </>
+              ) : (
+                <select
+                  id="role"
+                  name="role"
+                  defaultValue={defaults?.role ?? "TRAINEE"}
+                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                >
+                  <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
+                  <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
+                  <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
+                </select>
+              )}
             </div>
           </div>
 

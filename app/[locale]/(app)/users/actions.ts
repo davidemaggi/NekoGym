@@ -52,6 +52,7 @@ function t(locale: string) {
     terminateSessionsFailed: isIt ? "Impossibile terminare le sessioni utente." : "Unable to terminate user sessions.",
     cannotDeleteSelf: isIt ? "Non puoi eliminare il tuo utente." : "You cannot delete your own user.",
     cannotDisableSelf: isIt ? "Non puoi disattivare il tuo utente." : "You cannot deactivate your own user.",
+    cannotChangeOwnRole: isIt ? "Non puoi cambiare il tuo ruolo." : "You cannot change your own role.",
     messageQueued: isIt ? "Notifica accodata." : "Notification queued.",
     futureBookingsRevoked:
       isIt
@@ -241,7 +242,7 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
   const msg = t(locale);
 
   try {
-    await requireAnyRole(["ADMIN"], locale);
+    const currentUser = await requireAnyRole(["ADMIN"], locale);
 
     const id = getField(formData, "id");
     const name = getField(formData, "name");
@@ -261,6 +262,7 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
     if (!id) throw new Error(msg.idRequired);
     if (!name || !email) throw new Error(msg.required);
     if (!roles.includes(role)) throw new Error(msg.roleInvalid);
+    if (id === currentUser.id && role !== currentUser.role) throw new Error(msg.cannotChangeOwnRole);
     if (!membershipStatuses.includes(membershipStatus)) throw new Error(msg.membershipInvalid);
     if (!subscriptionTypes.includes(subscriptionType)) throw new Error(msg.subscriptionInvalid);
 

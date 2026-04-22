@@ -10,7 +10,7 @@ export default async function UsersPage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  await requireAnyRole(["ADMIN"], locale);
+  const currentUser = await requireAnyRole(["ADMIN"], locale);
   const safeLocale = isLocale(locale) ? locale : "it";
   const labels = getDictionary(safeLocale).usersPage;
 
@@ -46,6 +46,7 @@ export default async function UsersPage({
   return (
     <UsersManager
       locale={locale}
+      currentUserId={currentUser.id}
       labels={labels}
       lessonTypes={lessonTypes}
       users={users.map((user) => ({
