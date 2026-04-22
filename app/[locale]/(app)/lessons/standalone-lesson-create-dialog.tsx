@@ -53,6 +53,7 @@ type StandaloneLessonDialogProps = {
   trigger?: ReactNode;
   openWeekdays?: Weekday[];
   closedDates?: string[];
+  disableTrainerSelection?: boolean;
 };
 
 function toDateTimeLocalValue(date: Date): string {
@@ -81,6 +82,7 @@ export function StandaloneLessonCreateDialog({
   trigger,
   openWeekdays,
   closedDates,
+  disableTrainerSelection = false,
 }: StandaloneLessonDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -230,10 +232,14 @@ export function StandaloneLessonCreateDialog({
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
               <Label htmlFor={lessonId ? `trainer-${lessonId}` : "trainer-create"}>{labels.trainerLabel}</Label>
+              {disableTrainerSelection ? (
+                <input type="hidden" name="trainerId" value={defaultTrainerId ?? ""} />
+              ) : null}
               <select
                 id={lessonId ? `trainer-${lessonId}` : "trainer-create"}
                 name="trainerId"
                 defaultValue={defaultTrainerId ?? ""}
+                disabled={disableTrainerSelection}
                 className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
               >
                 <option value="">- {labels.trainerLabel} -</option>
@@ -275,4 +281,3 @@ export function StandaloneLessonCreateDialog({
     </Dialog>
   );
 }
-

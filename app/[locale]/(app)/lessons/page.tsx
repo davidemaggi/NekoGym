@@ -114,33 +114,40 @@ export default async function LessonsPage({
 }) {
   const { locale } = await params;
   const { month, flash, flashType, showDeleted, showPast } = await searchParams;
-  const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+  const currentUser = await requireAnyRole(["ADMIN", "TRAINER", "TRAINEE"], locale);
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
   const labels = dictionary.lessonsPage;
   const bookingLabels = dictionary.bookings;
+  const canCreateStandaloneLesson = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
   const includeDeleted = currentUser.role === "ADMIN" && showDeleted === "1";
   const includePast = showPast === "1";
 
   const trainerCandidates =
-    currentUser.role === "ADMIN"
-      ? await prisma.user.findMany({
-          where: { role: { in: ["ADMIN", "TRAINER"] } },
-          select: { id: true, name: true, email: true },
-          orderBy: { name: "asc" },
-        })
-      : [{ id: currentUser.id, name: currentUser.name, email: currentUser.email }];
+    canCreateStandaloneLesson
+      ? currentUser.role === "ADMIN"
+        ? await prisma.user.findMany({
+            where: { role: { in: ["ADMIN", "TRAINER"] } },
+            select: { id: true, name: true, email: true },
+            orderBy: { name: "asc" },
+          })
+        : [{ id: currentUser.id, name: currentUser.name, email: currentUser.email }]
+      : [];
 
-  const lessonTypeCandidates = await prisma.lessonType.findMany({
-    select: { id: true, name: true },
-    orderBy: { name: "asc" },
-  });
+  const lessonTypeCandidates = canCreateStandaloneLesson
+    ? await prisma.lessonType.findMany({
+        select: { id: true, name: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
   const iconOptions = await getLessonTypeIconOptions();
 
-  const attendeeCandidates = await prisma.user.findMany({
-    select: { id: true, name: true, email: true },
-    orderBy: { name: "asc" },
-  });
+  const attendeeCandidates = canCreateStandaloneLesson
+    ? await prisma.user.findMany({
+        select: { id: true, name: true, email: true },
+        orderBy: { name: "asc" },
+      })
+    : [];
 
   const selectedMonth = parseMonthInput(month);
   const monthStart = new Date(selectedMonth.year, selectedMonth.month, 1, 0, 0, 0, 0);
@@ -284,28 +291,31 @@ export default async function LessonsPage({
               <h3 className="text-sm font-semibold">{labels.standaloneTitle}</h3>
               <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.standaloneDescription}</p>
             </div>
-            <StandaloneLessonCreateDialog
-              locale={locale}
-              trainerCandidates={trainerCandidates}
-              lessonTypeCandidates={lessonTypeCandidates}
-              defaultTrainerId={currentUser.role === "TRAINER" ? currentUser.id : undefined}
-              labels={{
-                triggerCta: labels.createStandaloneCta,
-                title: labels.standaloneTitle,
-                description: labels.standaloneDescription,
-                trainerLabel: labels.trainerLabel,
-                standaloneDuration: labels.standaloneDuration,
-                standaloneMaxAttendees: labels.standaloneMaxAttendees,
-                standaloneCancellationWindow: labels.standaloneCancellationWindow,
-                standaloneLessonType: labels.standaloneLessonType,
-                lessonTitleLabel: labels.lessonTitleLabel,
-                lessonDescriptionLabel: labels.lessonDescriptionLabel,
-                startsAtLabel: labels.startsAtLabel,
-                submitCta: labels.createStandaloneCta,
-                processing: labels.processing,
-                closeCta: labels.closeCta,
-              }}
-            />
+            {canCreateStandaloneLesson ? (
+              <StandaloneLessonCreateDialog
+                locale={locale}
+                trainerCandidates={trainerCandidates}
+                lessonTypeCandidates={lessonTypeCandidates}
+                defaultTrainerId={currentUser.role === "TRAINER" ? currentUser.id : undefined}
+                disableTrainerSelection={currentUser.role === "TRAINER"}
+                labels={{
+                  triggerCta: labels.createStandaloneCta,
+                  title: labels.standaloneTitle,
+                  description: labels.standaloneDescription,
+                  trainerLabel: labels.trainerLabel,
+                  standaloneDuration: labels.standaloneDuration,
+                  standaloneMaxAttendees: labels.standaloneMaxAttendees,
+                  standaloneCancellationWindow: labels.standaloneCancellationWindow,
+                  standaloneLessonType: labels.standaloneLessonType,
+                  lessonTitleLabel: labels.lessonTitleLabel,
+                  lessonDescriptionLabel: labels.lessonDescriptionLabel,
+                  startsAtLabel: labels.startsAtLabel,
+                  submitCta: labels.createStandaloneCta,
+                  processing: labels.processing,
+                  closeCta: labels.closeCta,
+                }}
+              />
+            ) : null}
           </div>
         </div>
 
@@ -386,7 +396,7 @@ export default async function LessonsPage({
                           trainerName: lesson.trainer?.name ?? null,
                           occupancy: `${lesson._count.bookings}/${lesson.maxAttendees}`,
                           queueLength: lesson.waitlistEntries.length,
-                          canViewWaitlist: true,
+                          canViewWaitlist: currentUser.role === "ADMIN" || currentUser.role === "TRAINER",
                           isCourseLesson: Boolean(lesson.course?.id),
                           lessonTypeName: lesson.lessonType?.name ?? null,
                           lessonTypeIcon: lesson.lessonType

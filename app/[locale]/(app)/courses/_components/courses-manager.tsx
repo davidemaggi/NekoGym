@@ -667,6 +667,8 @@ export function CoursesManager({
                 scheduleSlots={createSchedule}
                 lessonTypes={lessonTypes}
                 trainerCandidates={trainerCandidates}
+                disableTrainerSelection={currentUser.role === "TRAINER"}
+                fixedTrainerId={currentUser.id}
                 onAddSlot={(weekday, startTime) => addScheduleSlot("create", weekday, startTime)}
                 onRemoveSlot={(weekday, startTime) => removeScheduleSlot("create", weekday, startTime)}
               />
@@ -902,6 +904,8 @@ export function CoursesManager({
                 scheduleSlots={editSchedule}
                 lessonTypes={lessonTypes}
                 trainerCandidates={trainerCandidates}
+                disableTrainerSelection={currentUser.role === "TRAINER"}
+                fixedTrainerId={currentUser.id}
                 onAddSlot={(weekday, startTime) => addScheduleSlot("edit", weekday, startTime)}
                 onRemoveSlot={(weekday, startTime) => removeScheduleSlot("edit", weekday, startTime)}
               />
@@ -995,6 +999,8 @@ function CourseFields({
   scheduleSlots,
   lessonTypes,
   trainerCandidates,
+  disableTrainerSelection = false,
+  fixedTrainerId,
   onAddSlot,
   onRemoveSlot,
 }: {
@@ -1016,6 +1022,8 @@ function CourseFields({
   scheduleSlots: ScheduleSlot[];
   lessonTypes: LessonTypeItem[];
   trainerCandidates: TrainerCandidate[];
+  disableTrainerSelection?: boolean;
+  fixedTrainerId?: string;
   onAddSlot: (weekday: Weekday, startTime: string) => void;
   onRemoveSlot: (weekday: Weekday, startTime: string) => void;
 }) {
@@ -1076,10 +1084,12 @@ function CourseFields({
         </div>
         <div className="space-y-1">
           <Label htmlFor="trainerId">{labels.trainer}</Label>
+          {disableTrainerSelection ? <input type="hidden" name="trainerId" value={fixedTrainerId ?? defaultValues.trainerId} /> : null}
           <select
             id="trainerId"
             name="trainerId"
             defaultValue={defaultValues.trainerId}
+            disabled={disableTrainerSelection}
             className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
           >
             <option value="">-</option>

@@ -323,6 +323,7 @@ export function BookingsManager({
                         openWeekdays={openWeekdays}
                         closedDates={closedDates}
                         defaultTrainerId={defaultTrainerId}
+                        disableTrainerSelection={!canUpdateTrainer}
                         defaultStartsAt={defaultStartsAtForDay(day.date)}
                         labels={{
                           triggerCta: lessonCreateLabels.createStandaloneCta,
@@ -591,6 +592,7 @@ export function BookingsManager({
                         openWeekdays={openWeekdays}
                         closedDates={closedDates}
                         defaultTrainerId={defaultTrainerId}
+                        disableTrainerSelection={!canUpdateTrainer}
                         defaultStartsAt={defaultStartsAtForDay(day.date)}
                         labels={{
                           triggerCta: lessonCreateLabels.createStandaloneCta,

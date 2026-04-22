@@ -21,7 +21,7 @@ export type AppMenuItem = {
 export const appMenuItems: AppMenuItem[] = [
   { key: "dashboard", href: "/", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "courses", href: "/courses", allowedRoles: ["ADMIN", "TRAINER"] },
-  { key: "lessons", href: "/lessons", allowedRoles: ["ADMIN", "TRAINER"] },
+  { key: "lessons", href: "/lessons", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "bookings", href: "/bookings", allowedRoles: ["ADMIN", "TRAINER", "TRAINEE"] },
   { key: "users", href: "/users", allowedRoles: ["ADMIN"] },
   { key: "reports", href: "/reports", allowedRoles: ["ADMIN"] },
