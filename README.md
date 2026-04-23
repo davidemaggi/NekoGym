@@ -413,6 +413,37 @@ docker compose logs -f nekogym
 - Container in ascolto su `3000`
 - Healthcheck HTTP incluso sia in Dockerfile che in Compose
 
+### 8.5 Build e push immagine con GitHub Actions (GitHub Container Registry)
+
+Workflow incluso: `.github/workflows/docker-build-push.yml`
+
+Trigger:
+
+- `push` su branch `main` / `master`
+- esecuzione manuale (`workflow_dispatch`)
+
+Comportamento:
+
+- il workflow esegue `semantic-release`
+- se viene pubblicata una nuova release, aggiorna automaticamente la versione applicativa (`package.json`, `package-lock.json`, `CHANGELOG.md`) e crea tag git `vX.Y.Z`
+- solo in caso di nuova release builda e pubblica l'immagine Docker
+- viene verificato che `package.json.version` combaci con la versione semantic release prima del push immagine
+- il push avviene su `ghcr.io/<owner>/<repo>` (repository GitHub in lowercase)
+- autenticazione via `GITHUB_TOKEN` della action (richiede `packages: write` nel workflow)
+
+Tag pubblicati dal workflow:
+
+- `${version}` (es. `1.4.2`)
+- `v${version}` (es. `v1.4.2`)
+- `latest`
+
+Regole semantic versioning (Conventional Commits):
+
+- `fix:` -> patch (`x.y.Z`)
+- `feat:` -> minor (`x.Y.z`)
+- `BREAKING CHANGE:` o `feat!:`/`fix!:` -> major (`X.y.z`)
+- commit non conformi non producono una nuova release
+
 ## 9. Variabili ambiente
 
 Base (vedi `.env.example`):
