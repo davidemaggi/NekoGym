@@ -93,7 +93,7 @@ A trainee can signup for an account, but they cannot book lessons until an admin
 
 This codebase treats course-to-lessons reconciliation as a critical business workflow.
 
-When editing code around courses/lessons:
+When editing code around courses/lessons: 
  
 - Assume reconcile behavior is safety-critical for bookings and notifications.
 - Preserve the meaning of reconcile outcomes:
