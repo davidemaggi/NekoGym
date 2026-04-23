@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/davidemaggi/NekoGym/compare/v1.0.1...v1.0.2) (2026-04-23)
+
+
+### Bug Fixes
+
+* trigger release ([1742850](https://github.com/davidemaggi/NekoGym/commit/174285068ecfe04712261ff9a38d8ff35791d921))
+
 ## [1.0.1](https://github.com/davidemaggi/NekoGym/compare/v1.0.0...v1.0.1) (2026-04-23)
 
 
