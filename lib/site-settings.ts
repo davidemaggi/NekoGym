@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
 
@@ -91,6 +92,18 @@ export async function getSiteSettings() {
   return prisma.siteSettings.findUnique({ where: { id: 1 } });
 }
 
+export async function getSiteSettingsSafe() {
+  try {
+    return await getSiteSettings();
+  } catch (error) {
+    // During image/build-time prerender there might be no migrated DB yet.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2021") {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function upsertSiteSettings(input: SiteSettingsInput) {
   const safeLogoSvg = sanitizeSiteLogoSvg(input.siteLogoSvg);
   const safeWeeklyResetWeekday = WEEKDAY_VALUES.includes(input.weeklyResetWeekday)
@@ -124,4 +137,3 @@ export async function upsertSiteSettings(input: SiteSettingsInput) {
     },
   });
 }
-

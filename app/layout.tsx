@@ -4,7 +4,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeInitializer } from "@/components/layout/theme-initializer";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { AppToaster } from "@/components/ui/toaster";
-import { prisma } from "@/lib/prisma";
+import { getSiteSettingsSafe } from "@/lib/site-settings";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
 import "./globals.css";
 
@@ -19,10 +19,7 @@ const geistMono = Geist_Mono({
 });
 
 export async function generateMetadata(): Promise<Metadata> {
-  const siteSettings = await prisma.siteSettings.findUnique({
-    where: { id: 1 },
-    select: { siteName: true, siteLogoSvg: true },
-  });
+  const siteSettings = await getSiteSettingsSafe();
   const siteName = siteSettings?.siteName?.trim() || "NekoGym";
   const siteLogoSvg = sanitizeSiteLogoSvg(siteSettings?.siteLogoSvg);
 

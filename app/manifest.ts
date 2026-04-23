@@ -1,12 +1,9 @@
 import type { MetadataRoute } from "next";
 
-import { prisma } from "@/lib/prisma";
+import { getSiteSettingsSafe } from "@/lib/site-settings";
 
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const siteSettings = await prisma.siteSettings.findUnique({
-    where: { id: 1 },
-    select: { siteName: true },
-  });
+  const siteSettings = await getSiteSettingsSafe();
   const siteName = siteSettings?.siteName?.trim() || "NekoGym";
 
   return {

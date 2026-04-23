@@ -2,8 +2,8 @@ import { ImageResponse } from "next/og";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 
-import { prisma } from "@/lib/prisma";
 import { DEFAULT_SITE_LOGO_SVG, sanitizeSiteLogoSvg } from "@/lib/site-logo";
+import { getSiteSettingsSafe } from "@/lib/site-settings";
 
 export const runtime = "nodejs";
 
@@ -31,10 +31,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const size = parseSize(url.searchParams.get("size"));
 
-  const siteSettings = await prisma.siteSettings.findUnique({
-    where: { id: 1 },
-    select: { siteLogoSvg: true },
-  });
+  const siteSettings = await getSiteSettingsSafe();
   const logoPath = sanitizeSiteLogoSvg(siteSettings?.siteLogoSvg);
   const logoDataUrl = await loadLogoSvgDataUrl(logoPath);
 
