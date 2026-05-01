@@ -67,6 +67,7 @@ export async function loginWithPasswordAction(formData: FormData) {
   const locale = sanitizeLocale(asString(formData, "locale"));
   const email = asString(formData, "email").toLowerCase();
   const password = asString(formData, "password");
+  const clientIp = await getClientIp();
   let challengeToken: string | null = null;
 
   if (!email || !password) {
@@ -74,7 +75,7 @@ export async function loginWithPasswordAction(formData: FormData) {
   }
 
   try {
-    const result = await loginWithPassword({ email, password, locale });
+    const result = await loginWithPassword({ email, password, locale, clientIp: clientIp ?? undefined });
     if (result.requiresTwoFactor) {
       challengeToken = result.challengeToken;
     }

@@ -17,7 +17,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as PushSubscriptionPayload;
+  let body: PushSubscriptionPayload;
+  try {
+    body = (await request.json()) as PushSubscriptionPayload;
+  } catch {
+    return NextResponse.json({ ok: false, message: "Invalid JSON payload" }, { status: 400 });
+  }
   const endpoint = body.endpoint?.trim();
   const p256dh = body.keys?.p256dh?.trim();
   const auth = body.keys?.auth?.trim();
@@ -45,4 +50,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
-

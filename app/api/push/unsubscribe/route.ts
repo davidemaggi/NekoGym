@@ -13,7 +13,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unauthorized" }, { status: 401 });
   }
 
-  const body = (await request.json()) as UnsubscribePayload;
+  let body: UnsubscribePayload;
+  try {
+    body = (await request.json()) as UnsubscribePayload;
+  } catch {
+    return NextResponse.json({ ok: false, message: "Invalid JSON payload" }, { status: 400 });
+  }
   const endpoint = body.endpoint?.trim();
   if (!endpoint) {
     return NextResponse.json({ ok: false, message: "Invalid endpoint" }, { status: 400 });
@@ -28,4 +33,3 @@ export async function POST(request: Request) {
 
   return NextResponse.json({ ok: true });
 }
-

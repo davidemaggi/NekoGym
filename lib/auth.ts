@@ -34,6 +34,9 @@ const OTP_REQUEST_MAX_PER_IP_DEFAULT = 20;
 const OTP_VERIFY_WINDOW_MS_DEFAULT = 10 * 60 * 1000;
 const OTP_VERIFY_MAX_FAILURES_PER_USER_DEFAULT = 8;
 const OTP_VERIFY_MAX_FAILURES_PER_IP_DEFAULT = 25;
+const PASSWORD_LOGIN_WINDOW_MS_DEFAULT = 10 * 60 * 1000;
+const PASSWORD_LOGIN_MAX_FAILURES_PER_EMAIL_DEFAULT = 8;
+const PASSWORD_LOGIN_MAX_FAILURES_PER_IP_DEFAULT = 25;
 
 function parsePositiveIntEnv(input: string | undefined, fallback: number, min: number, max: number) {
   if (!input) return fallback;
@@ -81,6 +84,24 @@ const OTP_VERIFY_MAX_FAILURES_PER_IP = parsePositiveIntEnv(
   1,
   5_000
 );
+const PASSWORD_LOGIN_WINDOW_MS = parsePositiveIntEnv(
+  process.env.AUTH_PASSWORD_LOGIN_WINDOW_MS,
+  PASSWORD_LOGIN_WINDOW_MS_DEFAULT,
+  10_000,
+  24 * 60 * 60 * 1000
+);
+const PASSWORD_LOGIN_MAX_FAILURES_PER_EMAIL = parsePositiveIntEnv(
+  process.env.AUTH_PASSWORD_LOGIN_MAX_FAILURES_PER_EMAIL,
+  PASSWORD_LOGIN_MAX_FAILURES_PER_EMAIL_DEFAULT,
+  1,
+  1_000
+);
+const PASSWORD_LOGIN_MAX_FAILURES_PER_IP = parsePositiveIntEnv(
+  process.env.AUTH_PASSWORD_LOGIN_MAX_FAILURES_PER_IP,
+  PASSWORD_LOGIN_MAX_FAILURES_PER_IP_DEFAULT,
+  1,
+  5_000
+);
 
 function buildSessionExpiry() {
   return new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
@@ -106,6 +127,10 @@ function hashIp(input: string) {
   return createHash("sha256").update(`ip:${input}`).digest("hex");
 }
 
+function hashEmailForRateLimit(input: string) {
+  return createHash("sha256").update(`email:${input}`).digest("hex");
+}
+
 function sanitizeClientIp(raw?: string | null) {
   const value = (raw ?? "").trim();
   if (!value) return null;
@@ -113,7 +138,7 @@ function sanitizeClientIp(raw?: string | null) {
   return value.split(",")[0]?.trim() || null;
 }
 
-function otpRateLimitKey(input: { flow: "request" | "verify"; scope: "ip" | "user"; value: string }) {
+function otpRateLimitKey(input: { flow: "request" | "verify" | "password"; scope: "ip" | "user"; value: string }) {
   return `otp:${input.flow}:${input.scope}:${input.value}`;
 }
 
@@ -573,9 +598,30 @@ export async function registerUser(input: {
   return user;
 }
 
-export async function loginWithPassword(input: { email: string; password: string; locale: string }) {
+export async function loginWithPassword(input: { email: string; password: string; locale: string; clientIp?: string }) {
   const msg = authMessages(input.locale);
   const normalizedEmail = input.email.trim().toLowerCase();
+  const clientIp = sanitizeClientIp(input.clientIp);
+  const emailKey = otpRateLimitKey({
+    flow: "password",
+    scope: "user",
+    value: hashEmailForRateLimit(normalizedEmail),
+  });
+  const ipKey = clientIp
+    ? otpRateLimitKey({
+        flow: "password",
+        scope: "ip",
+        value: hashIp(clientIp),
+      })
+    : null;
+
+  if (!(await consumeOtpRateLimit(emailKey, PASSWORD_LOGIN_MAX_FAILURES_PER_EMAIL, PASSWORD_LOGIN_WINDOW_MS))) {
+    throw new Error(msg.loginCodeRateLimited);
+  }
+  if (ipKey && !(await consumeOtpRateLimit(ipKey, PASSWORD_LOGIN_MAX_FAILURES_PER_IP, PASSWORD_LOGIN_WINDOW_MS))) {
+    throw new Error(msg.loginCodeRateLimited);
+  }
+
   const user = await getLoginTargetUserByEmail(normalizedEmail);
 
   if (!user || user.isDisabled || !verifyPassword(input.password, user.passwordHash)) {
@@ -587,6 +633,8 @@ export async function loginWithPassword(input: { email: string; password: string
   }
 
   if (user.totpEnabled) {
+    await Promise.all([clearOtpRateLimit(emailKey), ...(ipKey ? [clearOtpRateLimit(ipKey)] : [])]);
+
     const challengeToken = await prisma.$transaction(async (tx) => {
       return createAuthToken({
         tx,
@@ -601,6 +649,8 @@ export async function loginWithPassword(input: { email: string; password: string
       challengeToken,
     };
   }
+
+  await Promise.all([clearOtpRateLimit(emailKey), ...(ipKey ? [clearOtpRateLimit(ipKey)] : [])]);
 
   await createSession(user.id);
   return {

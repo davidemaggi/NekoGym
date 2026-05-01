@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { timingSafeEqual } from "node:crypto";
 
 import { reconcileFutureLessonsForAllCourses } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
@@ -10,12 +11,19 @@ function isAuthorized(request: Request): boolean {
   if (!configured) return false;
 
   const headerSecret = request.headers.get("x-cron-secret");
-  if (headerSecret && headerSecret === configured) return true;
+  if (headerSecret && safeEqualSecret(headerSecret, configured)) return true;
 
   const auth = request.headers.get("authorization");
   if (!auth) return false;
   const token = auth.replace(/^Bearer\s+/i, "").trim();
-  return token === configured;
+  return safeEqualSecret(token, configured);
+}
+
+function safeEqualSecret(input: string, expected: string): boolean {
+  const a = Buffer.from(input);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(a, b);
 }
 
 export async function POST(request: Request) {
@@ -33,4 +41,3 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Unable to reconcile lessons" }, { status: 500 });
   }
 }
-
