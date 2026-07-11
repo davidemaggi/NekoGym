@@ -45,11 +45,13 @@ export default async function ProfileSettingsPage({
   const pushCount = await prisma.webPushSubscription.count({
     where: { userId: user.id },
   });
+  const webPushPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim() || "";
 
   return (
     <ProfileSettingsManager
       locale={locale}
       labels={labels}
+      webPushPublicKey={webPushPublicKey}
       initialIdentity={{
         email: fullUser?.email ?? user.email,
         pendingEmail: fullUser?.pendingEmail ?? null,

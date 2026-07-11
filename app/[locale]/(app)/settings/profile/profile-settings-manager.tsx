@@ -24,6 +24,7 @@ import { OtpCodeField } from "@/components/ui/otp-code-field";
 
 type ProfileSettingsManagerProps = {
   locale: string;
+  webPushPublicKey: string;
   labels: {
     title: string;
     subtitle: string;
@@ -476,7 +477,7 @@ function TelegramTabContent(props: {
   );
 }
 
-export function ProfileSettingsManager({ locale, labels, initialIdentity, initialTelegram }: ProfileSettingsManagerProps) {
+export function ProfileSettingsManager({ locale, labels, webPushPublicKey, initialIdentity, initialTelegram }: ProfileSettingsManagerProps) {
   const [isPending, startTransition] = useTransition();
   const [isIdentityPending, startIdentityTransition] = useTransition();
   const [state, setState] = useState(initialTelegram);
@@ -517,9 +518,9 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
       isStandalone,
       isIOS,
       permission: hasNotification ? Notification.permission : "unsupported",
-      vapidConfigured: Boolean(process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY),
+      vapidConfigured: Boolean(webPushPublicKey),
     };
-  }, []);
+  }, [webPushPublicKey]);
 
   const unsupportedReasons = useMemo(() => {
     if (!webPushDiagnostics) return [] as string[];
@@ -696,7 +697,7 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
         return;
       }
 
-      const vapidPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
+      const vapidPublicKey = webPushPublicKey;
       if (!vapidPublicKey) {
         toast.error(labels.webPushMissingKey);
         return;
@@ -874,7 +875,5 @@ export function ProfileSettingsManager({ locale, labels, initialIdentity, initia
     </section>
   );
 }
-
-
 
 
