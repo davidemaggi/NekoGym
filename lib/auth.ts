@@ -103,6 +103,13 @@ const PASSWORD_LOGIN_MAX_FAILURES_PER_IP = parsePositiveIntEnv(
   5_000
 );
 
+function isSessionCookieSecure() {
+  const configured = process.env.AUTH_COOKIE_SECURE?.trim().toLowerCase();
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+  return process.env.NODE_ENV === "production";
+}
+
 function buildSessionExpiry() {
   return new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 }
@@ -206,7 +213,7 @@ async function setSessionCookie(token: string, expiresAt: Date) {
   cookieStore.set(SESSION_COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
+    secure: isSessionCookieSecure(),
     path: "/",
     expires: expiresAt,
   });

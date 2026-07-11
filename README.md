@@ -500,6 +500,7 @@ Base (vedi `.env.example`):
 - `CRON_SECRET`
 - `APP_PORT` (solo Docker Compose, default `3000`)
 - `APP_URL`
+- `AUTH_COOKIE_SECURE` (`true` in HTTPS/prod, `false` solo per test HTTP locale)
 - `APP_DATETIME_LOCALE`
 - `APP_DATETIME_TIMEZONE`
 - `NEXT_PUBLIC_APP_DATETIME_LOCALE`
