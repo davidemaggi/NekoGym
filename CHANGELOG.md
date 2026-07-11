@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/davidemaggi/NekoGym/compare/v1.0.3...v1.0.4) (2026-07-11)
+
+
+### Bug Fixes
+
+* configured docker ([031ce1f](https://github.com/davidemaggi/NekoGym/commit/031ce1f275e923420d8867ff558bca603dde55ed))
+
 ## [1.0.3](https://github.com/davidemaggi/NekoGym/compare/v1.0.2...v1.0.3) (2026-05-01)
 
 
