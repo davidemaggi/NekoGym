@@ -1,3 +1,10 @@
+## [1.0.12](https://github.com/davidemaggi/NekoGym/compare/v1.0.11...v1.0.12) (2026-07-11)
+
+
+### Bug Fixes
+
+* banner notifiche ([55ab8ec](https://github.com/davidemaggi/NekoGym/commit/55ab8ecad8596d978fba6f6e94f4312c9eb52c00))
+
 ## [1.0.11](https://github.com/davidemaggi/NekoGym/compare/v1.0.10...v1.0.11) (2026-07-11)
 
 
