@@ -53,6 +53,7 @@ type AppSidebarProps = {
   locale: Locale;
   siteName: string;
   siteLogoSvg: string;
+  appVersion: string;
   labels: {
     signedInAs: string;
     logout: string;
@@ -79,7 +80,7 @@ type AppSidebarProps = {
   };
 };
 
-export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppSidebarProps) {
+export function AppSidebar({ user, locale, siteName, siteLogoSvg, appVersion, labels }: AppSidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -397,6 +398,15 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, labels }: AppS
           ].join(" ")}
         >
           {user.role}
+        </p>
+        <p
+          className={[
+            "mt-2 text-[0.7rem] text-[var(--muted-foreground)]",
+            isDesktopCollapsed ? "text-center" : "",
+          ].join(" ")}
+          title={`NekoGym ${appVersion}`}
+        >
+          {isDesktopCollapsed ? `v${appVersion}` : `NekoGym v${appVersion}`}
         </p>
       </SidebarFooter>
     </Sidebar>

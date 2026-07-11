@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { getAppVersion } from "@/lib/app-version";
 import { getCurrentUser } from "@/lib/auth";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { DEFAULT_SITE_LOGO_SVG } from "@/lib/site-logo";
@@ -28,6 +29,7 @@ export default async function AppAreaLayout({
   const siteSettings = await getSiteSettings();
   const siteName = siteSettings?.siteName || dictionary.appName;
   const siteLogoSvg = siteSettings?.siteLogoSvg || DEFAULT_SITE_LOGO_SVG;
+  const appVersion = getAppVersion();
 
   return (
     <div className="flex min-h-screen">
@@ -36,6 +38,7 @@ export default async function AppAreaLayout({
         locale={locale}
         siteName={siteName}
         siteLogoSvg={siteLogoSvg}
+        appVersion={appVersion}
         labels={dictionary.sidebar}
       />
       <main className="min-w-0 flex-1 p-6 md:p-8">
@@ -44,4 +47,3 @@ export default async function AppAreaLayout({
     </div>
   );
 }
-

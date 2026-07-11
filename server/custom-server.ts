@@ -13,9 +13,45 @@ const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
+const appUrl = parseAppUrl(process.env.APP_URL);
 
 function isEnabled(value?: string): boolean {
   return value?.trim().toLowerCase() === "true";
+}
+
+function parseAppUrl(value?: string) {
+  if (!value) return null;
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+function firstHeaderValue(value: string | string[] | undefined): string | undefined {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw?.split(",")[0]?.trim() || undefined;
+}
+
+function normalizeForwardedHeaders(req: IncomingMessage) {
+  const forwardedHost = firstHeaderValue(req.headers["x-forwarded-host"]);
+  const forwardedProto = firstHeaderValue(req.headers["x-forwarded-proto"]);
+  const appHost = appUrl?.host;
+  const appProto = appUrl?.protocol.replace(/:$/, "");
+
+  if (forwardedHost) {
+    req.headers.host = forwardedHost;
+  } else if (appHost && (!req.headers.host || req.headers.host.startsWith("0.0.0.0"))) {
+    req.headers.host = appHost;
+  }
+
+  if (!forwardedProto && appProto) {
+    req.headers["x-forwarded-proto"] = appProto;
+  }
+
+  if (!req.headers["x-forwarded-host"] && req.headers.host) {
+    req.headers["x-forwarded-host"] = req.headers.host;
+  }
 }
 
 function prepareDatabase() {
@@ -52,6 +88,7 @@ async function main() {
   const stopBackgroundServices = startBackgroundServices(log);
 
   const requestHandler = (req: IncomingMessage, res: ServerResponse) => {
+    normalizeForwardedHeaders(req);
     void handle(req, res);
   };
 
@@ -112,5 +149,4 @@ async function main() {
 }
 
 void main();
-
 

@@ -479,6 +479,7 @@ Comportamento:
 - l'immagine riceve label OCI con repository, revisione git e versione
 - `GIT_HASH` e `DEPLOYMENT_VERSION` sono passati al build Next.js per build id e version skew protection self-hosted
 - `DEPLOYMENT_VERSION` resta SemVer per tag/label Docker, mentre `next.config.ts` lo normalizza per `deploymentId` perché Next accetta solo lettere, numeri, `_` e `-`
+- `APP_VERSION` viene impostata nell'immagine Docker e mostrata nel footer della sidebar
 
 Tag pubblicati dal workflow:
 

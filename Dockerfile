@@ -26,6 +26,7 @@ ARG DEPLOYMENT_VERSION
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV APP_VERSION=${DEPLOYMENT_VERSION}
 ENV DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION}
 LABEL org.opencontainers.image.source="https://github.com/davidemaggi/NekoGym"
 LABEL org.opencontainers.image.revision="${GIT_HASH}"
