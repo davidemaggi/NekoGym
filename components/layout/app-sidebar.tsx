@@ -378,7 +378,7 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, appVersion, la
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link
+              <a
                 href={logoutHref}
                 className="w-full"
                 onClick={() => {
@@ -387,7 +387,7 @@ export function AppSidebar({ user, locale, siteName, siteLogoSvg, appVersion, la
               >
                 <LogOut size={14} />
                 {labels.logout}
-              </Link>
+              </a>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
