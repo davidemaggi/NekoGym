@@ -76,7 +76,7 @@ async function main() {
     import("@/server/background-services"),
   ]);
 
-  const app = next({ dev, hostname, port });
+  const app = next({ dev });
   const handle = app.getRequestHandler();
 
   await app.prepare();
@@ -149,4 +149,3 @@ async function main() {
 }
 
 void main();
-
