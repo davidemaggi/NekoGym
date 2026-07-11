@@ -33,24 +33,28 @@ function firstHeaderValue(value: string | string[] | undefined): string | undefi
   return raw?.split(",")[0]?.trim() || undefined;
 }
 
+function isInternalHost(value: string | undefined) {
+  const host = value?.toLowerCase().split(":")[0];
+  return !host || host === "0.0.0.0" || host === "localhost" || host === "127.0.0.1" || host === "::1" || host === "[::1]";
+}
+
 function normalizeForwardedHeaders(req: IncomingMessage) {
   const forwardedHost = firstHeaderValue(req.headers["x-forwarded-host"]);
   const forwardedProto = firstHeaderValue(req.headers["x-forwarded-proto"]);
   const appHost = appUrl?.host;
   const appProto = appUrl?.protocol.replace(/:$/, "");
+  const requestHost = firstHeaderValue(req.headers.host);
+  const publicHost = !isInternalHost(forwardedHost) ? forwardedHost : appHost || (!isInternalHost(requestHost) ? requestHost : undefined);
 
-  if (forwardedHost) {
-    req.headers.host = forwardedHost;
-  } else if (appHost && (!req.headers.host || req.headers.host.startsWith("0.0.0.0"))) {
-    req.headers.host = appHost;
+  if (publicHost) {
+    req.headers.host = publicHost;
+    req.headers["x-forwarded-host"] = publicHost;
   }
 
-  if (!forwardedProto && appProto) {
+  if (appProto) {
     req.headers["x-forwarded-proto"] = appProto;
-  }
-
-  if (!req.headers["x-forwarded-host"] && req.headers.host) {
-    req.headers["x-forwarded-host"] = req.headers.host;
+  } else if (!forwardedProto) {
+    req.headers["x-forwarded-proto"] = "http";
   }
 }
 

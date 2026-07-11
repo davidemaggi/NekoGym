@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { logoutCurrentUser } from "@/lib/auth";
+import { getAppBaseUrl, logoutCurrentUser } from "@/lib/auth";
 import { defaultLocale, isLocale } from "@/lib/i18n";
 
 export async function GET(
@@ -12,6 +12,5 @@ export async function GET(
 
   await logoutCurrentUser();
 
-  return NextResponse.redirect(new URL(`/${locale}/login`, request.url));
+  return NextResponse.redirect(new URL(`/${locale}/login`, getAppBaseUrl()));
 }
-
