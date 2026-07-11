@@ -107,6 +107,14 @@ type Dictionary = {
     installCta: string;
     dismissCta: string;
   };
+  webPushPrompt: {
+    title: string;
+    description: string;
+    enableCta: string;
+    dismissCta: string;
+    unsupported: string;
+    enabled: string;
+  };
   auth: {
     loginTitle: string;
     registerTitle: string;
@@ -837,6 +845,14 @@ const dictionaries: Record<Locale, Dictionary> = {
       installCta: "Installa",
       dismissCta: "Non ora",
     },
+    webPushPrompt: {
+      title: "Attiva le notifiche",
+      description: "Ricevi avvisi su prenotazioni, cambi lezione e comunicazioni importanti.",
+      enableCta: "Attiva",
+      dismissCta: "Non ora",
+      unsupported: "Le notifiche Web Push non sono disponibili in questo browser.",
+      enabled: "Notifiche Web Push attivate.",
+    },
     bookings: {
       title: "Calendario",
       description: "Visualizza le lezioni future e prenota i posti disponibili.",
@@ -1566,6 +1582,14 @@ const dictionaries: Record<Locale, Dictionary> = {
       description: "Add the app to your home screen for faster access and more reliable notifications.",
       installCta: "Install",
       dismissCta: "Not now",
+    },
+    webPushPrompt: {
+      title: "Enable notifications",
+      description: "Get alerts for bookings, lesson changes, and important messages.",
+      enableCta: "Enable",
+      dismissCta: "Not now",
+      unsupported: "Web Push notifications are not available in this browser.",
+      enabled: "Web Push notifications enabled.",
     },
     bookings: {
       title: "Calendar",

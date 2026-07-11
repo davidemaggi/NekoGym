@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
+import { WebPushPromptBanner } from "@/components/pwa/web-push-banner";
 import { getAppVersion } from "@/lib/app-version";
 import { getCurrentUser } from "@/lib/auth";
 import { getDictionary, isLocale } from "@/lib/i18n";
@@ -30,6 +31,7 @@ export default async function AppAreaLayout({
   const siteName = siteSettings?.siteName || dictionary.appName;
   const siteLogoSvg = siteSettings?.siteLogoSvg || DEFAULT_SITE_LOGO_SVG;
   const appVersion = getAppVersion();
+  const webPushPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim() || "";
 
   return (
     <div className="flex min-h-screen">
@@ -42,6 +44,7 @@ export default async function AppAreaLayout({
         labels={dictionary.sidebar}
       />
       <main className="min-w-0 flex-1 p-6 md:p-8">
+        <WebPushPromptBanner publicKey={webPushPublicKey} labels={dictionary.webPushPrompt} />
         {children}
       </main>
     </div>
