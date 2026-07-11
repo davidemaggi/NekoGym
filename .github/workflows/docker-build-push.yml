@@ -30,6 +30,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
 
       - name: Semantic release
         id: semantic
@@ -39,15 +40,18 @@ jobs:
             @semantic-release/changelog@6.0.3
             @semantic-release/git@10.0.1
             @semantic-release/npm@12.0.2
+            @semantic-release/github@11.0.1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Ensure app version matches semantic release version
+      - name: Checkout release tag and export image metadata
         if: steps.semantic.outputs.new_release_published == 'true'
         env:
           RELEASE_VERSION: ${{ steps.semantic.outputs.new_release_version }}
         run: |
           set -eu
+          git fetch --tags --force
+          git checkout "v${RELEASE_VERSION}"
           APP_VERSION="$(node -p "require('./package.json').version")"
           if [ "${APP_VERSION}" != "${RELEASE_VERSION}" ]; then
             echo "package.json version (${APP_VERSION}) does not match release version (${RELEASE_VERSION})"
@@ -56,6 +60,7 @@ jobs:
           IMAGE_REPOSITORY="$(echo "${GITHUB_REPOSITORY}" | tr '[:upper:]' '[:lower:]')"
           echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
           echo "IMAGE=ghcr.io/${IMAGE_REPOSITORY}" >> "$GITHUB_ENV"
+          echo "GIT_HASH=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
 
       - name: Set up Docker Buildx
         if: steps.semantic.outputs.new_release_published == 'true'
@@ -80,5 +85,12 @@ jobs:
             ${{ env.IMAGE }}:${{ env.APP_VERSION }}
             ${{ env.IMAGE }}:v${{ env.APP_VERSION }}
             ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ env.GIT_HASH }}
+            org.opencontainers.image.version=${{ env.APP_VERSION }}
+          build-args: |
+            GIT_HASH=${{ env.GIT_HASH }}
+            DEPLOYMENT_VERSION=${{ env.APP_VERSION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

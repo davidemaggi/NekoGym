@@ -12,14 +12,24 @@ COPY package.json package-lock.json* ./
 RUN npm ci
 
 FROM base AS build
+ARG GIT_HASH
+ARG DEPLOYMENT_VERSION
+ENV GIT_HASH=${GIT_HASH}
+ENV DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run prisma:generate && npm run build
 
 FROM base AS runner
+ARG GIT_HASH
+ARG DEPLOYMENT_VERSION
 ENV NODE_ENV=production
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV DEPLOYMENT_VERSION=${DEPLOYMENT_VERSION}
+LABEL org.opencontainers.image.source="https://github.com/davidemaggi/NekoGym"
+LABEL org.opencontainers.image.revision="${GIT_HASH}"
+LABEL org.opencontainers.image.version="${DEPLOYMENT_VERSION}"
 
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/.next ./.next

@@ -350,7 +350,7 @@ Il container usa il custom server (`npm run start`), quindi include anche:
 - background jobs (reconcile, outbox worker, digest report, ecc.)
 - bot Telegram (se configurato)
 
-### 8.1 Deploy con Docker Compose
+### 8.1 Test locale con Docker Compose
 
 1. Prepara le variabili ambiente:
 
@@ -365,7 +365,7 @@ cp .env.example .env
 - SMTP / Telegram / Web Push se vuoi usare i canali di notifica
 - `DEV_HTTPS="false"` (in container, salvo setup certificati dedicato con mount)
 
-3. Avvia in background:
+3. Builda e avvia in background:
 
 ```bash
 docker compose up --build -d
@@ -384,7 +384,46 @@ docker compose logs -f nekogym
 docker compose down
 ```
 
-### 8.2 Persistenza dati
+### 8.2 Deploy da GitHub Container Registry
+
+Quando il workflow GitHub pubblica una release, l'immagine viene caricata su GHCR.
+Sul server di deploy serve solo Docker Compose e un file `.env` configurato.
+
+1. Prepara `.env`:
+
+```bash
+cp .env.example .env
+```
+
+2. Imposta almeno:
+
+- `IMAGE_REPOSITORY=ghcr.io/davidemaggi/nekogym` oppure `ghcr.io/<owner>/<repo>`
+- `IMAGE_TAG=latest`, `vX.Y.Z` oppure `X.Y.Z`
+- `CRON_SECRET`
+- `APP_URL`
+- SMTP / Telegram / Web Push se usati
+
+3. Scarica e avvia l'immagine pubblicata:
+
+```bash
+docker compose -f docker-compose.deploy.yml pull
+docker compose -f docker-compose.deploy.yml up -d
+```
+
+Comando compatto per aggiornare un deploy esistente:
+
+```bash
+docker compose -f docker-compose.deploy.yml pull && docker compose -f docker-compose.deploy.yml up -d
+```
+
+Per consultare stato e log:
+
+```bash
+docker compose -f docker-compose.deploy.yml ps
+docker compose -f docker-compose.deploy.yml logs -f nekogym
+```
+
+### 8.3 Persistenza dati
 
 Di default Compose monta un volume nominato:
 
@@ -399,7 +438,14 @@ Per usare una cartella locale host, abilita il bind mount già commentato in `do
 
 - `./data:/app/data`
 
-### 8.3 Aggiornamento applicazione
+Nel compose di deploy (`docker-compose.deploy.yml`) il volume nominato è già configurato. Se preferisci bind mount su host, sostituisci il volume con:
+
+```yaml
+volumes:
+  - ./data:/app/data
+```
+
+### 8.4 Aggiornamento applicazione da sorgente
 
 ```bash
 git pull
@@ -407,13 +453,13 @@ docker compose up --build -d
 docker compose logs -f nekogym
 ```
 
-### 8.4 Porte e healthcheck
+### 8.5 Porte e healthcheck
 
 - Porta host configurabile con `APP_PORT` (default `3000`)
 - Container in ascolto su `3000`
 - Healthcheck HTTP incluso sia in Dockerfile che in Compose
 
-### 8.5 Build e push immagine con GitHub Actions (GitHub Container Registry)
+### 8.6 Build e push immagine con GitHub Actions (GitHub Container Registry)
 
 Workflow incluso: `.github/workflows/docker-build-push.yml`
 
@@ -426,10 +472,12 @@ Comportamento:
 
 - il workflow esegue `semantic-release`
 - se viene pubblicata una nuova release, aggiorna automaticamente la versione applicativa (`package.json`, `package-lock.json`, `CHANGELOG.md`) e crea tag git `vX.Y.Z`
-- solo in caso di nuova release builda e pubblica l'immagine Docker
+- solo in caso di nuova release fa checkout del tag appena creato, builda e pubblica l'immagine Docker
 - viene verificato che `package.json.version` combaci con la versione semantic release prima del push immagine
 - il push avviene su `ghcr.io/<owner>/<repo>` (repository GitHub in lowercase)
 - autenticazione via `GITHUB_TOKEN` della action (richiede `packages: write` nel workflow)
+- l'immagine riceve label OCI con repository, revisione git e versione
+- `GIT_HASH` e `DEPLOYMENT_VERSION` sono passati al build Next.js per build id e version skew protection self-hosted
 
 Tag pubblicati dal workflow:
 
