@@ -1,3 +1,10 @@
+## [1.0.10](https://github.com/davidemaggi/NekoGym/compare/v1.0.9...v1.0.10) (2026-07-11)
+
+
+### Bug Fixes
+
+* auth & version ([12bcc47](https://github.com/davidemaggi/NekoGym/commit/12bcc47a8fbfe7587425a99045fbcfee8f5e2e09))
+
 ## [1.0.9](https://github.com/davidemaggi/NekoGym/compare/v1.0.8...v1.0.9) (2026-07-11)
 
 
