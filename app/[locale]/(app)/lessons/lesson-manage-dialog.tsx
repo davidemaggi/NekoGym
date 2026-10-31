@@ -1,6 +1,8 @@
 "use client";
 
 import { weekdayOfDateKey } from "@/lib/date-time";
+import type { PlanUsage } from "@/lib/plan-usage";
+import { PlanUsageTag } from "@/components/users/plan-usage-tag";
 
 import { type ReactNode, useState, useTransition } from "react";
 import { ListChecks, Pencil, Send, ThumbsDown, ThumbsUp } from "lucide-react";
@@ -38,6 +40,7 @@ type AttendeeOption = {
   id: string;
   name: string;
   email?: string;
+  planUsage?: PlanUsage;
 };
 
 type LessonManageDialogProps = {
@@ -556,6 +559,7 @@ export function LessonManageDialog({
                         <UserQuickProfileTooltip userId={attendee.id} locale={locale}>
                           {attendee.name}
                         </UserQuickProfileTooltip>
+                        {attendee.planUsage ? <PlanUsageTag usage={attendee.planUsage} locale={locale} /> : null}
                         <span className="rounded border border-[var(--surface-border)] px-1.5 py-0.5 text-[10px]">
                           {labels.attendanceStatusLabel}:{" "}
                           {lesson.attendeeAttendance[attendee.id] === "PRESENT"
@@ -645,6 +649,7 @@ export function LessonManageDialog({
                         </UserQuickProfileTooltip>
                         {pendingUser.email ? ` (${pendingUser.email})` : ""}
                       </span>
+                      {pendingUser.planUsage ? <PlanUsageTag usage={pendingUser.planUsage} locale={locale} /> : null}
                       {allowPeopleActions ? (
                         <div className="inline-flex items-center gap-1">
                           {canGrantOpenAccess ? (
@@ -704,6 +709,7 @@ export function LessonManageDialog({
                         </UserQuickProfileTooltip>
                         {queuedUser.email ? ` (${queuedUser.email})` : ""}
                       </span>
+                      {queuedUser.planUsage ? <PlanUsageTag usage={queuedUser.planUsage} locale={locale} /> : null}
                       {allowPeopleActions ? (
                         <div className="inline-flex items-center gap-1">
                           <Button type="button" size="sm" variant="outline" onClick={() => handleConfirmWaitlist(queuedUser.id)} disabled={isPending}>

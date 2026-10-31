@@ -5,6 +5,7 @@ import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesso
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
 import { loadMemberPass } from "@/lib/member-pass";
+import { type PlanUsage, withLessonPlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
@@ -127,6 +128,15 @@ export default async function BookingsPage({
     return accessByTypeId.get(lessonTypeId) ?? "REQUIRES_CONFIRMATION";
   }
 
+  // Plan spent by each person in the lesson's own week/month, only for lessons this staff member manages.
+  const planUsage =
+    currentUser.role === "TRAINEE"
+      ? new Map<string, Map<string, PlanUsage>>()
+      : await withLessonPlanUsage(prisma, lessons, (lesson) => [
+          ...lesson.bookings.map((booking) => booking.trainee),
+          ...lesson.waitlistEntries.map((entry) => entry.trainee),
+        ]);
+  const usageOf = (lessonId: string, traineeId: string) => planUsage.get(lessonId)?.get(traineeId);
   const items: BookingsLesson[] = lessons.map((lesson) => {
     const bookedCount = lesson._count.bookings;
     const pendingApprovalsCount = lesson.bookings.filter((booking) => booking.status === "PENDING").length;
@@ -187,7 +197,12 @@ export default async function BookingsPage({
       trainerId: lesson.trainer?.id ?? "",
       trainerName: lesson.trainer?.name ?? null,
       attendees: canManageLesson
-        ? confirmed.map((booking) => ({ id: booking.trainee.id, name: booking.trainee.name, email: booking.trainee.email }))
+        ? confirmed.map((booking) => ({
+            id: booking.trainee.id,
+            name: booking.trainee.name,
+            email: booking.trainee.email,
+            planUsage: usageOf(lesson.id, booking.trainee.id),
+          }))
         : [],
       attendeeAttendance: canManageLesson
         ? Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null]))
@@ -196,10 +211,20 @@ export default async function BookingsPage({
       pendingApprovals: canManageLesson
         ? lesson.bookings
             .filter((booking) => booking.status === "PENDING")
-            .map((booking) => ({ id: booking.trainee.id, name: booking.trainee.name, email: booking.trainee.email }))
+            .map((booking) => ({
+              id: booking.trainee.id,
+              name: booking.trainee.name,
+              email: booking.trainee.email,
+              planUsage: usageOf(lesson.id, booking.trainee.id),
+            }))
         : [],
       waitlist: canManageLesson
-        ? lesson.waitlistEntries.map((entry) => ({ id: entry.trainee.id, name: entry.trainee.name, email: entry.trainee.email }))
+        ? lesson.waitlistEntries.map((entry) => ({
+            id: entry.trainee.id,
+            name: entry.trainee.name,
+            email: entry.trainee.email,
+            planUsage: usageOf(lesson.id, entry.trainee.id),
+          }))
         : [],
     };
   });

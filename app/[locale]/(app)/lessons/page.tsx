@@ -25,6 +25,7 @@ import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateParts, g
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
+import { withLessonPlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 import { textLinkActionClass } from "@/lib/ui-classes";
@@ -116,6 +117,15 @@ export default async function LessonsPage({
     phase: "ended" | "inProgress" | "upcoming";
   };
 
+  // Plan spent by each person in the lesson's own week/month (staff only reads it).
+  const planUsage = await withLessonPlanUsage(prisma, lessons, (lesson) => [
+    ...lesson.bookings.map((booking) => booking.trainee),
+    ...lesson.waitlistEntries.map((entry) => entry.trainee),
+  ]);
+  const withUsage = <P extends { id: string }>(lessonId: string, person: P) => ({
+    ...person,
+    planUsage: planUsage.get(lessonId)?.get(person.id),
+  });
   const rows: Row[] = lessons.map((lesson) => {
     const confirmed = lesson.bookings.filter((booking) => booking.status === "CONFIRMED");
     const canManageLesson = isAdmin || lesson.trainerId === currentUser.id;
@@ -157,10 +167,12 @@ export default async function LessonsPage({
       canViewWaitlist: true,
       canManageLesson,
       canManageAttendance: canManageLesson && lesson.endsAt <= now && !isDeleted,
-      attendees: confirmed.map((booking) => booking.trainee),
+      attendees: confirmed.map((booking) => withUsage(lesson.id, booking.trainee)),
       attendeeAttendance: Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])),
-      pendingApprovals: lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => booking.trainee),
-      waitlist: lesson.waitlistEntries.map((entry) => entry.trainee),
+      pendingApprovals: lesson.bookings
+        .filter((booking) => booking.status === "PENDING")
+        .map((booking) => withUsage(lesson.id, booking.trainee)),
+      waitlist: lesson.waitlistEntries.map((entry) => withUsage(lesson.id, entry.trainee)),
       isDeleted,
       modifiedReasons: Array.from(modifiedReasons),
       // (On a cancelled lesson isCustomized only marks a staff cancellation, not an edit.)

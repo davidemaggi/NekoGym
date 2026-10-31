@@ -1,6 +1,7 @@
 "use client";
 
 import { getAppTimeParts } from "@/lib/date-time";
+import type { PlanUsage } from "@/lib/plan-usage";
 
 import { useId, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
@@ -40,7 +41,7 @@ import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
-type Person = { id: string; name: string; email: string };
+type Person = { id: string; name: string; email: string; planUsage?: PlanUsage };
 
 export type BookingsLesson = {
   id: string;

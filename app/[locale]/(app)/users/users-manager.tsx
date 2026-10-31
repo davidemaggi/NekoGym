@@ -1,6 +1,8 @@
 "use client";
 
 import { appDateTimeLocalValue } from "@/lib/date-time";
+import type { PlanUsage } from "@/lib/plan-usage";
+import { PlanUsageTag } from "@/components/users/plan-usage-tag";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
@@ -46,6 +48,8 @@ type UserItem = {
   subscriptionType: "NONE" | "WEEKLY" | "MONTHLY" | "FIXED";
   subscriptionLessons: number | null;
   subscriptionRemaining: number | null;
+  /** Current week/month (or pack) usage; null without a plan. */
+  planUsage: PlanUsage | null;
   subscriptionResetAt: string | null;
   subscriptionEndsAt: string | null;
   lessonTypeAccesses: Array<{ lessonTypeId: string; mode: "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED" }>;
@@ -225,9 +229,6 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
         ? "Terminare tutte le sessioni attive di {name}?"
         : "Terminate all active sessions for {name}?",
     disabledBadge: locale === "it" ? "Disattivato" : "Disabled",
-    remaining: locale === "it" ? "rimaste" : "left",
-    perWeek: locale === "it" ? "a settimana" : "per week",
-    perMonth: locale === "it" ? "al mese" : "per month",
     allStatuses: locale === "it" ? "Tutti gli stati" : "All statuses",
     statusActive: locale === "it" ? "Attivi" : "Active",
     statusDisabled: locale === "it" ? "Disattivati" : "Disabled",
@@ -388,19 +389,12 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
     if (user.subscriptionType === "NONE") return labels.subscriptionOptions.NONE;
     const base = labels.subscriptionOptions[user.subscriptionType];
     if (user.subscriptionLessons === null) return base;
-    if (user.subscriptionType === "FIXED") {
-      return (
-        <>
-          {base} · <span className="tabular font-semibold text-[var(--foreground)]">{user.subscriptionRemaining ?? user.subscriptionLessons}/{user.subscriptionLessons}</span>{" "}
-          {localActions.remaining}
-        </>
-      );
-    }
+    // "Mensile [5/12 mese]": where the trainee stands now, not just the plan size.
     return (
-      <>
-        {base} · <span className="tabular font-semibold text-[var(--foreground)]">{user.subscriptionLessons}</span>{" "}
-        {user.subscriptionType === "WEEKLY" ? localActions.perWeek : localActions.perMonth}
-      </>
+      <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
+        {base}
+        {user.planUsage ? <PlanUsageTag usage={user.planUsage} locale={locale} /> : null}
+      </span>
     );
   };
 

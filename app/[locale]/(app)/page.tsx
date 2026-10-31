@@ -9,6 +9,7 @@ import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { loadMemberPass } from "@/lib/member-pass";
+import { withLessonPlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
 import { textLinkActionClass } from "@/lib/ui-classes";
 import { cn } from "@/lib/utils";
@@ -288,6 +289,15 @@ export default async function DashboardPage({
     orderBy: { startsAt: "asc" },
   });
 
+  // Plan spent by each person in the lesson's own week/month (staff only reads it).
+  const planUsage = await withLessonPlanUsage(prisma, todayLessons, (lesson) => [
+    ...lesson.bookings.map((booking) => booking.trainee),
+    ...lesson.waitlistEntries.map((entry) => entry.trainee),
+  ]);
+  const withUsage = <P extends { id: string }>(lessonId: string, person: P) => ({
+    ...person,
+    planUsage: planUsage.get(lessonId)?.get(person.id),
+  });
   const rows: HomeLesson[] = todayLessons.map((lesson) => {
     const confirmed = lesson.bookings.filter((booking) => booking.status === "CONFIRMED");
     const canManageLesson = currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id;
@@ -319,10 +329,12 @@ export default async function DashboardPage({
       canViewWaitlist: true,
       canManageLesson,
       canManageAttendance: canManageLesson && lesson.endsAt <= now,
-      attendees: confirmed.map((booking) => booking.trainee),
+      attendees: confirmed.map((booking) => withUsage(lesson.id, booking.trainee)),
       attendeeAttendance: Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])),
-      pendingApprovals: lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => booking.trainee),
-      waitlist: lesson.waitlistEntries.map((entry) => entry.trainee),
+      pendingApprovals: lesson.bookings
+        .filter((booking) => booking.status === "PENDING")
+        .map((booking) => withUsage(lesson.id, booking.trainee)),
+      waitlist: lesson.waitlistEntries.map((entry) => withUsage(lesson.id, entry.trainee)),
     };
   });
   const peopleToday = rows.reduce((sum, lesson) => sum + lesson.bookedCount, 0);

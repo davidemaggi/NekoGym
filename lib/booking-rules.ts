@@ -1,6 +1,7 @@
 import type { LessonBookingStatus, LessonTypeAccessMode, Prisma, Weekday } from "@prisma/client";
 
 import { appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
+import { planCountedBookingWhere } from "@/lib/plan-usage";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
 // Shared booking rules: the same checks apply to a trainee booking a lesson
@@ -179,16 +180,8 @@ export async function evaluateBookingEligibility(input: {
 
       const settings = await tx.siteSettings.findUnique({ where: { id: 1 }, select: { weeklyResetWeekday: true } });
       const window = planWindowForLesson(lesson.startsAt, user.subscriptionType, settings?.weeklyResetWeekday ?? "MONDAY");
-      const bookingsInWindow = await tx.lessonBooking.count({
-        where: {
-          traineeId: input.userId,
-          lesson: {
-            status: "SCHEDULED",
-            startsAt: { gte: window.start, lt: window.end },
-            deletedAt: null,
-          },
-        },
-      });
+      // Same counting rule the staff sees as "used / limit" (lib/plan-usage.ts).
+      const bookingsInWindow = await tx.lessonBooking.count({ where: planCountedBookingWhere(input.userId, window) });
 
       if (bookingsInWindow >= user.subscriptionLessons) return { ok: false, reason: "planDenied" };
     }

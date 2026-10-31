@@ -3,11 +3,11 @@
 import type React from "react";
 import { ChevronRight } from "lucide-react";
 
-import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
+import { LessonDetailsDialogTrigger, type LessonPerson } from "@/components/lessons/lesson-details-dialog-trigger";
 import type { Dictionary } from "@/lib/i18n";
 import { textLinkActionClass } from "@/lib/ui-classes";
 
-type Person = { id: string; name: string; email?: string };
+type Person = LessonPerson;
 
 /** The fields the manage dialog needs; BookingsLesson and the home rows both satisfy it. */
 export type ManageableLesson = {

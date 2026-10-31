@@ -1,5 +1,8 @@
 "use client";
 
+import { PlanUsageTag } from "@/components/users/plan-usage-tag";
+import type { PlanUsage } from "@/lib/plan-usage";
+
 import { getAppDateTimeConfig } from "@/lib/date-time";
 
 import { type ReactNode, useState, useTransition } from "react";
@@ -15,6 +18,9 @@ import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { hexToRgba } from "@/lib/lesson-type-icons";
+
+/** A person in the lesson; staff views carry their plan usage for the lesson's period. */
+export type LessonPerson = { id: string; name: string; email?: string; planUsage?: PlanUsage };
 
 type LessonDetailsDialogTriggerProps = {
   locale: string;
@@ -65,10 +71,10 @@ type LessonDetailsDialogTriggerProps = {
       lessonTypeId: string;
       canManageTrainer: boolean;
       canManageAttendance: boolean;
-      attendees: Array<{ id: string; name: string; email?: string }>;
+      attendees: Array<LessonPerson>;
       attendeeAttendance: Record<string, "PRESENT" | "NO_SHOW" | null>;
-      pendingApprovals: Array<{ id: string; name: string; email?: string }>;
-      waitlist: Array<{ id: string; name: string; email?: string }>;
+      pendingApprovals: Array<LessonPerson>;
+      waitlist: Array<LessonPerson>;
     };
     trainerCandidates: Array<{ id: string; name: string }>;
     lessonTypeCandidates: Array<{ id: string; name: string }>;
@@ -211,7 +217,7 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
     </div>
   );
 
-  function peopleList(title: string, empty: string, people: Array<{ id: string; name: string }>, prefix: string) {
+  function peopleList(title: string, empty: string, people: Array<LessonPerson>, prefix: string) {
     return (
       <section>
         <h3 className="flex items-baseline justify-between text-[15px] font-semibold">
@@ -223,10 +229,12 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
         ) : (
           <ul className="mt-1 divide-y divide-[var(--rule)]">
             {people.map((person) => (
-              <li key={`${prefix}-${lesson.id}-${person.id}`} className="flex min-h-11 items-center text-[15px]">
+              <li key={`${prefix}-${lesson.id}-${person.id}`} className="flex min-h-11 items-center justify-between gap-3 text-[15px]">
                 <UserQuickProfileTooltip userId={person.id} locale={locale}>
                   {person.name}
                 </UserQuickProfileTooltip>
+                {/* Plan spent in this lesson's week/month: decides approvals and queue promotions at a glance. */}
+                {person.planUsage ? <PlanUsageTag usage={person.planUsage} locale={locale} /> : null}
               </li>
             ))}
           </ul>
