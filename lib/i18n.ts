@@ -1125,7 +1125,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     usersPage: {
       title: "Utenti",
-      description: "Gestisci utenti, ruoli e configurazioni membership/subscription.",
+      description: "Gestisci utenti, ruoli, iscrizioni e piani.",
       createCta: "Nuovo utente",
       createTitle: "Crea utente",
       editTitle: "Modifica utente",

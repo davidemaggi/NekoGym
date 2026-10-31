@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 
 import { deleteAllLocalNotificationsAction, deleteLocalNotificationAction } from "@/app/[locale]/(app)/my-notifications/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { PageBand } from "@/components/layout/page-band";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { formatDateTimeForApp } from "@/lib/date-time";
@@ -133,23 +134,16 @@ export function MyNotificationsManager({ locale, labels, items, page, totalPages
 
   return (
     <div>
-      <div
-        data-page-band
-        className="-mt-4 bg-[var(--stock)] pb-5 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-6 lg:pt-10"
-      >
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
-            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">
-              {unreadCount > 0 ? (
+      <PageBand
+        title={labels.title}
+        description={<>{unreadCount > 0 ? (
                 <>
                   {unreadCount === 1 ? labels.unreadOne : <>{labels.unreadMany.split("{n}")[0]}<span className="tabular">{unreadCount}</span>{labels.unreadMany.split("{n}")[1]}</>} · {labels.description}
                 </>
               ) : (
                 labels.description
-              )}
-            </p>
-          </div>
+              )}</>}
+        action={
           <Button
             type="button"
             variant="ghost"
@@ -161,8 +155,10 @@ export function MyNotificationsManager({ locale, labels, items, page, totalPages
             <span className="hidden sm:inline">{labels.deleteAllCta}</span>
             <span className="sr-only sm:hidden">{labels.deleteAllCta}</span>
           </Button>
-        </header>
-      </div>
+        }
+      >
+        
+      </PageBand>
 
       {sortedItems.length === 0 ? (
         <p className="pt-6 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>

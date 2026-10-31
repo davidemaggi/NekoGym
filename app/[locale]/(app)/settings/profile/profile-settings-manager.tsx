@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import QRCode from "qrcode";
+import { ShieldOff } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -280,6 +281,7 @@ function SecurityTabContent(props: {
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button type="button" variant="ghost" className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]" disabled={props.isTotpPending}>
+                <ShieldOff size={18} aria-hidden="true" />
                 {props.labels.twoFactorDisableCta}
               </Button>
             </AlertDialogTrigger>
@@ -468,7 +470,7 @@ function TelegramTabContent(props: {
         <SettingsSection title={props.labels.codeLabel} description={props.labels.codeHint}>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
             <div className="min-w-0 space-y-3">
-              <p className="inline-block rounded-xl bg-[var(--muted)] px-4 py-2.5 font-mono text-[1.375rem] font-semibold tracking-wider">
+              <p className="inline-block rounded-xl bg-[var(--muted)] px-4 py-2.5 font-mono text-[1.375rem] font-semibold">
                 {props.state.linkToken}
               </p>
               {props.linkCommand ? (

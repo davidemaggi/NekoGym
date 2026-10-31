@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T13:12:24.732570+00:00",
+  "generatedAt": "2026-10-31T17:48:35.040046+00:00",
   "title": "Design System: NekoGym",
   "extensions": {
     "colorMeta": {
@@ -893,7 +893,7 @@
       "name": "Segmented Control",
       "kind": "custom",
       "refersTo": "segmented-control",
-      "description": "Exclusive views or filters on a muted rail (chart range, course trainer filter, course form panels); 44px options, the pressed one on surface with Lift.",
+      "description": "Exclusive views or filters on a muted rail (chart range, trainer and role filters, course form, user edit and settings panels); 44px options, the pressed one on surface with Lift. Four or more options become a 2x2 grid on phones; URL-changing choices are links with aria-current.",
       "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Trainer\"><button aria-pressed=\"true\">Tutti</button><button aria-pressed=\"false\">Con trainer</button><button aria-pressed=\"false\">Senza trainer</button></div>",
       "css": ".ds-seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--muted, #eceef3); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-seg button { height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted-foreground, #555a78); font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: color 150ms, background-color 150ms; } .ds-seg button:hover { color: var(--foreground, #1f2340); } .ds-seg button[aria-pressed='true'] { background: var(--surface, #ffffff); color: var(--foreground, #1f2340); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-seg button:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
     },
@@ -928,18 +928,57 @@
       "description": "A course's week as a printed timetable: one column per open weekday, giallino tabular time chips, an empty cell keeps the column.",
       "html": "<div class=\"ds-tt\" role=\"group\" aria-label=\"Schedulazione\"><div><p>Lun</p><span class=\"ds-tt-chip\">07:30</span></div><div><p>Mar</p><span class=\"ds-tt-chip\">07:30</span><span class=\"ds-tt-chip\">18:00</span></div><div><p>Mer</p><span class=\"ds-tt-empty\" aria-hidden=\"true\"></span></div><div><p>Gio</p><span class=\"ds-tt-chip\">07:30</span></div><div><p>Ven</p><span class=\"ds-tt-empty\" aria-hidden=\"true\"></span></div><div><p>Sab</p><span class=\"ds-tt-chip\">10:00</span></div></div>",
       "css": ".ds-tt { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-width: 480px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; text-align: center; } .ds-tt div { display: grid; gap: 4px; align-content: start; } .ds-tt p { margin: 0 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted-foreground, #555a78); } .ds-tt-chip { display: block; padding: 4px 0; border-radius: 6px; background: var(--stock-giallino, #f4ecc6); color: var(--stock-ink, #1f2340); font-size: 13px; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-tt-empty { display: block; height: 28px; border-radius: 6px; border: 1px solid var(--rule, #e6e9ef); }"
+    },
+    {
+      "name": "Person Row",
+      "kind": "custom",
+      "refersTo": "person-avatar",
+      "description": "A person in the users list: role-tinted 44px initials avatar, name and email, role/membership tags and plan with a tabular unit figure, outline Modifica and an overflow menu.",
+      "html": "<div class=\"ds-person\"><span class=\"ds-person-av\">GR</span><div class=\"ds-person-id\"><p class=\"ds-person-name\">Giulia Rossi</p><p class=\"ds-person-mail\">giulia@example.it</p><p class=\"ds-person-tags\"><span class=\"ds-tag\">Trainee</span><span class=\"ds-tag ds-tag-ok\">Attiva</span><span class=\"ds-person-plan\">Pacchetto · <b>4/10</b> rimaste</span></p></div><button class=\"ds-person-edit\">Modifica</button></div>",
+      "css": ".ds-person { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 8px 12px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--rule, #e6e9ef); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-person-av { width: 44px; height: 44px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; background: var(--stock-mint, #dcefe3); color: var(--stock-ink, #1f2340); font-weight: 700; font-size: 14px; } .ds-person-name { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-person-mail { margin: 0; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-person-tags { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .ds-tag { border-radius: 8px; padding: 2px 8px; font-size: 13px; font-weight: 600; background: var(--muted, #eceef3); } .ds-tag-ok { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-person-plan { font-size: 14px; color: var(--muted-foreground, #555a78); } .ds-person-plan b { color: var(--foreground, #1f2340); font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-person-edit { height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--foreground, #1f2340); background: var(--surface, #fff); color: inherit; font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-person-edit:hover { background: var(--muted, #eceef3); } .ds-person-edit:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Unread Notification Row",
+      "kind": "custom",
+      "refersTo": "notification-row-unread",
+      "description": "Inbox message; unread ones are lifted off the paper on surface with an ink dot, read ones sit flat on hairlines.",
+      "html": "<ul class=\"ds-inbox\"><li class=\"ds-inbox-row is-new\"><div><p class=\"ds-inbox-subj\"><span class=\"ds-dot\"></span>Lezione annullata</p><p class=\"ds-inbox-date\">sab 31 ott, 08:00</p><p class=\"ds-inbox-body\">Pilates delle 18:00 è stata annullata.</p></div><button aria-label=\"Elimina\" class=\"ds-x\">&#x2715;</button></li><li class=\"ds-inbox-row\"><div><p class=\"ds-inbox-subj\">Prenotazione confermata</p><p class=\"ds-inbox-date\">ven 30 ott, 12:10</p></div><button aria-label=\"Elimina\" class=\"ds-x\">&#x2715;</button></li></ul>",
+      "css": ".ds-inbox { list-style: none; margin: 0; padding: 0; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-inbox-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 0 12px; padding: 16px 0; border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-inbox-row.is-new { margin: 4px 0; padding: 16px; border: 0; border-radius: 16px; background: var(--surface, #fff); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-inbox-subj { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--foreground, #1f2340); } .ds-inbox-date { margin: 2px 0 0; font-size: 14px; color: var(--muted-foreground, #555a78); font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-inbox-body { margin: 8px 0 0; font-size: 15px; max-width: 65ch; } .ds-x { width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--muted-foreground, #555a78); cursor: pointer; transition: background-color 150ms, color 150ms; } .ds-x:hover { background: var(--muted, #eceef3); color: var(--foreground, #1f2340); } .ds-x:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Settings Section with Status Note and Check Row",
+      "kind": "custom",
+      "refersTo": "status-note-ok",
+      "description": "A settings group separated by a rule, never boxed: 17px title, muted description, status note pill (icon + words) and 44px check rows.",
+      "html": "<section class=\"ds-set\"><div class=\"ds-set-head\"><div><h2>Notifiche</h2><p>Scegli come ricevere gli avvisi.</p></div><span class=\"ds-note\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Attiva</span></div><label class=\"ds-check\"><input type=\"checkbox\" checked><span>Email</span></label><label class=\"ds-check\"><input type=\"checkbox\"><span>Telegram<small>Collega prima il tuo account.</small></span></label></section>",
+      "css": ".ds-set { border-top: 1px solid var(--rule, #e6e9ef); padding: 24px 0; max-width: 42rem; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-set-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px 16px; margin-bottom: 16px; } .ds-set h2 { margin: 0; font-size: 17px; font-weight: 600; } .ds-set-head p { margin: 4px 0 0; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-note { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 10px; font-size: 14px; font-weight: 600; background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-check { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 10px 0; font-size: 16px; cursor: pointer; } .ds-check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ring, #5b3fa0); } .ds-check input:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; } .ds-check small { display: block; margin-top: 2px; font-size: 14px; color: var(--muted-foreground, #555a78); }"
+    },
+    {
+      "name": "Report Table",
+      "kind": "custom",
+      "description": "Ruled report table from sm: numeric columns right-aligned tabular, first column as semibold row header, over-threshold cells in semibold danger ink.",
+      "html": "<table class=\"ds-rt\"><thead><tr><th>Corso</th><th class=\"n\">Lezioni</th><th class=\"n\">No-show</th></tr></thead><tbody><tr><th scope=\"row\">Pilates</th><td class=\"n\">24</td><td class=\"n\">12%</td></tr><tr><th scope=\"row\">Yoga</th><td class=\"n\">18</td><td class=\"n hi\">34%</td></tr></tbody></table>",
+      "css": ".ds-rt { width: 100%; border-collapse: collapse; font-size: 15px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-rt thead tr { border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-rt thead th { padding: 8px 16px 8px 0; font-size: 14px; font-weight: 600; text-align: left; color: var(--muted-foreground, #555a78); } .ds-rt tbody tr { border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-rt tbody tr:last-child { border-bottom: 0; } .ds-rt tbody th, .ds-rt td { padding: 12px 16px 12px 0; text-align: left; } .ds-rt tbody th { font-weight: 600; } .ds-rt .n { text-align: right; font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-rt th:last-child, .ds-rt td:last-child { padding-right: 0; } .ds-rt .hi { font-weight: 600; color: var(--danger-fg, #8c2236); }"
+    },
+    {
+      "name": "Course Health Meters",
+      "kind": "custom",
+      "refersTo": "meter-fill",
+      "description": "Fill rate and no-show per course as paired 0-100% pill meters (Chart Blue, muted ink) with values always printed.",
+      "html": "<div class=\"ds-hm\"><p>Pilates</p><div><div class=\"ds-m\"><div class=\"ds-mt\" role=\"meter\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"78\" aria-label=\"Pilates · Riempimento\"><span style=\"width:78%\"></span></div><b>78%</b></div><div class=\"ds-m\"><div class=\"ds-mt ns\" role=\"meter\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"9\" aria-label=\"Pilates · No-show\"><span style=\"width:9%\"></span></div><b>9%</b></div></div></div>",
+      "css": ".ds-hm { display: grid; grid-template-columns: 12rem minmax(0,1fr); gap: 24px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-hm > p { margin: 0; font-size: 15px; font-weight: 600; } .ds-m { display: grid; grid-template-columns: minmax(0,1fr) 3.5rem; gap: 12px; align-items: center; margin-bottom: 6px; } .ds-mt { height: 8px; border-radius: 9999px; overflow: hidden; background: var(--muted, #eceef3); } .ds-mt span { display: block; height: 100%; border-radius: 9999px; background: var(--chart-1, #3b5fc4); } .ds-mt.ns span { background: var(--muted-foreground, #555a78); } .ds-m b { font-weight: 400; font-size: 15px; text-align: right; font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; }"
     }
   ],
   "narrative": {
     "northStar": "Abbonamento",
-    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: four surfaces are the world: Bookings, the per-role Home (staff and member), Lessons and Courses, together with the shared lesson dialog, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui` (including the native select), the home charts, the toaster, the Web Push banner and the PWA install banner. Users, settings, reports, notifications and the auth screens still only inherit the tokens and primitives; their layouts are pre-redesign and are not part of this system. Do not copy their compositions as precedent.",
+    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: the signed-in app is the world: Bookings, the per-role Home (staff and member), Lessons, Courses, Users, the notifications inbox, the settings pages (profile, site, registries, notifications, danger zone), Reports and the sign-in pages (login, register, forgot and reset password, verify email), together with the shared lesson dialog, the shared page band, the settings building blocks, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui` (including the native select), the home charts, the toaster, the Web Push banner and the PWA install banner.",
     "keyCharacteristics": [
       "One paper stock per section; the current stock tints the shell and the page header band.",
       "Night-blue ink for text and primary actions; never a neutral admin grey ground.",
       "One reserved violet stamp for the user's own bookings.",
       "Condensed tabular figures for every time, count and date.",
       "Dashed perforation as the only ornament, also meaning \"provisional\".",
-      "Flat paper; lift only on things picked up: the pass card, the opened or in-progress row, the member's next lesson, the active tab or segment, and overlays.",
+      "Flat paper; lift only on things picked up: the pass card, the sign-in ticket, the opened or in-progress row, the member's next lesson, an unread notification, the active tab or segment, and overlays.",
       "Seats are counted, not charted: one ink segment per seat, dashed while held by a pending request.",
       "44px touch targets, 16px input text, bottom sheets on phones."
     ],
@@ -951,7 +990,7 @@
       },
       {
         "name": "The One Stock Per Section Rule",
-        "body": "A section owns exactly one stock, assigned in the shell. A page never mixes stocks as decoration; a stock appears outside its section only as a nav swatch.",
+        "body": "A section owns exactly one stock, assigned in the shell. A page never mixes stocks as decoration; a stock appears outside its section only as a nav swatch or as a role tint on a person's initials avatar (admin lilla, trainer azzurro, trainee mint), which always sits beside the role named in a tag.",
         "section": "colors"
       },
       {
@@ -971,12 +1010,12 @@
       },
       {
         "name": "The Mono Is For Codes Rule",
-        "body": "Geist Mono appears only where a machine string must be read character by character.",
+        "body": "Geist Mono appears only where a machine string must be read character by character: backup file names, the TOTP secret, the Telegram link code, command and chat id. Dates, sizes, counts and percentages beside a code are never mono; they are `.tabular`.",
         "section": "typography"
       },
       {
         "name": "The Picked-Up Rule",
-        "body": "Only the pass, the one opened or in-progress row, the member's next lesson, the active tab or segment, and overlays carry shadow. Lists, nav, inline banners and ordinary cards stay flat with a hairline.",
+        "body": "Only the pass, the sign-in ticket, the one opened or in-progress row, the member's next lesson, an unread notification, the active tab or segment, and overlays carry shadow. Lists, nav, inline banners, settings sections and ordinary cards stay flat with a hairline.",
         "section": "elevation"
       },
       {
@@ -991,7 +1030,7 @@
       },
       {
         "name": "The Deliberate Delete Rule",
-        "body": "Cancelling a lesson and deleting a course are never row actions. They live in the footer of the object's own dialog as a ghost-danger button and always pass through a confirmation with the solid destructive button. Rows carry only the forward action (manage, edit) or the undo (restore).",
+        "body": "Cancelling a lesson and deleting a course, a person, a lesson type or a backup are never row actions. They live in the footer of the object's own dialog as a ghost-danger button and always pass through a confirmation with the solid destructive button, named by its act. Rows carry only the forward action (manage, edit, open) or the undo (restore).",
         "section": "components"
       }
     ],
@@ -1009,18 +1048,22 @@
       "**Do** dim behind overlays with the `overlay` token, never an ad-hoc black.",
       "**Do** put page filters in the band: independent filters as filter toggles (check icon plus ink stroke when on), exclusive choices as a segmented control.",
       "**Do** give every native select the `.ui-select` class.",
-      "**Do** set status tags at 13px semibold on a semantic ground, and say why a lesson is modified (\"Modificata: orario\")."
+      "**Do** set status tags at 13px semibold on a semantic ground, and say why a lesson is modified (\"Modificata: orario\").",
+      "**Do** draw a page's band with `PageBand` and build settings from `SettingsSection`, `SegmentedTabs`, `CheckRow` and `StatusNote`.",
+      "**Do** name a confirm by its act (Elimina, Disattiva), and give deactivation and deletion the solid destructive fill.",
+      "**Do** right-align numeric table columns in `.tabular`, and print every value a meter or bar shows."
     ],
     "donts": [
       "**Don't** use stamp violet for anything but the user's own bookings (beyond focus ring, caret and control accent).",
       "**Don't** put content on a neutral grey ground; the field is the section paper.",
       "**Don't** add gradient washes, glass, or blur. The only gradients in the build are hard-stop marks: the punched centre of a used entry slot and the hatch key in the chart legend.",
-      "**Don't** add shadow to lists, nav, inline banners or ordinary cards; lift is for the pass, the opened or in-progress row, the next-lesson card, the active tab or segment, and overlays.",
+      "**Don't** add shadow to lists, nav, inline banners, settings sections or ordinary cards; lift is for the pass, the sign-in ticket, the opened or in-progress row, the next-lesson card, an unread notification, the active tab or segment, and overlays.",
       "**Don't** use uppercase lettering outside a stamp face, a stamp chip and weekday abbreviations (the day strip, the course timetable heads); tracking belongs to the stamp alone.",
       "**Don't** use stamp violet or Chart Blue for seats, counts or to-do tiles; seats are ink, tiles are semantic grounds.",
       "**Don't** reorder rows or animate layout when state changes.",
       "**Don't** put cancel or delete buttons in list rows; they belong in the object's dialog footer behind a confirmation.",
-      "**Don't** treat the users, settings, reports, notifications or auth layouts as precedent until they are redesigned."
+      "**Don't** box settings groups in cards; separate them with rules.",
+      "**Don't** set dates, sizes or counts in mono; mono is for codes only."
     ]
   }
 }

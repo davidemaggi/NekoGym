@@ -24,6 +24,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PageBand } from "@/components/layout/page-band";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -407,15 +408,10 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
 
   return (
     <div>
-      <div
-        data-page-band
-        className="-mt-4 bg-[var(--stock)] pb-5 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-6 lg:pt-10"
-      >
-        <header className="flex items-start justify-between gap-3">
-          <div>
-            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
-            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">{labels.description}</p>
-          </div>
+      <PageBand
+        title={labels.title}
+        description={<>{labels.description}</>}
+        action={
           <Dialog open={createOpen} onOpenChange={setCreateOpen}>
             <DialogTrigger asChild>
               <Button aria-label={labels.createCta} className="w-11 px-0 sm:w-auto sm:px-4">
@@ -443,8 +439,8 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
               </form>
             </DialogContent>
           </Dialog>
-        </header>
-
+        }
+      >
         <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
           <div className="relative lg:max-w-sm lg:flex-1">
             <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
@@ -488,7 +484,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
             </select>
           </div>
         </div>
-      </div>
+      </PageBand>
 
       {filteredUsers.length === 0 ? (
         <p className="pt-6 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
@@ -749,7 +745,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="outline">{labels.actions.cancel}</Button>
+              <Button variant="ghost">{labels.actions.cancel}</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button
@@ -1023,19 +1019,22 @@ function UserFormFields({
       </div>
 
       <div className={panelClass("access")}>
-        <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
-          <p className="text-sm font-medium">{labels.fields.lessonTypeAccess}</p>
+        <fieldset>
+          <legend className="text-sm font-semibold">{labels.fields.lessonTypeAccess}</legend>
           {lessonTypes.length === 0 ? (
-            <p className="text-xs text-[var(--muted-foreground)]">-</p>
+            <p className="mt-2 text-[15px] text-[var(--muted-foreground)]">—</p>
           ) : (
             lessonTypes.map((lessonType) => (
-              <div key={`access-${lessonType.id}`} className="grid grid-cols-[1fr_auto] items-center gap-3">
+              <div
+                key={`access-${lessonType.id}`}
+                className="grid gap-1.5 border-b border-[var(--rule)] py-3 last:border-b-0 sm:grid-cols-[1fr_auto] sm:items-center sm:gap-3"
+              >
                 <Label htmlFor={`lessonTypeAccess-${lessonType.id}`}>{lessonType.name}</Label>
                 <select
                   id={`lessonTypeAccess-${lessonType.id}`}
                   name={`lessonTypeAccess:${lessonType.id}`}
                   defaultValue={defaults?.lessonTypeAccesses?.[lessonType.id] ?? "REQUIRES_CONFIRMATION"}
-                  className="ui-select min-w-52"
+                  className="ui-select w-full sm:w-auto sm:min-w-52"
                 >
                   <option value="REQUIRES_CONFIRMATION">{labels.lessonTypeAccessOptions.REQUIRES_CONFIRMATION}</option>
                   <option value="ALLOWED">{labels.lessonTypeAccessOptions.ALLOWED}</option>
@@ -1044,7 +1043,7 @@ function UserFormFields({
               </div>
             ))
           )}
-        </div>
+        </fieldset>
       </div>
     </>
   );
