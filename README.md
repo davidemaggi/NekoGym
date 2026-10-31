@@ -80,9 +80,20 @@ Pagine staff:
 Operazioni disponibili:
 
 - creare lezione standalone (non legata a corso)
+- ripetere una lezione standalone senza creare un corso (vedi sotto)
 - modificare/cancellare/ripristinare standalone
 - aprire dettaglio lezione con tab `Informazioni` + `Persone`
 - gestire iscritti, pending approvals, waitlist
+- vedere per ogni persona quante lezioni del piano ha già usato nel periodo della lezione (es. `2/3 sett.`, `5/12 mese`, `7/10 pacchetto`): stesso conteggio usato dal controllo di prenotazione (`lib/plan-usage.ts`); l'elenco utenti mostra il periodo corrente
+
+Ripetizione lezioni standalone:
+
+- in creazione, sezione `Ripeti`: `Ogni giorno`, `Ogni settimana` (giorni scelti) per N volte o fino a una data, oppure `Date scelte` su un calendario
+- su una lezione standalone esistente, `Ripeti…` nel dettaglio crea copie dal giorno successivo
+- le copie sono lezioni standalone indipendenti (nessun collegamento di serie), senza iscritti, alla stessa ora nella timezone della palestra
+- giorni di chiusura (giorni non aperti / date chiuse) saltati, senza consumare il conteggio; slot nel passato e doppioni esatti (stesso inizio, trainer, tipo e titolo) saltati
+- massimo 60 lezioni per richiesta, entro un anno; l'anteprima nel dialog usa la stessa logica del server (`lib/lesson-recurrence.ts`)
+- le lezioni generate dai corsi non si ripetono: il loro calendario è del corso
 - inviare messaggi broadcast agli iscritti della lezione
 
 Regole su lezioni passate:
@@ -129,14 +140,17 @@ Regole booking:
 Sezione piani:
 
 - `FIXED`: decremento `subscriptionRemaining` alla conferma, rimborso su disiscrizione valida
-- `WEEKLY`/`MONTHLY`: limite prenotazioni nella finestra corrispondente
+- `WEEKLY`/`MONTHLY`: limite prenotazioni nella finestra corrispondente (la settimana parte dal "giorno reset piano settimanale" delle impostazioni sito, il mese dal giorno 1; entrambe calcolate nella timezone della palestra)
 - trial attivo bypassa membership inattiva
 - subscription scaduta può forzare membership a inattiva
 
 Waitlist:
 
 - se lezione piena, utente va in coda
-- liberando posto, promozione automatica del primo in coda
+- liberando posto (disiscrizione, rimozione da parte dello staff, rifiuto di una richiesta pendente), promozione automatica del primo in coda **che rispetta le stesse regole di una prenotazione normale** (membership/trial, piano, accesso tipo lezione, stesso corso stesso giorno)
+- chi in quel momento non è idoneo resta in coda e il posto passa al successivo idoneo
+- se il tipo lezione richiede conferma, il promosso entra in `PENDING`
+- nessuna promozione su lezioni già iniziate/passate
 - notifiche a utente promosso + staff
 
 Pending approvals:
@@ -275,8 +289,11 @@ Vincoli:
 
 - solo lezioni future `isGenerated=true` e non eliminate
 - `isCustomized=true` trattate separatamente
+- una lezione generata annullata dallo staff viene marcata `isCustomized=true` e il reconcile **non la ricrea** nello stesso slot (log `outcome=unchanged reason=cancelled_by_staff_not_recreated`); se viene ripristinata torna `isCustomized=false` e il reconcile la riallinea al corso
 - filtri su schedule palestra (giorni aperti/date chiuse)
 - notifiche inviate per cancellazioni automatiche di lezioni con iscritti
+- rimborso automatico della lezione ai piani `FIXED` per ogni iscrizione confermata di una lezione annullata (vale anche per chiusura palestra, eliminazione corso e annullamento da parte dello staff)
+- orari degli slot interpretati nella timezone della palestra (`APP_DATETIME_TIMEZONE`, default `Europe/Rome`), indipendentemente dalla timezone del server/container
 - log server dettagliati per ogni decisione reconcile (id, startsAt, outcome, reason)
 
 ## 4. Automazioni server (background jobs)
@@ -284,7 +301,7 @@ Vincoli:
 Avviate dal custom server nello stesso processo applicativo:
 
 - reconcile giornaliera lezioni future (`LESSON_RECONCILE_*`)
-- auto-cancel notice window (`LESSON_NOTICE_WINDOW_POLL_MS`)
+- auto-cancel notice window (`LESSON_NOTICE_WINDOW_POLL_MS`): annulla solo le lezioni **senza iscritti** quando entrano nella finestra di preavviso
 - auto-conferma presenze a fine giornata (`LESSON_ATTENDANCE_AUTOCONFIRM_INTERVAL_MS`)
 - pulizia notifiche locali in base a retention utente (`LOCAL_NOTIFICATIONS_CLEANUP_INTERVAL_MS`)
 - digest report via email (`REPORT_DIGEST_*`)
@@ -499,13 +516,14 @@ Regole semantic versioning (Conventional Commits):
 Base (vedi `.env.example`):
 
 - `CRON_SECRET`
+- `NEKOGYM_DATA_DIR` (opzionale, default `./data`: cartella di DB e backup, utile per un DB demo/di test separato)
 - `APP_PORT` (solo Docker Compose, default `3000`)
 - `APP_URL`
 - `AUTH_COOKIE_SECURE` (`true` in HTTPS/prod, `false` solo per test HTTP locale)
 - `APP_DATETIME_LOCALE`
 - `APP_DATETIME_TIMEZONE`
 - `NEXT_PUBLIC_APP_DATETIME_LOCALE`
-- `NEXT_PUBLIC_APP_DATETIME_TIMEZONE`
+- `NEXT_PUBLIC_APP_DATETIME_TIMEZONE` (opzionali: il browser riceve locale e timezone dal server a runtime, tramite il root layout; queste servono solo come fallback)
 
 Reconcile / jobs:
 

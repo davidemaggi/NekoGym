@@ -1,12 +1,13 @@
 import { redirect } from "next/navigation";
 
-import { AppSidebar } from "@/components/layout/app-sidebar";
+import { AppShell } from "@/components/layout/app-sidebar";
 import { WebPushPromptBanner } from "@/components/pwa/web-push-banner";
 import { getAppVersion } from "@/lib/app-version";
 import { getCurrentUser } from "@/lib/auth";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { DEFAULT_SITE_LOGO_SVG } from "@/lib/site-logo";
-import { getSiteSettings } from "@/lib/site-settings";
+import { getSiteSettings, parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
+import { SiteScheduleProvider } from "@/components/lessons/site-schedule-context";
 
 export default async function AppAreaLayout({
   children,
@@ -34,19 +35,23 @@ export default async function AppAreaLayout({
   const webPushPublicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY?.trim() || "";
 
   return (
-    <div className="flex min-h-screen">
-      <AppSidebar
-        user={user}
-        locale={locale}
-        siteName={siteName}
-        siteLogoSvg={siteLogoSvg}
-        appVersion={appVersion}
-        labels={dictionary.sidebar}
-      />
-      <main className="min-w-0 flex-1 p-6 md:p-8">
-        <WebPushPromptBanner publicKey={webPushPublicKey} labels={dictionary.webPushPrompt} />
+    <AppShell
+      user={user}
+      locale={locale}
+      siteName={siteName}
+      siteLogoSvg={siteLogoSvg}
+      appVersion={appVersion}
+      labels={dictionary.sidebar}
+    >
+      <WebPushPromptBanner publicKey={webPushPublicKey} labels={dictionary.webPushPrompt} />
+      <SiteScheduleProvider
+        value={{
+          openWeekdays: parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv),
+          closedDates: parseClosedDatesCsv(siteSettings?.closedDatesCsv),
+        }}
+      >
         {children}
-      </main>
-    </div>
+      </SiteScheduleProvider>
+    </AppShell>
   );
 }

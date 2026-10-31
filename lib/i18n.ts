@@ -8,7 +8,7 @@ export function isLocale(value: string): value is Locale {
   return locales.includes(value as Locale);
 }
 
-type Dictionary = {
+export type Dictionary = {
   appName: string;
   sidebar: {
     title: string;
@@ -19,6 +19,10 @@ type Dictionary = {
     themeToLight: string;
     themeToDark: string;
     settingsSection: string;
+    menu: string;
+    primaryNav: string;
+    skipToContent: string;
+    unreadNotifications: string;
     nav: {
       dashboard: string;
       courses: string;
@@ -80,6 +84,7 @@ type Dictionary = {
     twoFactorSecretLabel: string;
     twoFactorOtpAuthLabel: string;
     twoFactorHint: string;
+    cancelCta: string;
     webPushTitle: string;
     webPushDescription: string;
     webPushSupported: string;
@@ -127,9 +132,13 @@ type Dictionary = {
     nameLabel: string;
     emailLabel: string;
     passwordLabel: string;
+    passwordHint: string;
     loginMethodPassword: string;
     loginMethodOtp: string;
     loginMethodMagicLink: string;
+    loginMethodLabel: string;
+    loginMethodOtpHint: string;
+    loginMethodMagicHint: string;
     sendCodeCta: string;
     verifyCodeCta: string;
     sendMagicLinkCta: string;
@@ -173,8 +182,66 @@ type Dictionary = {
     youAreQueued: string;
     queuedLabel: string;
     joinQueueCta: string;
+    prevWeek: string;
+    nextWeek: string;
+    weekNavigationLabel: string;
+    today: string;
+    noLessonsDay: string;
+    closedDay: string;
+    seatsFree: string;
+    seatFreeOne: string;
+    full: string;
+    queueCount: string;
+    stampBooked: string;
+    stampPending: string;
+    stampQueued: string;
+    cancelBy: string;
+    cancelClosed: string;
+    costFixed: string;
+    costPeriod: string;
+    requiresConfirmation: string;
+    lessonEnded: string;
+    lessonInProgress: string;
+    manageCta: string;
+    showDetails: string;
+    upcomingTitle: string;
+    upcomingEmpty: string;
+    dayLessons: string;
+    pass: {
+      fixedTitle: string;
+      weeklyTitle: string;
+      monthlyTitle: string;
+      remaining: string;
+      availableWeek: string;
+      availableMonth: string;
+      validUntil: string;
+      trialTitle: string;
+      trialUntil: string;
+      inactiveTitle: string;
+      inactiveBody: string;
+      openPlanTitle: string;
+      openPlanBody: string;
+      activeBookings: string;
+      activeBookingsOne: string;
+      slotsLabel: string;
+    };
   };
   lessonsPage: {
+    todayTag: string;
+    emptyMonthTitle: string;
+    emptyMonthFiltered: string;
+    backToCurrentMonth: string;
+    showAllLessonsCta: string;
+    onlyMineCta: string;
+    filtersLabel: string;
+    cancelledTag: string;
+    standaloneTag: string;
+    lessonsCount: string;
+    lessonsCountOne: string;
+    monthLessonsSummary: string;
+    manageCta: string;
+    moreActionsLabel: string;
+    emptyMonth: string;
     title: string;
     description: string;
     prevMonth: string;
@@ -446,12 +513,46 @@ type Dictionary = {
         title: string;
         description: string;
         contextLabel: string;
+        contextLabelOne: string;
         previousDay: string;
         nextDay: string;
         empty: string;
         avgAttendees: string;
       };
+      home: {
+        greetingMorning: string;
+        greetingAfternoon: string;
+        greetingEvening: string;
+        summaryToday: string;
+        summaryTodayOne: string;
+        summaryNone: string;
+        todayTitle: string;
+        todayEmpty: string;
+        inProgress: string;
+        ended: string;
+        queueShort: string;
+        pendingShort: string;
+        occupancyLabel: string;
+        attendeesCta: string;
+        manageCta: string;
+        todoTitle: string;
+        todoEmpty: string;
+        todoPendingTitle: string;
+        todoAttendanceTitle: string;
+        todoAttendanceBody: string;
+        todoRiskTitle: string;
+        todoRiskBody: string;
+        todoRiskCta: string;
+        todoAttendanceCta: string;
+        nextLessonTitle: string;
+        laterTitle: string;
+        memberEmpty: string;
+        bookCta: string;
+        seeAllCta: string;
+      };
       userInsights: {
+        chartFutureSuffix: string;
+        chartFutureNote: string;
         upcomingTitle: string;
         upcomingDescription: string;
         upcomingEmpty: string;
@@ -493,6 +594,9 @@ type Dictionary = {
       description: string;
       empty: string;
       trendLabel: string;
+      trendShort: string;
+      trendNoPrevious: string;
+      pointsUnit: string;
       executiveTitle: string;
       executiveTopCourse: string;
       executiveBusiestSlot: string;
@@ -557,6 +661,10 @@ type Dictionary = {
       };
     };
     myNotifications: {
+      unreadOne: string;
+      unreadMany: string;
+      prevPage: string;
+      nextPage: string;
       title: string;
       description: string;
       empty: string;
@@ -756,17 +864,21 @@ const dictionaries: Record<Locale, Dictionary> = {
       themeLabel: "Tema",
       themeToLight: "Passa al tema chiaro",
       themeToDark: "Passa al tema scuro",
-      settingsSection: "Settings",
+      settingsSection: "Impostazioni",
+      menu: "Menu",
+      primaryNav: "Navigazione principale",
+      skipToContent: "Vai al contenuto",
+      unreadNotifications: "notifiche non lette",
       nav: {
-        dashboard: "Dashboard",
+        dashboard: "Home",
         courses: "Corsi",
         lessons: "Lezioni",
-        bookings: "Calendario",
+        bookings: "Prenotazioni",
         users: "Utenti",
         reports: "Report",
-        myNotifications: "Le mie notifiche",
+        myNotifications: "Notifiche",
         profileSettings: "Profilo",
-        manualNotifications: "Notifiche",
+        manualNotifications: "Invio notifiche",
         registries: "Registri",
         siteSettings: "Impostazioni sito",
         dangerZone: "Danger zone",
@@ -818,6 +930,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       twoFactorSecretLabel: "Secret key",
       twoFactorOtpAuthLabel: "URI otpauth",
       twoFactorHint: "Inserisci la chiave nell'app Authenticator e poi conferma con un codice a 6 cifre.",
+      cancelCta: "Annulla",
       webPushTitle: "Notifiche web push",
       webPushDescription: "Ricevi notifiche browser anche quando non hai la pagina aperta.",
       webPushSupported: "Browser compatibile con web push.",
@@ -837,7 +950,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       notificationLocalAlwaysOnLabel: "Notifiche locali (sempre attive)",
       notificationPrefsSaveCta: "Salva preferenze",
       notificationsRetentionDaysLabel: "Conservazione notifiche locali (giorni)",
-      notificationsRetentionDaysHint: "Le notifiche locali piu vecchie saranno cancellate automaticamente dal server.",
+      notificationsRetentionDaysHint: "Le notifiche locali più vecchie saranno cancellate automaticamente dal server.",
     },
     pwaInstall: {
       title: "Installa NekoGym",
@@ -854,8 +967,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Notifiche Web Push attivate.",
     },
     bookings: {
-      title: "Calendario",
-      description: "Visualizza le lezioni future e prenota i posti disponibili.",
+      title: "Prenotazioni",
+      description: "Scegli il giorno e prenota il tuo posto.",
       calendarTitle: "Lezioni disponibili",
       monthNavigationLabel: "Naviga mese per mese",
       empty: "Nessuna lezione disponibile nel periodo selezionato.",
@@ -874,7 +987,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       closeCta: "Chiudi",
       prevMonth: "Mese precedente",
       nextMonth: "Mese successivo",
-      bookCta: "Iscriviti",
+      bookCta: "Prenota",
       unbookCta: "Disiscriviti",
       confirmUnbookTitle: "Conferma disiscrizione",
       confirmUnbookDescription: "Vuoi davvero cancellare la tua prenotazione per questa lezione?",
@@ -883,9 +996,67 @@ const dictionaries: Record<Locale, Dictionary> = {
       processing: "Elaborazione...",
       youAreQueued: "In coda",
       queuedLabel: "In coda",
-      joinQueueCta: "Mettimi in coda",
+      joinQueueCta: "Mettiti in coda",
+      prevWeek: "Settimana precedente",
+      nextWeek: "Settimana successiva",
+      weekNavigationLabel: "Scegli il giorno",
+      today: "Oggi",
+      noLessonsDay: "Nessuna lezione in programma in questo giorno.",
+      closedDay: "La palestra è chiusa in questo giorno.",
+      seatsFree: "{n} posti liberi",
+      seatFreeOne: "Ultimo posto libero",
+      full: "Al completo",
+      queueCount: "{n} in coda",
+      stampBooked: "Prenotato",
+      stampPending: "In attesa",
+      stampQueued: "In coda",
+      cancelBy: "Puoi disdire fino a {date}",
+      cancelClosed: "Non è più possibile disdire",
+      costFixed: "Usa 1 ingresso del tuo abbonamento",
+      costPeriod: "Conta nel limite del tuo abbonamento",
+      requiresConfirmation: "La prenotazione va confermata dallo staff",
+      lessonEnded: "Conclusa",
+      lessonInProgress: "In corso",
+      manageCta: "Gestisci lezione",
+      showDetails: "Mostra dettagli di {name}",
+      upcomingTitle: "Le tue prossime lezioni",
+      upcomingEmpty: "Non hai lezioni prenotate. Scegli un giorno e prenota il tuo posto.",
+      dayLessons: "Lezioni di {day}",
+      pass: {
+        fixedTitle: "Abbonamento {n} ingressi",
+        weeklyTitle: "Settimanale · {n} lezioni",
+        monthlyTitle: "Mensile · {n} lezioni",
+        remaining: "rimasti",
+        availableWeek: "liberi questa settimana",
+        availableMonth: "liberi questo mese",
+        validUntil: "Valido fino al {date}",
+        trialTitle: "Prova gratuita",
+        trialUntil: "Puoi prenotare fino al {date}",
+        inactiveTitle: "Abbonamento non attivo",
+        inactiveBody: "Per prenotare chiedi alla palestra di attivare il tuo abbonamento.",
+        openPlanTitle: "Abbonamento attivo",
+        openPlanBody: "Nessun limite di lezioni",
+        activeBookings: "{n} prenotazioni in corso",
+        activeBookingsOne: "1 prenotazione in corso",
+        slotsLabel: "{used} usati su {total}",
+      },
     },
     lessonsPage: {
+      todayTag: "Oggi",
+      emptyMonthTitle: "Nessuna lezione",
+      emptyMonthFiltered: "Nessuna lezione corrisponde ai filtri in questo mese.",
+      backToCurrentMonth: "Torna al mese corrente",
+      showAllLessonsCta: "Mostra le lezioni di tutti",
+      onlyMineCta: "Solo le mie",
+      filtersLabel: "Filtri",
+      cancelledTag: "Annullata",
+      standaloneTag: "Singola",
+      lessonsCount: "{n} lezioni",
+      lessonsCountOne: "1 lezione",
+      monthLessonsSummary: "{lessons} lezioni · {people} iscritti nel mese",
+      manageCta: "Gestisci",
+      moreActionsLabel: "Altre azioni per {name}",
+      emptyMonth: "Non ci sono lezioni in programma in questo mese. Le lezioni dei corsi vengono generate fino al limite di prenotazione di ciascun corso.",
       title: "Lezioni",
       description: "Elenco mensile delle lezioni, raggruppate per giorno.",
       prevMonth: "Mese precedente",
@@ -900,8 +1071,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       modifiedReasonsLabel: "Differenze",
       modifiedReasonTrainer: "trainer",
       modifiedReasonTime: "orario/durata",
-      standaloneTitle: "Lezioni standalone",
-      standaloneDescription: "Crea e gestisci lezioni non collegate a un corso.",
+      standaloneTitle: "Lezione singola",
+      standaloneDescription: "Una lezione fuori dai corsi: puoi crearla una volta o ripeterla.",
       standaloneDuration: "Durata (min)",
       standaloneMaxAttendees: "Max posti",
       standaloneCancellationWindow: "Limite cancellazione (ore)",
@@ -912,12 +1083,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       createStandaloneCta: "Crea lezione",
       updateStandaloneCta: "Salva modifiche",
       deleteStandaloneCta: "Elimina",
-      deleteLessonCta: "Cancella",
-      confirmDeleteLessonTitle: "Conferma cancellazione lezione",
-      confirmDeleteLessonDescription: "Questa azione annullera manualmente la lezione selezionata. Vuoi continuare?",
+      deleteLessonCta: "Annulla lezione",
+      confirmDeleteLessonTitle: "Annullare la lezione?",
+      confirmDeleteLessonDescription: "Gli iscritti riceveranno un avviso e, se hanno un abbonamento a ingressi, la lezione verrà restituita. Potrai ripristinarla dalle lezioni annullate.",
       restoreLessonCta: "Ripristina",
-      showDeletedCta: "Mostra cancellate",
-      hideDeletedCta: "Nascondi cancellate",
+      showDeletedCta: "Mostra annullate",
+      hideDeletedCta: "Nascondi annullate",
       showPastCta: "Mostra passate",
       hidePastCta: "Nascondi passate",
       deletedTag: "Cancellata",
@@ -925,7 +1096,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       detailsDescription: "Consulta i dati della lezione e gli iscritti.",
       detailsTriggerLabel: "Dettagli",
       manageTitle: "Gestisci lezione",
-      manageDescription: "Modifica dati, trainer e iscritti da questa modale.",
+      manageDescription: "Dettagli, trainer e persone della lezione.",
       manageTriggerLabel: "Gestisci lezione",
       manageTabMain: "Informazioni",
       manageTabPeople: "Persone",
@@ -937,10 +1108,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       addAttendeeCta: "Aggiungi",
       removeAttendeeCta: "Rimuovi",
       markAttendancePresentCta: "Presente",
-      markAttendanceNoShowCta: "No-show",
+      markAttendanceNoShowCta: "Assente",
       attendanceStatusLabel: "Stato",
       attendanceStatusPresent: "Presente",
-      attendanceStatusNoShow: "No-show",
+      attendanceStatusNoShow: "Assente",
       attendanceStatusUnmarked: "Non segnato",
       pendingApprovalsLabel: "In attesa di conferma",
       noPendingApprovals: "Nessuna iscrizione in attesa.",
@@ -958,7 +1129,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     usersPage: {
       title: "Utenti",
-      description: "Gestisci utenti, ruoli e configurazioni membership/subscription.",
+      description: "Gestisci utenti, ruoli, iscrizioni e piani.",
       createCta: "Nuovo utente",
       createTitle: "Crea utente",
       editTitle: "Modifica utente",
@@ -974,8 +1145,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         name: "Nome",
         email: "Email",
         role: "Ruolo",
-        membership: "Membership",
-        subscription: "Subscription",
+        membership: "Iscrizione",
+        subscription: "Piano",
         actions: "Azioni",
       },
       fields: {
@@ -984,19 +1155,19 @@ const dictionaries: Record<Locale, Dictionary> = {
         password: "Password",
         emailVerified: "Email verificata",
         role: "Ruolo",
-        membershipStatus: "Stato membership",
+        membershipStatus: "Stato iscrizione",
         trialEndsAt: "Fine trial",
         subscriptionType: "Tipo piano",
         subscriptionLessons: "Lezioni piano",
         subscriptionRemaining: "Lezioni residue",
         subscriptionResetAt: "Reset piano",
-        subscriptionEndsAt: "Fine subscription",
+        subscriptionEndsAt: "Fine piano",
         lessonTypeAccess: "Accesso per tipo lezione",
       },
       tabs: {
         profile: "Profilo",
-        membership: "Membership",
-        subscription: "Subscription",
+        membership: "Iscrizione",
+        subscription: "Piano",
         access: "Accessi",
       },
       actions: {
@@ -1049,18 +1220,22 @@ const dictionaries: Record<Locale, Dictionary> = {
       tabLogin: "Accedi",
       tabRegister: "Iscriviti",
       noAccount: "Non hai un account?",
-      hasAccount: "Hai gia un account?",
+      hasAccount: "Hai già un account?",
       loginCta: "Accedi",
       registerCta: "Registrati",
       nameLabel: "Nome",
       emailLabel: "Email",
       passwordLabel: "Password",
-      loginMethodPassword: "Accedi con password",
-      loginMethodOtp: "Codice OTP (telefono)",
-      loginMethodMagicLink: "Magic link",
+      passwordHint: "Almeno 8 caratteri.",
+      loginMethodPassword: "Password",
+      loginMethodOtp: "Codice",
+      loginMethodMagicLink: "Link",
+      loginMethodLabel: "Come vuoi accedere?",
+      loginMethodOtpHint: "Ti inviamo un codice di 6 cifre via email o Telegram.",
+      loginMethodMagicHint: "Ti inviamo un link via email: aprilo e sei dentro.",
       sendCodeCta: "Invia codice",
       verifyCodeCta: "Verifica codice",
-      sendMagicLinkCta: "Invia magic link",
+      sendMagicLinkCta: "Invia link",
       twoFactorTitle: "Conferma 2FA",
       twoFactorHint: "Inserisci il codice dell'app authenticator per completare l'accesso con password.",
       forgotPasswordCta: "Password dimenticata?",
@@ -1125,7 +1300,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         updateTitle: "Conferma aggiornamento corso",
         updateDescription: "Vuoi salvare queste modifiche?",
         deleteTitle: "Conferma eliminazione corso",
-        deleteDescription: "Eliminare \"{name}\"? Questa azione non puo essere annullata.",
+        deleteDescription: "Eliminare \"{name}\"? Questa azione non può essere annullata.",
         deletePolicyTitle: "Lezioni future con iscritti",
         deletePolicyDescription:
           "Il corso \"{name}\" ha {count} lezioni future con iscritti. Vuoi mantenerle o cancellarle (con notifica)?",
@@ -1141,21 +1316,21 @@ const dictionaries: Record<Locale, Dictionary> = {
         numericPositive: "I campi numerici devono essere maggiori di zero.",
         scheduleRequired: "Aggiungi almeno uno slot di schedulazione.",
         scheduleInvalid: "La schedulazione contiene orari non validi o duplicati.",
-        scheduleOverlap: "Uno o piu orari si sovrappongono nello stesso giorno.",
+        scheduleOverlap: "Uno o più orari si sovrappongono nello stesso giorno.",
         scheduleClosedWeekday: "Non puoi aggiungere orari in un giorno di chiusura palestra.",
       },
       schedule: {
         title: "Schedulazione settimanale",
-        description: "Per ogni giorno puoi aggiungere uno o piu orari di inizio. L'orario di fine e calcolato automaticamente.",
+        description: "Per ogni giorno puoi aggiungere uno o più orari di inizio. L'orario di fine è calcolato automaticamente.",
         addSlot: "Aggiungi orario",
         noSlots: "Nessun orario configurato",
         removeSlot: "Rimuovi",
         weekdays: {
-          MONDAY: "Lunedi",
-          TUESDAY: "Martedi",
-          WEDNESDAY: "Mercoledi",
-          THURSDAY: "Giovedi",
-          FRIDAY: "Venerdi",
+          MONDAY: "Lunedì",
+          TUESDAY: "Martedì",
+          WEDNESDAY: "Mercoledì",
+          THURSDAY: "Giovedì",
+          FRIDAY: "Venerdì",
           SATURDAY: "Sabato",
           SUNDAY: "Domenica",
         },
@@ -1177,7 +1352,7 @@ const dictionaries: Record<Locale, Dictionary> = {
           dialogDescription: "Approva o rifiuta richieste di iscrizione in attesa.",
           empty: "Nessuna richiesta in attesa.",
           approveCta: "Conferma",
-          approveAndUnlockCta: "Conferma e non chiedere piu",
+          approveAndUnlockCta: "Conferma e non chiedere più",
           rejectCta: "Non confermare",
           closeCta: "Chiudi",
         },
@@ -1185,12 +1360,46 @@ const dictionaries: Record<Locale, Dictionary> = {
           title: "Affollamento giornaliero",
           description: "Media presenze per fascia oraria sullo stesso giorno della settimana.",
           contextLabel: "Calcolato sugli ultimi {days} giorni omologhi.",
+          contextLabelOne: "Calcolato su un solo giorno omologo.",
           previousDay: "Giorno precedente",
           nextDay: "Giorno successivo",
           empty: "Nessuna lezione nel giorno selezionato.",
           avgAttendees: "Media presenze",
         },
+        home: {
+          greetingMorning: "Buongiorno, {name}",
+          greetingAfternoon: "Buon pomeriggio, {name}",
+          greetingEvening: "Buonasera, {name}",
+          summaryToday: "{lessons} lezioni oggi · {people} iscritti",
+          summaryTodayOne: "1 lezione oggi · {people} iscritti",
+          summaryNone: "Nessuna lezione oggi",
+          todayTitle: "Oggi",
+          todayEmpty: "Nessuna lezione in programma oggi.",
+          inProgress: "in corso",
+          ended: "conclusa",
+          queueShort: "{n} in coda",
+          pendingShort: "{n} da confermare",
+          occupancyLabel: "{booked} iscritti su {max} posti",
+          attendeesCta: "Presenze",
+          manageCta: "Gestisci",
+          todoTitle: "Da fare",
+          todoEmpty: "Niente da fare: è tutto in ordine.",
+          todoPendingTitle: "Richieste da confermare",
+          todoAttendanceTitle: "Presenze da segnare",
+          todoAttendanceBody: "{lesson} · {time} · {n} iscritti",
+          todoRiskTitle: "Lezione a rischio",
+          todoRiskBody: "{lesson} · {when} · nessun iscritto. Sarà annullata {deadline} se resta vuota.",
+          todoRiskCta: "Apri il giorno",
+          todoAttendanceCta: "Segna presenze",
+          nextLessonTitle: "La tua prossima lezione",
+          laterTitle: "Più avanti",
+          memberEmpty: "Non hai lezioni prenotate.",
+          bookCta: "Prenota una lezione",
+          seeAllCta: "Vedi tutte le prenotazioni",
+        },
         userInsights: {
+          chartFutureSuffix: "programmate",
+          chartFutureNote: "Tratteggiato: lezioni programmate",
           upcomingTitle: "Le mie prossime lezioni",
           upcomingDescription: "Le prossime lezioni in cui sei trainer o partecipante.",
           upcomingEmpty: "Nessuna lezione futura trovata.",
@@ -1206,8 +1415,8 @@ const dictionaries: Record<Locale, Dictionary> = {
           totalTimeDescription: "Somma delle durate delle tue lezioni.",
           totalTimeEmpty: "Nessuna durata disponibile nel filtro corrente.",
           totalTimeHours: "ore",
-          chartTitle: "Lezioni per tipo (grafico)",
-          chartDescription: "Distribuzione lezioni completate per tipologia nel periodo selezionato.",
+          chartTitle: "Lezioni per tipo",
+          chartDescription: "Lezioni per tipologia nel periodo scelto: piene le svolte, tratteggiate le programmate.",
           chartRangeLabel: "Vista",
           chartRangeWeek: "Settimanale",
           chartRangeMonth: "Mensile",
@@ -1231,17 +1440,20 @@ const dictionaries: Record<Locale, Dictionary> = {
         title: "Report",
         description: "Analizza report su corsi, orari, trainer e no-show.",
         empty: "Nessun dato disponibile nel periodo selezionato.",
-        trendLabel: "Trend vs periodo precedente",
-        executiveTitle: "Executive snapshot",
+        trendLabel: "rispetto al periodo precedente",
+        trendShort: "vs prec.",
+        trendNoPrevious: "nessun dato nel periodo precedente",
+        pointsUnit: "pt",
+        executiveTitle: "In sintesi",
         executiveTopCourse: "Corso top: {course} con {bookings} prenotazioni.",
-        executiveBusiestSlot: "Slot piu affollato: {weekday} {time} con riempimento medio {fill}.",
-        executiveTopNoShow: "No-show piu alto: {name} ({rate}, {count} assenze).",
+        executiveBusiestSlot: "Slot più affollato: {weekday} {time} con riempimento medio {fill}.",
+        executiveTopNoShow: "No-show più alto: {name} ({rate}, {count} assenze).",
         exportPdfCta: "Esporta PDF",
         filters: {
           periodLabel: "Periodo",
-          last7Days: "Ultimi 7 giorni",
-          last30Days: "Ultimi 30 giorni",
-          last90Days: "Ultimi 90 giorni",
+          last7Days: "7 giorni",
+          last30Days: "30 giorni",
+          last90Days: "90 giorni",
           applyCta: "Applica",
         },
         kpis: {
@@ -1250,12 +1462,12 @@ const dictionaries: Record<Locale, Dictionary> = {
           avgFillRate: "Riempimento medio",
         },
         sections: {
-          coursePopularityTitle: "Report 1 - Corsi piu seguiti",
-          timeCrowdingTitle: "Report 2 - Orari piu affollati",
-          trainerPerformanceTitle: "Report 3 - Trainer piu seguiti",
-          noShowAnalyticsTitle: "Report 4 - No-show per trainee",
-          courseHealthChartTitle: "Riempimento vs no-show (corsi)",
-          courseHealthChartDescription: "Confronto tra riempimento medio e tasso no-show dei corsi piu frequentati.",
+          coursePopularityTitle: "Corsi più seguiti",
+          timeCrowdingTitle: "Orari più affollati",
+          trainerPerformanceTitle: "Trainer più seguiti",
+          noShowAnalyticsTitle: "No-show per trainee",
+          courseHealthChartTitle: "Riempimento e no-show per corso",
+          courseHealthChartDescription: "Confronto tra riempimento medio e tasso no-show dei corsi più frequentati.",
         },
         columns: {
           course: "Corso",
@@ -1274,11 +1486,11 @@ const dictionaries: Record<Locale, Dictionary> = {
           uniqueTrainees: "Trainee unici",
         },
         weekdays: {
-          MONDAY: "Lunedi",
-          TUESDAY: "Martedi",
-          WEDNESDAY: "Mercoledi",
-          THURSDAY: "Giovedi",
-          FRIDAY: "Venerdi",
+          MONDAY: "Lunedì",
+          TUESDAY: "Martedì",
+          WEDNESDAY: "Mercoledì",
+          THURSDAY: "Giovedì",
+          FRIDAY: "Venerdì",
           SATURDAY: "Sabato",
           SUNDAY: "Domenica",
         },
@@ -1296,6 +1508,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
       myNotifications: {
+        unreadOne: "1 non letta",
+        unreadMany: "{n} non lette",
+        prevPage: "Precedente",
+        nextPage: "Successiva",
         title: "Le mie notifiche",
         description: "Storico notifiche locali ricevute su tutti i dispositivi.",
         empty: "Nessuna notifica disponibile.",
@@ -1314,10 +1530,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       title: "Registri",
       subtitle: "Gestisci i registri applicativi condivisi.",
       tabs: {
-        lessonTypes: "LessonType",
+        lessonTypes: "Tipi di lezione",
       },
       lessonTypes: {
-        title: "Registro LessonType",
+        title: "Tipi di lezione",
         description: "Definisci nome, descrizione e icona SVG da riutilizzare in corsi e lezioni.",
         nameLabel: "Nome",
         descriptionLabel: "Descrizione",
@@ -1325,14 +1541,14 @@ const dictionaries: Record<Locale, Dictionary> = {
         colorLabel: "Colore",
         createCta: "Crea tipo",
         editCta: "Modifica",
-        updateTitle: "Modifica LessonType",
+        updateTitle: "Modifica tipo di lezione",
         updateCta: "Salva",
         deleteCta: "Elimina",
         deleteConfirmTitle: "Conferma eliminazione",
-        deleteConfirmDescription: "Eliminare \"{name}\"? Questa azione non puo essere annullata.",
+        deleteConfirmDescription: "Eliminare \"{name}\"? Questa azione non può essere annullata.",
         cancelCta: "Annulla",
         processing: "Elaborazione...",
-        empty: "Nessun LessonType presente.",
+        empty: "Nessun tipo di lezione.",
       },
     },
     siteSettings: {
@@ -1359,17 +1575,17 @@ const dictionaries: Record<Locale, Dictionary> = {
         smtpPasswordConfigured: "Password SMTP configurata",
         telegramBotUsername: "Username bot Telegram",
         telegramBotTokenConfigured: "Token bot Telegram configurato",
-        smtpSectionTitle: "Configurazione SMTP (read-only)",
-        telegramSectionTitle: "Configurazione Telegram (read-only)",
+        smtpSectionTitle: "Configurazione SMTP",
+        telegramSectionTitle: "Configurazione Telegram",
         openWeekdays: "Giorni apertura",
         closedDates: "Date chiusura (una per riga)",
       },
       weekdays: {
-        MONDAY: "Lunedi",
-        TUESDAY: "Martedi",
-        WEDNESDAY: "Mercoledi",
-        THURSDAY: "Giovedi",
-        FRIDAY: "Venerdi",
+        MONDAY: "Lunedì",
+        TUESDAY: "Martedì",
+        WEDNESDAY: "Mercoledì",
+        THURSDAY: "Giovedì",
+        FRIDAY: "Venerdì",
         SATURDAY: "Sabato",
         SUNDAY: "Domenica",
       },
@@ -1390,7 +1606,7 @@ const dictionaries: Record<Locale, Dictionary> = {
     },
     dangerZone: {
       title: "Danger zone",
-      subtitle: "Operazioni critiche sul database: backup, restore e reset completo.",
+      subtitle: "Operazioni critiche sul database: backup, ripristino e azzeramento completo.",
       backupTitle: "Backup database",
       backupDescription: "Crea una copia locale del database SQLite (cartella /data/backups).",
       uploadTitle: "Carica backup esterno",
@@ -1470,7 +1686,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         pagination: {
           prev: "Precedente",
           next: "Successiva",
-          pageInfo: "Pagina {page}/{totalPages} - Totale {total}",
+          pageInfo: "Pagina {page} di {totalPages} · Totale {total}",
         },
         columns: {
           channel: "Canale",
@@ -1495,16 +1711,20 @@ const dictionaries: Record<Locale, Dictionary> = {
       themeToLight: "Switch to light theme",
       themeToDark: "Switch to dark theme",
       settingsSection: "Settings",
+      menu: "Menu",
+      primaryNav: "Main navigation",
+      skipToContent: "Skip to content",
+      unreadNotifications: "unread notifications",
       nav: {
-        dashboard: "Dashboard",
+        dashboard: "Home",
         courses: "Courses",
         lessons: "Lessons",
-        bookings: "Calendar",
+        bookings: "Bookings",
         users: "Users",
         reports: "Reports",
-        myNotifications: "My notifications",
+        myNotifications: "Notifications",
         profileSettings: "Profile",
-        manualNotifications: "Notifications",
+        manualNotifications: "Send notifications",
         registries: "Registries",
         siteSettings: "Site settings",
         dangerZone: "Danger zone",
@@ -1556,6 +1776,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       twoFactorSecretLabel: "Secret key",
       twoFactorOtpAuthLabel: "otpauth URI",
       twoFactorHint: "Add the secret to your Authenticator app and confirm with a 6-digit code.",
+      cancelCta: "Cancel",
       webPushTitle: "Web push notifications",
       webPushDescription: "Receive browser notifications even when the page is closed.",
       webPushSupported: "Browser supports web push.",
@@ -1592,8 +1813,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Web Push notifications enabled.",
     },
     bookings: {
-      title: "Calendar",
-      description: "Browse upcoming lessons and book available seats.",
+      title: "Bookings",
+      description: "Pick a day and book your seat.",
       calendarTitle: "Available lessons",
       monthNavigationLabel: "Browse month by month",
       empty: "No lessons available in the selected range.",
@@ -1622,8 +1843,66 @@ const dictionaries: Record<Locale, Dictionary> = {
       youAreQueued: "Queued",
       queuedLabel: "Queued",
       joinQueueCta: "Join waitlist",
+      prevWeek: "Previous week",
+      nextWeek: "Next week",
+      weekNavigationLabel: "Pick a day",
+      today: "Today",
+      noLessonsDay: "No lessons scheduled on this day.",
+      closedDay: "The gym is closed on this day.",
+      seatsFree: "{n} seats left",
+      seatFreeOne: "Last seat left",
+      full: "Full",
+      queueCount: "{n} waiting",
+      stampBooked: "Booked",
+      stampPending: "Pending",
+      stampQueued: "Waitlisted",
+      cancelBy: "You can cancel until {date}",
+      cancelClosed: "Cancellation is no longer possible",
+      costFixed: "Uses 1 entry of your pass",
+      costPeriod: "Counts toward your plan limit",
+      requiresConfirmation: "Staff must confirm this booking",
+      lessonEnded: "Ended",
+      lessonInProgress: "In progress",
+      manageCta: "Manage lesson",
+      showDetails: "Show details for {name}",
+      upcomingTitle: "Your next lessons",
+      upcomingEmpty: "You have no booked lessons. Pick a day and book your seat.",
+      dayLessons: "Lessons on {day}",
+      pass: {
+        fixedTitle: "{n}-entry pass",
+        weeklyTitle: "Weekly · {n} lessons",
+        monthlyTitle: "Monthly · {n} lessons",
+        remaining: "left",
+        availableWeek: "left this week",
+        availableMonth: "left this month",
+        validUntil: "Valid until {date}",
+        trialTitle: "Free trial",
+        trialUntil: "You can book until {date}",
+        inactiveTitle: "Membership inactive",
+        inactiveBody: "To book, ask the gym to activate your membership.",
+        openPlanTitle: "Active membership",
+        openPlanBody: "No lesson limit",
+        activeBookings: "{n} upcoming bookings",
+        activeBookingsOne: "1 upcoming booking",
+        slotsLabel: "{used} of {total} used",
+      },
     },
     lessonsPage: {
+      todayTag: "Today",
+      emptyMonthTitle: "No lessons",
+      emptyMonthFiltered: "No lessons match the filters this month.",
+      backToCurrentMonth: "Back to this month",
+      showAllLessonsCta: "Show everyone's lessons",
+      onlyMineCta: "Only mine",
+      filtersLabel: "Filters",
+      cancelledTag: "Cancelled",
+      standaloneTag: "One-off",
+      lessonsCount: "{n} lessons",
+      lessonsCountOne: "1 lesson",
+      monthLessonsSummary: "{lessons} lessons · {people} booked this month",
+      manageCta: "Manage",
+      moreActionsLabel: "More actions for {name}",
+      emptyMonth: "There are no lessons scheduled this month. Course lessons are generated up to each course's booking horizon.",
       title: "Lessons",
       description: "Monthly list of lessons grouped by day.",
       prevMonth: "Previous month",
@@ -1638,8 +1917,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       modifiedReasonsLabel: "Differences",
       modifiedReasonTrainer: "trainer",
       modifiedReasonTime: "time/duration",
-      standaloneTitle: "Standalone lessons",
-      standaloneDescription: "Create and manage lessons not linked to a course.",
+      standaloneTitle: "Single lesson",
+      standaloneDescription: "A lesson outside the courses: create it once or repeat it.",
       standaloneDuration: "Duration (min)",
       standaloneMaxAttendees: "Max seats",
       standaloneCancellationWindow: "Cancellation window (hours)",
@@ -1650,9 +1929,9 @@ const dictionaries: Record<Locale, Dictionary> = {
       createStandaloneCta: "Create lesson",
       updateStandaloneCta: "Save changes",
       deleteStandaloneCta: "Delete",
-      deleteLessonCta: "Cancel",
-      confirmDeleteLessonTitle: "Confirm lesson cancellation",
-      confirmDeleteLessonDescription: "This action manually cancels the selected lesson. Do you want to continue?",
+      deleteLessonCta: "Cancel lesson",
+      confirmDeleteLessonTitle: "Cancel this lesson?",
+      confirmDeleteLessonDescription: "Attendees will be notified and, on entry passes, get the lesson back. You can restore it from cancelled lessons.",
       restoreLessonCta: "Restore",
       showDeletedCta: "Show deleted",
       hideDeletedCta: "Hide deleted",
@@ -1663,7 +1942,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       detailsDescription: "Review lesson data and attendees.",
       detailsTriggerLabel: "Details",
       manageTitle: "Manage lesson",
-      manageDescription: "Update data, trainer and attendees from this modal.",
+      manageDescription: "Details, trainer and people of the lesson.",
       manageTriggerLabel: "Manage lesson",
       manageTabMain: "Information",
       manageTabPeople: "People",
@@ -1793,9 +2072,13 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Name",
       emailLabel: "Email",
       passwordLabel: "Password",
-      loginMethodPassword: "Sign in with password",
-      loginMethodOtp: "OTP code (phone)",
-      loginMethodMagicLink: "Magic link",
+      passwordHint: "At least 8 characters.",
+      loginMethodPassword: "Password",
+      loginMethodOtp: "Code",
+      loginMethodMagicLink: "Link",
+      loginMethodLabel: "How do you want to sign in?",
+      loginMethodOtpHint: "We send a 6-digit code by email or Telegram.",
+      loginMethodMagicHint: "We email you a link: open it and you're in.",
       sendCodeCta: "Send code",
       verifyCodeCta: "Verify code",
       sendMagicLinkCta: "Send magic link",
@@ -1923,12 +2206,46 @@ const dictionaries: Record<Locale, Dictionary> = {
           title: "Daily crowding",
           description: "Average attendees by hour for the same weekday pattern.",
           contextLabel: "Computed from the last {days} matching days.",
+          contextLabelOne: "Computed from a single matching day.",
           previousDay: "Previous day",
           nextDay: "Next day",
           empty: "No lessons on the selected day.",
           avgAttendees: "Average attendees",
         },
+        home: {
+          greetingMorning: "Good morning, {name}",
+          greetingAfternoon: "Good afternoon, {name}",
+          greetingEvening: "Good evening, {name}",
+          summaryToday: "{lessons} lessons today · {people} booked",
+          summaryTodayOne: "1 lesson today · {people} booked",
+          summaryNone: "No lessons today",
+          todayTitle: "Today",
+          todayEmpty: "No lessons scheduled today.",
+          inProgress: "in progress",
+          ended: "ended",
+          queueShort: "{n} waiting",
+          pendingShort: "{n} to confirm",
+          occupancyLabel: "{booked} booked of {max} seats",
+          attendeesCta: "Attendance",
+          manageCta: "Manage",
+          todoTitle: "To do",
+          todoEmpty: "Nothing to do: all clear.",
+          todoPendingTitle: "Requests to confirm",
+          todoAttendanceTitle: "Attendance to mark",
+          todoAttendanceBody: "{lesson} · {time} · {n} booked",
+          todoRiskTitle: "Lesson at risk",
+          todoRiskBody: "{lesson} · {when} · nobody booked. It will be cancelled {deadline} if it stays empty.",
+          todoRiskCta: "Open the day",
+          todoAttendanceCta: "Mark attendance",
+          nextLessonTitle: "Your next lesson",
+          laterTitle: "Coming up",
+          memberEmpty: "You have no lessons booked.",
+          bookCta: "Book a lesson",
+          seeAllCta: "See all bookings",
+        },
         userInsights: {
+          chartFutureSuffix: "scheduled",
+          chartFutureNote: "Hatched: scheduled lessons",
           upcomingTitle: "My upcoming lessons",
           upcomingDescription: "Next lessons where you are trainer or attendee.",
           upcomingEmpty: "No upcoming lessons found.",
@@ -1944,8 +2261,8 @@ const dictionaries: Record<Locale, Dictionary> = {
           totalTimeDescription: "Sum of lesson durations for your lessons.",
           totalTimeEmpty: "No duration available for current filter.",
           totalTimeHours: "hours",
-          chartTitle: "Lessons by type (chart)",
-          chartDescription: "Completed lessons split by lesson type in selected period.",
+          chartTitle: "Lessons by type",
+          chartDescription: "Lessons by type in the chosen period: solid for held, hatched for scheduled.",
           chartRangeLabel: "View",
           chartRangeWeek: "Weekly",
           chartRangeMonth: "Monthly",
@@ -1969,17 +2286,20 @@ const dictionaries: Record<Locale, Dictionary> = {
         title: "Reports",
         description: "Analyze reports for courses, time slots, trainers and no-shows.",
         empty: "No data available in the selected range.",
-        trendLabel: "Trend vs previous period",
-        executiveTitle: "Executive snapshot",
+        trendLabel: "vs previous period",
+        trendShort: "vs prev.",
+        trendNoPrevious: "no data in the previous period",
+        pointsUnit: "pt",
+        executiveTitle: "At a glance",
         executiveTopCourse: "Top course: {course} with {bookings} bookings.",
         executiveBusiestSlot: "Busiest slot: {weekday} {time} with average fill {fill}.",
         executiveTopNoShow: "Highest no-show: {name} ({rate}, {count} absences).",
         exportPdfCta: "Export PDF",
         filters: {
           periodLabel: "Period",
-          last7Days: "Last 7 days",
-          last30Days: "Last 30 days",
-          last90Days: "Last 90 days",
+          last7Days: "7 days",
+          last30Days: "30 days",
+          last90Days: "90 days",
           applyCta: "Apply",
         },
         kpis: {
@@ -1988,11 +2308,11 @@ const dictionaries: Record<Locale, Dictionary> = {
           avgFillRate: "Average fill rate",
         },
         sections: {
-          coursePopularityTitle: "Report 1 - Most attended courses",
-          timeCrowdingTitle: "Report 2 - Most crowded time slots",
-          trainerPerformanceTitle: "Report 3 - Most attended trainers",
-          noShowAnalyticsTitle: "Report 4 - No-show by trainee",
-          courseHealthChartTitle: "Fill rate vs no-show (courses)",
+          coursePopularityTitle: "Most attended courses",
+          timeCrowdingTitle: "Most crowded time slots",
+          trainerPerformanceTitle: "Most attended trainers",
+          noShowAnalyticsTitle: "No-show by trainee",
+          courseHealthChartTitle: "Fill rate and no-show by course",
           courseHealthChartDescription: "Compare average fill rate and no-show rate for the most booked courses.",
         },
         columns: {
@@ -2034,6 +2354,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
       myNotifications: {
+        unreadOne: "1 unread",
+        unreadMany: "{n} unread",
+        prevPage: "Previous",
+        nextPage: "Next",
         title: "My notifications",
         description: "Local notification history across all your devices.",
         empty: "No notifications available.",
@@ -2052,10 +2376,10 @@ const dictionaries: Record<Locale, Dictionary> = {
       title: "Registries",
       subtitle: "Manage shared application registries.",
       tabs: {
-        lessonTypes: "LessonType",
+        lessonTypes: "Lesson types",
       },
       lessonTypes: {
-        title: "LessonType registry",
+        title: "Lesson types",
         description: "Define name, description and SVG icon reused by courses and lessons.",
         nameLabel: "Name",
         descriptionLabel: "Description",
@@ -2063,14 +2387,14 @@ const dictionaries: Record<Locale, Dictionary> = {
         colorLabel: "Color",
         createCta: "Create type",
         editCta: "Edit",
-        updateTitle: "Edit LessonType",
+        updateTitle: "Edit lesson type",
         updateCta: "Save",
         deleteCta: "Delete",
         deleteConfirmTitle: "Confirm deletion",
         deleteConfirmDescription: "Delete \"{name}\"? This action cannot be undone.",
         cancelCta: "Cancel",
         processing: "Processing...",
-        empty: "No LessonType found.",
+        empty: "No lesson types yet.",
       },
     },
     siteSettings: {
@@ -2097,8 +2421,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         smtpPasswordConfigured: "SMTP password configured",
         telegramBotUsername: "Telegram bot username",
         telegramBotTokenConfigured: "Telegram bot token configured",
-        smtpSectionTitle: "SMTP configuration (read-only)",
-        telegramSectionTitle: "Telegram configuration (read-only)",
+        smtpSectionTitle: "SMTP configuration",
+        telegramSectionTitle: "Telegram configuration",
         openWeekdays: "Open weekdays",
         closedDates: "Closed dates (one per line)",
       },
@@ -2208,7 +2532,7 @@ const dictionaries: Record<Locale, Dictionary> = {
         pagination: {
           prev: "Previous",
           next: "Next",
-          pageInfo: "Page {page}/{totalPages} - Total {total}",
+          pageInfo: "Page {page} of {totalPages} · Total {total}",
         },
         columns: {
           channel: "Channel",

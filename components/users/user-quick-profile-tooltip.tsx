@@ -1,6 +1,10 @@
 "use client";
 
 import { type ReactNode, useMemo, useState } from "react";
+import * as Popover from "@radix-ui/react-popover";
+
+import { getAppDateTimeConfig } from "@/lib/date-time";
+import { cn } from "@/lib/utils";
 
 type QuickProfileResponse = {
   user: {
@@ -59,13 +63,15 @@ function loadQuickProfile(userId: string): Promise<QuickProfileResponse> {
 }
 
 function formatDate(value: string | null, locale: string): string {
-  if (!value) return "-";
+  const none = locale === "it" ? "Nessuna" : "None";
+  if (!value) return none;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
+  if (Number.isNaN(date.getTime())) return none;
   return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: getAppDateTimeConfig().timeZone,
   }).format(date);
 }
 
@@ -75,19 +81,16 @@ function membershipDurationLabel(createdAt: string, locale: string): string {
 
   const now = new Date();
   const diffDays = Math.max(0, Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)));
-  if (locale === "it") {
-    if (diffDays < 30) return `${diffDays} giorni`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} mesi`;
-    return `${Math.floor(diffDays / 365)} anni`;
-  }
-  if (diffDays < 30) return `${diffDays} days`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months`;
-  return `${Math.floor(diffDays / 365)} years`;
+  const it = locale === "it";
+  const unit = (n: number, one: [string, string], many: [string, string]) => `${n} ${n === 1 ? one[it ? 0 : 1] : many[it ? 0 : 1]}`;
+  if (diffDays === 0) return "";
+  if (diffDays < 30) return unit(diffDays, ["giorno", "day"], ["giorni", "days"]);
+  if (diffDays < 365) return unit(Math.floor(diffDays / 30), ["mese", "month"], ["mesi", "months"]);
+  return unit(Math.floor(diffDays / 365), ["anno", "year"], ["anni", "years"]);
 }
 
 export function UserQuickProfileTooltip({ userId, locale, className, children }: UserQuickProfileTooltipProps) {
   const t = useMemo(() => labelsForLocale(locale), [locale]);
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<QuickProfileResponse | null>(null);
@@ -106,70 +109,77 @@ export function UserQuickProfileTooltip({ userId, locale, className, children }:
     }
   }
 
-  function openTooltip() {
-    setOpen(true);
-    void ensureLoaded();
-  }
+  const countList = (title: string, entries: Array<{ type: string; count: number }>, prefix: string) => (
+    <div>
+      <p className="text-sm font-semibold">{title}</p>
+      {entries.length === 0 ? (
+        <p className="text-sm text-[var(--muted-foreground)]">{t.empty}</p>
+      ) : (
+        <dl className="mt-1 space-y-0.5 text-sm">
+          {entries.map((entry) => (
+            <div key={`${prefix}-${entry.type}`} className="flex justify-between gap-3">
+              <dt className="text-[var(--muted-foreground)]">{entry.type}</dt>
+              <dd className="tabular font-semibold">{entry.count}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+    </div>
+  );
 
+  // A popover, not a hover tooltip: it opens on tap, click or keyboard, so phones get it too.
   return (
-    <span
-      className={`relative inline-flex max-w-full ${className ?? ""}`}
-      onMouseEnter={openTooltip}
-      onMouseLeave={() => setOpen(false)}
-      onFocus={openTooltip}
-      onBlur={() => setOpen(false)}
-    >
-      <span className="truncate cursor-help decoration-dotted underline-offset-2 hover:underline">{children}</span>
-      {open ? (
-        <span className="pointer-events-none absolute left-0 top-full z-50 mt-1 w-80 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] p-3 text-left text-xs shadow-lg">
+    <Popover.Root onOpenChange={(next) => next && void ensureLoaded()}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "inline-flex min-h-11 max-w-full items-center text-left underline decoration-[var(--muted-foreground)] decoration-dotted underline-offset-4 hover:decoration-solid",
+            className
+          )}
+        >
+          <span className="truncate">{children}</span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="start"
+          sideOffset={6}
+          collisionPadding={12}
+          className="z-[60] w-[min(20rem,calc(100vw-24px))] rounded-2xl border border-[var(--rule)] bg-[var(--surface)] p-4 text-left text-[15px] shadow-[var(--shadow-sheet)] outline-none"
+        >
           {loading ? (
-            <span className="text-[var(--muted-foreground)]">{t.loading}</span>
+            <p className="text-[var(--muted-foreground)]">{t.loading}</p>
           ) : error ? (
-            <span className="text-[var(--danger-fg)]">{error}</span>
+            <p className="font-semibold text-[var(--danger-fg)]">{error}</p>
           ) : data ? (
-            <span className="space-y-2">
-              <span className="block text-base font-semibold leading-tight">{data.user.name}</span>
-              <span className="block text-[var(--muted-foreground)]">{data.user.email}</span>
-              <span className="block text-[var(--muted-foreground)]">
-                {t.memberSince}: {formatDate(data.user.createdAt, locale)} ({membershipDurationLabel(data.user.createdAt, locale)})
-              </span>
-
-              <span className="mt-2 block border-t border-[var(--surface-border)] pt-2">
-                <span className="block font-medium">{t.completedByType}</span>
-                {data.stats.completedByType.length === 0 ? (
-                  <span className="block text-[var(--muted-foreground)]">{t.empty}</span>
-                ) : (
-                  data.stats.completedByType.map((entry) => (
-                    <span key={`done-${data.user.id}-${entry.type}`} className="block text-[var(--muted-foreground)]">
-                      {entry.type}: {entry.count}
-                    </span>
-                  ))
-                )}
-              </span>
-
-              <span className="block">
-                <span className="block font-medium">{t.futureByType}</span>
-                {data.stats.futureByType.length === 0 ? (
-                  <span className="block text-[var(--muted-foreground)]">{t.empty}</span>
-                ) : (
-                  data.stats.futureByType.map((entry) => (
-                    <span key={`future-${data.user.id}-${entry.type}`} className="block text-[var(--muted-foreground)]">
-                      {entry.type}: {entry.count}
-                    </span>
-                  ))
-                )}
-              </span>
-
-              <span className="block border-t border-[var(--surface-border)] pt-2 text-[var(--muted-foreground)]">
-                {t.firstLesson}: {formatDate(data.stats.firstCompletedLessonAt, locale)}
-              </span>
-              <span className="block text-[var(--muted-foreground)]">
-                {t.lastLesson}: {formatDate(data.stats.lastCompletedLessonAt, locale)}
-              </span>
-            </span>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[17px] font-semibold leading-tight">{data.user.name}</p>
+                <p className="break-all text-sm text-[var(--muted-foreground)]">{data.user.email}</p>
+                <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                  {t.memberSince} <span className="tabular">{formatDate(data.user.createdAt, locale)}</span>
+                  {membershipDurationLabel(data.user.createdAt, locale) ? ` · ${membershipDurationLabel(data.user.createdAt, locale)}` : ""}
+                </p>
+              </div>
+              <div className="grid gap-3 border-t border-[var(--rule)] pt-3">
+                {countList(t.completedByType, data.stats.completedByType, `done-${data.user.id}`)}
+                {countList(t.futureByType, data.stats.futureByType, `future-${data.user.id}`)}
+              </div>
+              <dl className="space-y-0.5 border-t border-[var(--rule)] pt-3 text-sm">
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--muted-foreground)]">{t.firstLesson}</dt>
+                  <dd className="tabular">{formatDate(data.stats.firstCompletedLessonAt, locale)}</dd>
+                </div>
+                <div className="flex justify-between gap-3">
+                  <dt className="text-[var(--muted-foreground)]">{t.lastLesson}</dt>
+                  <dd className="tabular">{formatDate(data.stats.lastCompletedLessonAt, locale)}</dd>
+                </div>
+              </dl>
+            </div>
           ) : null}
-        </span>
-      ) : null}
-    </span>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }

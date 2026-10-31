@@ -5,8 +5,17 @@ const DATETIME_LOCAL_INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?
 
 type DateValue = Date | string | number;
 
+type InjectedDateTimeConfig = { locale?: string; timeZone?: string };
+
+/** In the browser, the server's runtime config (written by the root layout) wins over build-time NEXT_PUBLIC_ values. */
+function injectedConfig(): InjectedDateTimeConfig | null {
+  if (typeof window === "undefined") return null;
+  return (window as unknown as { __NEKO_DATETIME__?: InjectedDateTimeConfig }).__NEKO_DATETIME__ ?? null;
+}
+
 function configuredLocale(): string {
   return (
+    injectedConfig()?.locale ||
     process.env.NEXT_PUBLIC_APP_DATETIME_LOCALE?.trim() ||
     process.env.APP_DATETIME_LOCALE?.trim() ||
     DEFAULT_LOCALE
@@ -15,6 +24,7 @@ function configuredLocale(): string {
 
 function configuredTimeZone(): string {
   return (
+    injectedConfig()?.timeZone ||
     process.env.NEXT_PUBLIC_APP_DATETIME_TIMEZONE?.trim() ||
     process.env.APP_DATETIME_TIMEZONE?.trim() ||
     DEFAULT_TIME_ZONE
@@ -115,6 +125,84 @@ export function getAppDateTimeConfig() {
     locale: configuredLocale(),
     timeZone: resolvedTimeZone(),
   };
+}
+
+/** Calendar date of an instant in the app time zone (weekday: Sunday=0 ... Saturday=6). */
+export function getAppDateParts(value: DateValue): { year: number; month: number; day: number; weekday: number } {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolvedTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(toDate(value));
+  const read = (type: Intl.DateTimeFormatPartTypes) =>
+    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "", 10);
+  const year = read("year");
+  const month = read("month");
+  const day = read("day");
+  return { year, month, day, weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay() };
+}
+
+/**
+ * Instant of a wall-clock time in the app time zone. Day/month overflow is normalized (e.g. day 32).
+ * A time skipped by DST (spring forward gap) is moved forward to the first valid hour.
+ */
+export function appLocalDateTimeToUtc(year: number, month: number, day: number, hour = 0, minute = 0): Date {
+  const normalized = new Date(Date.UTC(year, month - 1, day));
+  const y = normalized.getUTCFullYear();
+  const m = normalized.getUTCMonth() + 1;
+  const d = normalized.getUTCDate();
+  const timeZone = resolvedTimeZone();
+  for (let shift = 0; shift < 3 && hour + shift < 24; shift += 1) {
+    const candidate = localDateTimeInZoneToUtcDate(y, m, d, hour + shift, minute, 0, 0, timeZone);
+    if (candidate) return candidate;
+  }
+  return new Date(Date.UTC(y, m - 1, d, hour, minute));
+}
+
+/** Instant of local midnight in the app time zone. Day/month overflow is normalized (e.g. day 32). */
+export function appStartOfDayUtc(year: number, month: number, day: number): Date {
+  return appLocalDateTimeToUtc(year, month, day, 0, 0);
+}
+
+/** `YYYY-MM-DDTHH:mm` of an instant in the app time zone, for <input type="datetime-local"> values. */
+export function appDateTimeLocalValue(value: DateValue): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolvedTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(toDate(value));
+  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
+  return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
+}
+
+/** Wall-clock hour and minute of an instant in the app time zone. */
+export function getAppTimeParts(value: DateValue): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolvedTimeZone(),
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(toDate(value));
+  const read = (type: Intl.DateTimeFormatPartTypes) => Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
+  return { hour: read("hour"), minute: read("minute") };
+}
+
+/** Weekday (Sunday=0) of a `YYYY-MM-DD` calendar date, independent of any time zone. */
+export function weekdayOfDateKey(dateKey: string): number {
+  const [year, month, day] = dateKey.split("-").map((part) => Number.parseInt(part, 10));
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+}
+
+/** `YYYY-MM-DD` of an instant in the app time zone (same format as date inputs / closed dates). */
+export function appDateKey(value: DateValue): string {
+  const { year, month, day } = getAppDateParts(value);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
 export function parseDateInputToUtc(value: string): Date | null {

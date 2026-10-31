@@ -1,51 +1,45 @@
 import { requireAuth } from "@/lib/authorization";
+import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateTimeConfig } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
+import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
+import { loadMemberPass } from "@/lib/member-pass";
+import { type PlanUsage, withLessonPlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
-import { BookingsManager } from "@/app/[locale]/(app)/bookings/bookings-manager";
+import { BookingsManager, type BookingsDay, type BookingsLesson } from "@/app/[locale]/(app)/bookings/bookings-manager";
 
-function parseMonthInput(value: string | undefined): { year: number; month: number } {
-  if (!value) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
+const DAY_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
-  const match = /^(\d{4})-(\d{2})$/.exec(value);
-  if (!match) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
-
-  const year = Number.parseInt(match[1] ?? "", 10);
-  const monthIndex = Number.parseInt(match[2] ?? "", 10) - 1;
-  if (Number.isNaN(year) || Number.isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
-
-  return { year, month: monthIndex };
+function parseDayKey(value: string | undefined, fallback: string) {
+  const match = DAY_KEY_PATTERN.exec(value ?? "") ?? DAY_KEY_PATTERN.exec(fallback)!;
+  const year = Number.parseInt(match[1], 10);
+  const month = Number.parseInt(match[2], 10);
+  const day = Number.parseInt(match[3], 10);
+  const probe = new Date(Date.UTC(year, month - 1, day));
+  if (probe.getUTCMonth() !== month - 1) return parseDayKey(undefined, fallback);
+  return { year, month, day, weekday: probe.getUTCDay() };
 }
 
-function monthValue(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
 
 export default async function BookingsPage({
   params,
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ month?: string }>;
+  searchParams: Promise<{ day?: string }>;
 }) {
   const { locale } = await params;
-  const { month } = await searchParams;
+  const { day } = await searchParams;
   const currentUser = await requireAuth(locale);
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
   const labels = dictionary.bookings;
+  const { timeZone } = getAppDateTimeConfig();
+  const intlLocale = safeLocale === "it" ? "it-IT" : "en-GB";
+  const now = new Date();
 
   const iconOptions = await getLessonTypeIconOptions();
   const siteSettings = await prisma.siteSettings.findUnique({
@@ -54,17 +48,37 @@ export default async function BookingsPage({
   });
   const openWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
   const closedDates = parseClosedDatesCsv(siteSettings?.closedDatesCsv);
-  const selectedMonth = parseMonthInput(month);
-  const rangeStart = new Date(selectedMonth.year, selectedMonth.month, 1, 0, 0, 0, 0);
-  const rangeEnd = new Date(selectedMonth.year, selectedMonth.month + 1, 1, 0, 0, 0, 0);
-  const previousMonth = new Date(selectedMonth.year, selectedMonth.month - 1, 1);
-  const nextMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 1);
+
+  // The week (Monday to Sunday, gym time zone) containing the selected day.
+  const todayKey = appDateKey(now);
+  const selected = parseDayKey(day, todayKey);
+  const mondayOffset = (selected.weekday + 6) % 7;
+  const weekStart = appStartOfDayUtc(selected.year, selected.month, selected.day - mondayOffset);
+  const weekEnd = appStartOfDayUtc(selected.year, selected.month, selected.day - mondayOffset + 7);
+  const selectedKey = appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day));
+  const previousWeekKey = appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day - 7));
+  const nextWeekKey = appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day + 7));
+
+  const timeFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const deadlineFormat = new Intl.DateTimeFormat(intlLocale, {
+    timeZone,
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  });
+  const stampFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, day: "2-digit", month: "2-digit" });
+  const longDayFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "long", day: "numeric", month: "long" });
+  const shortWeekdayFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "short" });
+  const dayNumberFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, day: "numeric" });
 
   const lessons = await prisma.lesson.findMany({
     where: {
       status: "SCHEDULED",
       deletedAt: null,
-      startsAt: { gte: rangeStart, lt: rangeEnd },
+      startsAt: { gte: weekStart, lt: weekEnd },
     },
     include: {
       course: { select: { id: true, name: true } },
@@ -92,7 +106,6 @@ export default async function BookingsPage({
       _count: {
         select: { bookings: true, waitlistEntries: true },
       },
-      // Keep lesson-level cancellation policy available to the booking UI.
     },
     orderBy: { startsAt: "asc" },
   });
@@ -115,7 +128,16 @@ export default async function BookingsPage({
     return accessByTypeId.get(lessonTypeId) ?? "REQUIRES_CONFIRMATION";
   }
 
-  const items = lessons.map((lesson) => {
+  // Plan spent by each person in the lesson's own week/month, only for lessons this staff member manages.
+  const planUsage =
+    currentUser.role === "TRAINEE"
+      ? new Map<string, Map<string, PlanUsage>>()
+      : await withLessonPlanUsage(prisma, lessons, (lesson) => [
+          ...lesson.bookings.map((booking) => booking.trainee),
+          ...lesson.waitlistEntries.map((entry) => entry.trainee),
+        ]);
+  const usageOf = (lessonId: string, traineeId: string) => planUsage.get(lessonId)?.get(traineeId);
+  const items: BookingsLesson[] = lessons.map((lesson) => {
     const bookedCount = lesson._count.bookings;
     const pendingApprovalsCount = lesson.bookings.filter((booking) => booking.status === "PENDING").length;
     const availableSeats = Math.max(0, lesson.maxAttendees - bookedCount);
@@ -123,21 +145,33 @@ export default async function BookingsPage({
     const isBookedByCurrentUser = Boolean(currentUserBooking);
     const isPendingByCurrentUser = currentUserBooking?.status === "PENDING";
     const isQueuedByCurrentUser = lesson.waitlistEntries.some((entry) => entry.traineeId === currentUser.id);
-    const isAccessDenied = effectiveAccessMode(lesson.lessonTypeId) === "DENIED";
+    const accessMode = effectiveAccessMode(lesson.lessonTypeId);
+    const isAccessDenied = accessMode === "DENIED";
     const cancellationDeadline = new Date(lesson.startsAt.getTime() - lesson.cancellationWindowHours * 60 * 60 * 1000);
-    const canBook = !isAccessDenied && !isBookedByCurrentUser && !isQueuedByCurrentUser && lesson.startsAt > new Date();
-    const canUnbook = isBookedByCurrentUser && new Date() <= cancellationDeadline;
+    const hasStarted = lesson.startsAt <= now;
+    const canBook = !isAccessDenied && !isBookedByCurrentUser && !isQueuedByCurrentUser && !hasStarted;
+    const canUnbook = isBookedByCurrentUser && now <= cancellationDeadline;
     const canManageLesson =
       currentUser.role === "ADMIN" ||
       (currentUser.role === "TRAINER" && lesson.trainer?.id === currentUser.id);
     const canViewWaitlist = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
+    const confirmed = lesson.bookings.filter((booking) => booking.status === "CONFIRMED");
 
     return {
       id: lesson.id,
+      dayKey: appDateKey(lesson.startsAt),
       title: lesson.title ?? null,
       description: lesson.description ?? null,
       startsAt: lesson.startsAt.toISOString(),
       endsAt: lesson.endsAt.toISOString(),
+      startsAtLocal: appDateTimeLocalValue(lesson.startsAt),
+      timeLabel: timeFormat.format(lesson.startsAt),
+      endTimeLabel: timeFormat.format(lesson.endsAt),
+      stampDateLabel: stampFormat.format(lesson.startsAt),
+      cancelDeadlineLabel: deadlineFormat.format(cancellationDeadline),
+      durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
+      hasStarted,
+      hasEnded: lesson.endsAt <= now,
       maxAttendees: lesson.maxAttendees,
       cancellationWindowHours: lesson.cancellationWindowHours,
       bookedCount,
@@ -146,6 +180,7 @@ export default async function BookingsPage({
       isPendingByCurrentUser,
       isQueuedByCurrentUser,
       isAccessDenied,
+      requiresConfirmation: accessMode === "REQUIRES_CONFIRMATION",
       canViewWaitlist,
       queueLength: lesson._count.waitlistEntries,
       pendingApprovalsCount,
@@ -157,42 +192,68 @@ export default async function BookingsPage({
       courseName: lesson.course?.name ?? "-",
       lessonTypeName: lesson.lessonType?.name ?? null,
       lessonTypeId: lesson.lessonTypeId ?? "",
-      lessonTypeIcon: lesson.lessonType
-        ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)
-        : null,
+      lessonTypeIcon: lesson.lessonType ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions) : null,
       lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
       trainerId: lesson.trainer?.id ?? "",
       trainerName: lesson.trainer?.name ?? null,
       attendees: canManageLesson
-        ? lesson.bookings.filter((booking) => booking.status === "CONFIRMED").map((booking) => ({
+        ? confirmed.map((booking) => ({
             id: booking.trainee.id,
             name: booking.trainee.name,
             email: booking.trainee.email,
+            planUsage: usageOf(lesson.id, booking.trainee.id),
           }))
         : [],
       attendeeAttendance: canManageLesson
-        ? Object.fromEntries(
-            lesson.bookings
-              .filter((booking) => booking.status === "CONFIRMED")
-              .map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])
-          )
+        ? Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null]))
         : {},
-      canManageAttendance: canManageLesson && lesson.endsAt <= new Date(),
+      canManageAttendance: canManageLesson && lesson.endsAt <= now,
       pendingApprovals: canManageLesson
-        ? lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => ({
-            id: booking.trainee.id,
-            name: booking.trainee.name,
-            email: booking.trainee.email,
-          }))
+        ? lesson.bookings
+            .filter((booking) => booking.status === "PENDING")
+            .map((booking) => ({
+              id: booking.trainee.id,
+              name: booking.trainee.name,
+              email: booking.trainee.email,
+              planUsage: usageOf(lesson.id, booking.trainee.id),
+            }))
         : [],
       waitlist: canManageLesson
         ? lesson.waitlistEntries.map((entry) => ({
             id: entry.trainee.id,
             name: entry.trainee.name,
             email: entry.trainee.email,
+            planUsage: usageOf(lesson.id, entry.trainee.id),
           }))
         : [],
     };
+  });
+
+  const days: BookingsDay[] = Array.from({ length: 7 }, (_, index) => {
+    const start = appStartOfDayUtc(selected.year, selected.month, selected.day - mondayOffset + index);
+    const key = appDateKey(start);
+    const dayLessons = items.filter((lesson) => lesson.dayKey === key);
+    // Probe at midday so the weekday check never straddles midnight.
+    const midday = new Date(start.getTime() + 12 * 60 * 60 * 1000);
+    return {
+      key,
+      weekdayLabel: shortWeekdayFormat.format(midday).replace(".", ""),
+      dayNumberLabel: dayNumberFormat.format(midday),
+      longLabel: longDayFormat.format(midday),
+      isToday: key === todayKey,
+      isPast: key < todayKey,
+      isClosed: !isLessonAllowedBySiteSchedule(midday, openWeekdays, closedDates),
+      lessonCount: dayLessons.length,
+      hasOwnBooking: dayLessons.some((lesson) => lesson.isBookedByCurrentUser),
+    };
+  });
+
+  const { pass, upcoming } = await loadMemberPass({
+    userId: currentUser.id,
+    role: currentUser.role,
+    locale: safeLocale,
+    iconOptions,
+    now,
   });
 
   const canCreateStandaloneLesson = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
@@ -220,13 +281,18 @@ export default async function BookingsPage({
 
   return (
     <BookingsManager
-      locale={locale}
+      key={selectedKey}
+      locale={safeLocale}
       labels={labels}
       lessonCreateLabels={dictionary.lessonsPage}
       lessons={items}
-      month={monthValue(rangeStart)}
-      previousMonth={monthValue(previousMonth)}
-      nextMonth={monthValue(nextMonth)}
+      days={days}
+      initialDayKey={selectedKey}
+      previousWeekKey={previousWeekKey}
+      nextWeekKey={nextWeekKey}
+      todayKey={todayKey}
+      pass={pass}
+      upcoming={upcoming}
       canCreateStandaloneLesson={canCreateStandaloneLesson}
       canUpdateTrainer={currentUser.role === "ADMIN"}
       defaultTrainerId={currentUser.role === "TRAINER" ? currentUser.id : undefined}

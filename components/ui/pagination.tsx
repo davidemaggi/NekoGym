@@ -23,10 +23,10 @@ export function PaginationLink({ className, isActive, ...props }: PaginationLink
   return (
     <button
       className={cn(
-        "inline-flex h-9 min-w-9 items-center justify-center rounded-md border px-3 text-sm transition-colors",
+        "inline-flex h-11 min-w-11 items-center justify-center rounded-xl border-[1.5px] px-3.5 text-[15px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-40",
         isActive
           ? "border-[var(--primary)] bg-[var(--primary)] text-[var(--primary-foreground)]"
-          : "border-[var(--surface-border)] bg-[var(--surface)] hover:bg-[var(--muted)]",
+          : "border-[var(--surface-border)] bg-[var(--surface)] hover:border-[var(--foreground)]",
         className
       )}
       {...props}
@@ -34,28 +34,20 @@ export function PaginationLink({ className, isActive, ...props }: PaginationLink
   );
 }
 
-export function PaginationPrevious({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {
+export function PaginationPrevious({ className, label = "Previous", ...props }: React.ComponentProps<typeof PaginationLink> & { label?: string }) {
   return (
-    <PaginationLink
-      aria-label="Go to previous page"
-      className={cn("gap-1 pl-2.5", className)}
-      {...props}
-    >
-      <ChevronLeft className="h-4 w-4" />
-      <span>Previous</span>
+    <PaginationLink className={cn("gap-1 pl-2.5", className)} {...props}>
+      <ChevronLeft size={18} aria-hidden="true" />
+      <span>{label}</span>
     </PaginationLink>
   );
 }
 
-export function PaginationNext({ className, ...props }: React.ComponentProps<typeof PaginationLink>) {
+export function PaginationNext({ className, label = "Next", ...props }: React.ComponentProps<typeof PaginationLink> & { label?: string }) {
   return (
-    <PaginationLink
-      aria-label="Go to next page"
-      className={cn("gap-1 pr-2.5", className)}
-      {...props}
-    >
-      <span>Next</span>
-      <ChevronRight className="h-4 w-4" />
+    <PaginationLink className={cn("gap-1 pr-2.5", className)} {...props}>
+      <span>{label}</span>
+      <ChevronRight size={18} aria-hidden="true" />
     </PaginationLink>
   );
 }

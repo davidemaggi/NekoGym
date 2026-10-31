@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
 
 import {
   deleteCourseAction,
@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -322,32 +322,6 @@ function computeEndTime(startTime: string, durationMinutes: number): string {
   return `${endHours}:${endMinutes}`;
 }
 
-function formatScheduleRows(
-  slots: ScheduleSlot[],
-  durationMinutes: number,
-  weekdays: Record<Weekday, string>
-): Array<{ day: string; ranges: string[] }> {
-  const grouped = new Map<Weekday, string[]>();
-
-  for (const day of weekdayOrder) {
-    grouped.set(day, []);
-  }
-
-  for (const slot of slots) {
-    const list = grouped.get(slot.weekday) ?? [];
-    list.push(`${slot.startTime}-${computeEndTime(slot.startTime, durationMinutes)}`);
-    grouped.set(slot.weekday, list);
-  }
-
-  return weekdayOrder
-    .map((day) => {
-      const ranges = grouped.get(day) ?? [];
-      if (ranges.length === 0) return null;
-      return { day: weekdays[day], ranges };
-    })
-    .filter((row): row is { day: string; ranges: string[] } => Boolean(row));
-}
-
 function validateCoursePayloadClient(
   payload: CoursePayload,
   labels: CoursesManagerProps["labels"],
@@ -449,13 +423,14 @@ export function CoursesManager({
     const query = search.trim().toLowerCase();
 
     return courses.filter((course) => {
-      if (trainerFilter === "with" && !course.trainerName) return false;
-      if (trainerFilter === "without" && course.trainerName) return false;
+      const trainerName = course.trainer?.name ?? course.trainerName ?? "";
+      if (trainerFilter === "with" && !trainerName) return false;
+      if (trainerFilter === "without" && trainerName) return false;
 
       if (!query) return true;
 
       const byName = course.name.toLowerCase().includes(query);
-      const byTrainer = (course.trainerName ?? "").toLowerCase().includes(query);
+      const byTrainer = trainerName.toLowerCase().includes(query);
       return byName || byTrainer;
     });
   }, [courses, search, trainerFilter]);
@@ -589,253 +564,256 @@ export function CoursesManager({
     });
   }
 
+  const trainerFilters: Array<[typeof trainerFilter, string]> = [
+    ["all", labels.filterAll],
+    ["with", labels.filterWithTrainer],
+    ["without", labels.filterWithoutTrainer],
+  ];
+  const weekdayOrderForGrid = weekdayOrder.filter((day) => availableWeekdays.includes(day));
+
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {currentUser.role === "ADMIN" ? (
-            <a
-              className="inline-flex h-9 items-center rounded-md border border-[var(--surface-border)] px-3 text-sm hover:bg-[var(--muted)]"
-              href={`/${locale}/courses${includeDeleted ? "" : "?showDeleted=1"}`}
+    <div>
+      <div
+        data-page-band
+        className="-mt-4 bg-[var(--stock)] pb-5 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-6 lg:pt-10"
+      >
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
+            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">{labels.subtitle}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            {currentUser.role === "ADMIN" ? (
+              <a
+                href={`/${locale}/courses${includeDeleted ? "" : "?showDeleted=1"}`}
+                role="button"
+                aria-pressed={includeDeleted}
+                className={cn(
+                  "inline-flex h-11 items-center gap-1.5 rounded-xl border-[1.5px] px-3.5 text-[15px] font-semibold transition-colors",
+                  includeDeleted
+                    ? "border-[var(--foreground)] bg-[var(--surface)]"
+                    : "border-[var(--stock-edge)] text-[var(--stock-ink)]/80 hover:bg-[var(--surface)]/60"
+                )}
+              >
+                {includeDeleted ? <Check size={16} aria-hidden="true" /> : null}
+                {labels.showDeletedCta}
+              </a>
+            ) : null}
+            <Dialog
+              open={createOpen}
+              onOpenChange={(nextOpen) => {
+                setCreateOpen(nextOpen);
+                if (!nextOpen) {
+                  setCreateSchedule([]);
+                  setCreateTab("main");
+                }
+              }}
             >
-              {includeDeleted ? labels.hideDeletedCta : labels.showDeletedCta}
-            </a>
-          ) : null}
-
-          <Dialog
-            open={createOpen}
-            onOpenChange={(nextOpen) => {
-              setCreateOpen(nextOpen);
-              if (!nextOpen) {
-                setCreateSchedule([]);
-                setCreateTab("main");
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4" />
-                <span>{labels.createCta}</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{labels.createTitle}</DialogTitle>
-              <DialogDescription>{labels.createDescription}</DialogDescription>
-            </DialogHeader>
-
-            <div className="inline-flex rounded-md border border-[var(--surface-border)] p-1">
-              <button
-                type="button"
-                onClick={() => setCreateTab("main")}
-                className={[
-                  "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
-                  createTab === "main"
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
-                ].join(" ")}
-              >
-                Main
-              </button>
-              <button
-                type="button"
-                onClick={() => setCreateTab("schedule")}
-                className={[
-                  "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
-                  createTab === "schedule"
-                    ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                    : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
-                ].join(" ")}
-              >
-                {labels.schedule.title}
-              </button>
-            </div>
-
-            <form className="space-y-3" onSubmit={askCreateConfirmation}>
-              <CourseFields
-                activeTab={createTab}
-                defaultValues={emptyDraft}
-                labels={labels.fields}
-                validationLabels={labels.validation}
-                scheduleLabels={labels.schedule}
-                weekdays={weekdays}
-                scheduleSlots={createSchedule}
-                lessonTypes={lessonTypes}
-                trainerCandidates={trainerCandidates}
-                disableTrainerSelection={currentUser.role === "TRAINER"}
-                fixedTrainerId={currentUser.id}
-                onAddSlot={(weekday, startTime) => addScheduleSlot("create", weekday, startTime)}
-                onRemoveSlot={(weekday, startTime) => removeScheduleSlot("create", weekday, startTime)}
-              />
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
-                  {labels.actions.cancel}
+              <DialogTrigger asChild>
+                <Button aria-label={labels.createCta} className="w-11 px-0 sm:w-auto sm:px-4">
+                  <Plus size={18} aria-hidden="true" />
+                  <span className="hidden sm:inline">{labels.createCta}</span>
                 </Button>
-                <Button type="submit">
-                  <Plus className="h-4 w-4" />
-                  <span>{labels.reviewCreate}</span>
-                </Button>
-              </DialogFooter>
-            </form>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              </DialogTrigger>
+              <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{labels.createTitle}</DialogTitle>
+                <DialogDescription>{labels.createDescription}</DialogDescription>
+              </DialogHeader>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.catalogTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-col gap-3 md:flex-row">
+              <div role="group" className="inline-flex rounded-xl bg-[var(--muted)] p-1">
+                <button
+                  type="button"
+                  onClick={() => setCreateTab("main")}
+                  aria-pressed={createTab === "main"}
+                  className={[
+                    "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
+                    createTab === "main"
+                      ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                  ].join(" ")}
+                >
+                  {labels.tabs.main}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateTab("schedule")}
+                  aria-pressed={createTab === "schedule"}
+                  className={[
+                    "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
+                    createTab === "schedule"
+                      ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
+                  ].join(" ")}
+                >
+                  {labels.schedule.title}
+                </button>
+              </div>
+
+              <form className="space-y-3" onSubmit={askCreateConfirmation}>
+                <CourseFields
+                  activeTab={createTab}
+                  defaultValues={emptyDraft}
+                  labels={labels.fields}
+                  validationLabels={labels.validation}
+                  scheduleLabels={labels.schedule}
+                  weekdays={weekdays}
+                  scheduleSlots={createSchedule}
+                  lessonTypes={lessonTypes}
+                  trainerCandidates={trainerCandidates}
+                  disableTrainerSelection={currentUser.role === "TRAINER"}
+                  fixedTrainerId={currentUser.id}
+                  onAddSlot={(weekday, startTime) => addScheduleSlot("create", weekday, startTime)}
+                  onRemoveSlot={(weekday, startTime) => removeScheduleSlot("create", weekday, startTime)}
+                />
+                <DialogFooter>
+                  <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+                    {labels.actions.cancel}
+                  </Button>
+                  <Button type="submit">
+                    <Plus className="h-4 w-4" />
+                    <span>{labels.reviewCreate}</span>
+                  </Button>
+                </DialogFooter>
+              </form>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </header>
+
+        <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative sm:max-w-sm sm:flex-1">
+            <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
             <Input
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={labels.searchPlaceholder}
+              aria-label={labels.searchPlaceholder}
+              className="pl-10"
             />
-            <select
-              value={trainerFilter}
-              onChange={(event) => setTrainerFilter(event.target.value as "all" | "with" | "without")}
-              className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
-            >
-              <option value="all">{labels.filterAll}</option>
-              <option value="with">{labels.filterWithTrainer}</option>
-              <option value="without">{labels.filterWithoutTrainer}</option>
-            </select>
           </div>
+          <div role="group" aria-label={labels.columns.trainer} className="inline-flex w-fit rounded-xl bg-[var(--surface)]/70 p-1">
+            {trainerFilters.map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={trainerFilter === value}
+                onClick={() => setTrainerFilter(value)}
+                className={cn(
+                  "h-11 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
+                  trainerFilter === value
+                    ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                    : "text-[var(--stock-ink)]/75 hover:text-[var(--foreground)]"
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-          {filteredCourses.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--surface-border)] text-left">
-                    <th className="py-2 pr-2">{labels.columns.name}</th>
-                    <th className="py-2 pr-2">{labels.columns.lessonType}</th>
-                    <th className="py-2 pr-2">{labels.columns.duration}</th>
-                    <th className="py-2 pr-2">{labels.columns.maxAttendees}</th>
-                    <th className="py-2 pr-2">{labels.columns.trainer}</th>
-                    <th className="py-2 pr-2">{labels.columns.schedule}</th>
-                    <th className="py-2 text-right">{labels.columns.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredCourses.map((course) => (
-                    <tr key={course.id} className="border-b border-[var(--surface-border)]/70">
-                      <td className="py-3 pr-2 font-medium">{course.name}</td>
-                      <td className="py-3 pr-2">
-                        <div className="inline-flex items-center gap-2">
-                          {course.lessonType ? (
-                            <div className="inline-flex items-center gap-2">
-                              <LessonTypeIcon
-                                iconPath={course.lessonType.iconSvg}
-                                colorHex={course.lessonType.colorHex}
-                                size={18}
-                                title={course.lessonType.name}
-                              />
-                              <span>{course.lessonType.name}</span>
-                            </div>
+      {filteredCourses.length === 0 ? (
+        <p className="pt-6 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
+      ) : (
+        <ul className="-mx-4 pt-2 sm:mx-0">
+          {filteredCourses.map((course) => {
+            const trainerName = course.trainer?.name ?? course.trainerName ?? null;
+            const slotsByDay = new Map<Weekday, string[]>();
+            for (const slot of normalizeScheduleSlots(course.scheduleSlots)) {
+              slotsByDay.set(slot.weekday, [...(slotsByDay.get(slot.weekday) ?? []), slot.startTime]);
+            }
+            return (
+              <li
+                key={course.id}
+                className="grid gap-x-6 gap-y-3 border-b border-[var(--rule)] px-4 py-5 last:border-b-0 sm:px-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_9.5rem] lg:items-center"
+              >
+                <div className="min-w-0">
+                  <p
+                    className={cn(
+                      "flex items-start gap-2 text-[17px] font-semibold leading-snug",
+                      course.deletedAt ? "text-[var(--muted-foreground)] line-through decoration-1" : ""
+                    )}
+                  >
+                    {course.lessonType ? (
+                      <LessonTypeIcon iconPath={course.lessonType.iconSvg} colorHex={course.lessonType.colorHex} size={18} className="mt-[3px]" />
+                    ) : null}
+                    <span className="min-w-0 break-words">{course.name}</span>
+                  </p>
+                  <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
+                    {[course.lessonType?.name, trainerName ?? labels.filterWithoutTrainer].filter(Boolean).join(" · ")}
+                  </p>
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                    <span className="tabular">{course.durationMinutes}</span> min · {labels.columns.maxAttendees}{" "}
+                    <span className="tabular">{course.maxAttendees}</span>
+                  </p>
+                  {course.deletedAt ? (
+                    <span className="mt-2 inline-block rounded-lg bg-[var(--danger-bg)] px-2 py-0.5 text-[13px] font-semibold text-[var(--danger-fg)]">
+                      {labels.deletedTag}
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* The course's week, set like a printed timetable: one column per open day. */}
+                <div
+                  aria-label={labels.columns.schedule}
+                  role="group"
+                  className="grid gap-1"
+                  style={{ gridTemplateColumns: `repeat(${Math.max(1, weekdayOrderForGrid.length)}, minmax(0, 1fr))` }}
+                >
+                  {weekdayOrderForGrid.map((day) => {
+                    const times = slotsByDay.get(day) ?? [];
+                    return (
+                      <div key={day} className="min-w-0 text-center">
+                        <p className="text-xs font-semibold uppercase text-[var(--muted-foreground)]">
+                          {labels.schedule.weekdays[day].slice(0, 3)}
+                        </p>
+                        <div className="mt-1 space-y-1">
+                          {times.length === 0 ? (
+                            <span aria-hidden="true" className="block h-7 rounded-md border border-[var(--rule)]" />
                           ) : (
-                            "-"
-                          )}
-                          {course.deletedAt ? (
-                            <span className="rounded-md border border-[var(--danger-hover)] px-1.5 py-0.5 text-[10px] text-[var(--danger-fg)] dark:border-red-800 dark:text-red-300">
-                              {labels.deletedTag}
-                            </span>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="py-3 pr-2">{course.durationMinutes} min</td>
-                      <td className="py-3 pr-2">{course.maxAttendees}</td>
-                      <td className="py-3 pr-2">{course.trainer?.name ?? course.trainerName ?? "-"}</td>
-                      <td className="py-3 pr-2 text-xs text-[var(--muted-foreground)]">
-                        {(() => {
-                          const scheduleGroups = formatScheduleRows(
-                            course.scheduleSlots,
-                            course.durationMinutes,
-                            labels.schedule.weekdays
-                          );
-
-                          if (scheduleGroups.length === 0) {
-                            return "-";
-                          }
-
-                          return (
-                            <div className="space-y-2">
-                              {scheduleGroups.map((group) => (
-                                <div key={`${course.id}-${group.day}`} className="flex flex-wrap items-center gap-1">
-                                  <span className="rounded-md bg-[var(--muted)] px-2 py-0.5 font-medium text-[var(--foreground)]">
-                                    {group.day}
-                                  </span>
-                                  {group.ranges.map((range) => (
-                                    <span
-                                      key={`${course.id}-${group.day}-${range}`}
-                                      className="rounded-md border border-[var(--surface-border)] px-2 py-0.5 text-[var(--foreground)]"
-                                    >
-                                      {range}
-                                    </span>
-                                  ))}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })()}
-                      </td>
-                      <td className="py-3 text-right">
-                        <div className="inline-flex gap-2">
-                          {course.deletedAt && course.canManage ? (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => restoreCourse(course.id)}
-                              disabled={isPending}
-                            >
-                              <RotateCcw className="h-4 w-4" />
-                              <span>{labels.actions.restore}</span>
-                            </Button>
-                          ) : !course.deletedAt && course.canManage ? (
-                            <>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedCourse(course);
-                                  setEditSchedule(normalizeScheduleSlots(course.scheduleSlots));
-                                  setEditTab("main");
-                                  setEditOpen(true);
-                                }}
+                            times.map((time) => (
+                              <span
+                                key={time}
+                                className="tabular block rounded-md bg-[var(--stock-giallino)] py-1 text-[13px] font-bold text-[var(--stock-ink)]"
                               >
-                                <Pencil className="h-4 w-4" />
-                                <span>{labels.actions.edit}</span>
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={() => askDeleteConfirmation(course.id, course.name, course.futureBookedLessonsCount)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span>{labels.actions.delete}</span>
-                              </Button>
-                            </>
-                          ) : (
-                            <span className="text-xs text-[var(--muted-foreground)]">-</span>
+                                {time}
+                              </span>
+                            ))
                           )}
                         </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex items-center gap-1 empty:hidden lg:justify-end">
+                  {course.deletedAt && course.canManage ? (
+                    <Button variant="outline" onClick={() => restoreCourse(course.id)} disabled={isPending}>
+                      <RotateCcw size={16} aria-hidden="true" />
+                      {labels.actions.restore}
+                    </Button>
+                  ) : !course.deletedAt && course.canManage ? (
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                          setSelectedCourse(course);
+                          setEditSchedule(normalizeScheduleSlots(course.scheduleSlots));
+                          setEditTab("main");
+                          setEditOpen(true);
+                        }}
+                      >
+                        <Pencil size={16} aria-hidden="true" />
+                        {labels.actions.edit}
+                      </Button>
+                  ) : null}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
       <Dialog
         open={editOpen}
@@ -859,15 +837,16 @@ export function CoursesManager({
               className="space-y-3"
               onSubmit={(event) => askUpdateConfirmation(event, selectedCourse.id)}
             >
-              <div className="inline-flex rounded-md border border-[var(--surface-border)] p-1">
+              <div role="group" className="inline-flex rounded-xl bg-[var(--muted)] p-1">
                 <button
                   type="button"
                   onClick={() => setEditTab("main")}
+                  aria-pressed={editTab === "main"}
                   className={[
-                    "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+                    "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
                     editTab === "main"
-                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                      : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+                      ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
                   ].join(" ")}
                 >
                   {labels.tabs.main}
@@ -875,11 +854,12 @@ export function CoursesManager({
                 <button
                   type="button"
                   onClick={() => setEditTab("schedule")}
+                  aria-pressed={editTab === "schedule"}
                   className={[
-                    "rounded px-3 py-1.5 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
+                    "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
                     editTab === "schedule"
-                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                      : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+                      ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                      : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
                   ].join(" ")}
                 >
                   {labels.schedule.title}
@@ -910,12 +890,25 @@ export function CoursesManager({
                 onRemoveSlot={(weekday, startTime) => removeScheduleSlot("edit", weekday, startTime)}
               />
               <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setEditOpen(false)}>
+                {/* Deleting is deliberate: it lives here, away from the list. */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] sm:mr-auto"
+                  onClick={() => {
+                    setEditOpen(false);
+                    askDeleteConfirmation(selectedCourse.id, selectedCourse.name, selectedCourse.futureBookedLessonsCount);
+                  }}
+                >
+                  <Trash2 size={18} aria-hidden="true" />
+                  {labels.actions.delete}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setEditOpen(false)}>
                   {labels.actions.cancel}
                 </Button>
                 <Button type="submit">
-                  <Pencil className="h-4 w-4" />
-                  <span>{labels.reviewUpdate}</span>
+                  <Pencil size={16} aria-hidden="true" />
+                  {labels.reviewUpdate}
                 </Button>
               </DialogFooter>
             </form>
@@ -931,13 +924,17 @@ export function CoursesManager({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary" disabled={isPending}>
+              <Button variant="outline" disabled={isPending}>
                 {labels.actions.cancel}
               </Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button onClick={submitConfirmedAction} disabled={isPending}>
-                {isPending ? labels.actions.processing : labels.actions.confirm}
+              <Button
+                variant={confirmation?.kind === "delete" ? "destructive" : "default"}
+                onClick={submitConfirmedAction}
+                disabled={isPending}
+              >
+                {isPending ? labels.actions.processing : confirmation?.kind === "delete" ? labels.actions.delete : labels.actions.confirm}
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -956,7 +953,7 @@ export function CoursesManager({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary">{labels.actions.cancel}</Button>
+              <Button variant="outline">{labels.actions.cancel}</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button
@@ -985,7 +982,7 @@ export function CoursesManager({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }
 
@@ -1052,7 +1049,7 @@ function CourseFields({
         <Textarea id="description" name="description" defaultValue={defaultValues.description} />
       </div>
 
-      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
+      <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="lessonTypeId">{labels.lessonType}</Label>
           <select
@@ -1061,7 +1058,7 @@ function CourseFields({
             required
             defaultValue={defaultValues.lessonTypeId}
             onChange={(event) => setSelectedLessonTypeId(event.target.value)}
-            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+            className="ui-select w-full"
           >
             <option value="">-</option>
             {lessonTypes.map((type) => (
@@ -1071,14 +1068,14 @@ function CourseFields({
             ))}
           </select>
           {selectedLessonType ? (
-            <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
+            <div className="mt-2 inline-flex items-center gap-2 rounded-xl bg-[var(--surface-sunken)] px-2.5 py-1.5">
               <LessonTypeIcon
                 iconPath={selectedLessonType.iconSvg}
                 colorHex={selectedLessonType.colorHex}
                 size={22}
                 title={selectedLessonType.name}
               />
-              <span className="text-xs text-[var(--muted-foreground)]">{selectedLessonType.name}</span>
+              <span className="text-sm text-[var(--muted-foreground)]">{selectedLessonType.name}</span>
             </div>
           ) : null}
         </div>
@@ -1090,19 +1087,19 @@ function CourseFields({
             name="trainerId"
             defaultValue={defaultValues.trainerId}
             disabled={disableTrainerSelection}
-            className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+            className="ui-select w-full"
           >
             <option value="">-</option>
             {trainerCandidates.map((trainer) => (
               <option key={trainer.id} value={trainer.id}>
-                {trainer.name} ({trainer.email})
+                {trainer.name}
               </option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
+      <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="durationMinutes">{labels.durationMinutes}</Label>
           <Input
@@ -1129,7 +1126,7 @@ function CourseFields({
         </div>
       </div>
 
-      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
+      <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="bookingAdvanceMonths">{labels.bookingAdvanceMonths}</Label>
           <Input
@@ -1155,15 +1152,17 @@ function CourseFields({
         </div>
       </div>
 
-      <div className={activeTab === "schedule" ? "space-y-2 rounded-md border border-[var(--surface-border)] p-3" : "hidden"}>
-        <p className="text-sm font-medium">{scheduleLabels.title}</p>
-        <p className="text-xs text-[var(--muted-foreground)]">{scheduleLabels.description}</p>
+      <div className={activeTab === "schedule" ? "space-y-4" : "hidden"}>
+        <div>
+          <p className="text-[15px] font-semibold">{scheduleLabels.title}</p>
+          <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">{scheduleLabels.description}</p>
+        </div>
 
-        <div className="flex flex-col gap-2 md:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <select
             value={safeDayToAdd}
             onChange={(event) => setDayToAdd(event.target.value as Weekday)}
-            className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+            className="ui-select"
           >
             {weekdays.map((weekday) => (
               <option key={weekday.value} value={weekday.value}>
@@ -1190,7 +1189,7 @@ function CourseFields({
         </div>
 
         {scheduleSlots.length === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{scheduleLabels.noSlots}</p>
+          <p className="text-[15px] text-[var(--muted-foreground)]">{scheduleLabels.noSlots}</p>
         ) : (
           <div className="space-y-2">
             {weekdayOrder.map((weekday) => {
@@ -1199,22 +1198,23 @@ function CourseFields({
 
               return (
                 <div key={weekday} className="space-y-1">
-                  <p className="text-xs font-medium text-[var(--muted-foreground)]">{scheduleLabels.weekdays[weekday]}</p>
+                  <p className="text-sm font-semibold">{scheduleLabels.weekdays[weekday]}</p>
                   <div className="flex flex-wrap gap-2">
                     {daySlots.map((slot) => (
                       <div
                         key={`${slot.weekday}-${slot.startTime}`}
-                        className="inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs"
+                        className="inline-flex min-h-11 items-center gap-1 rounded-xl bg-[var(--stock-giallino)] pl-3 text-[15px] font-semibold text-[var(--stock-ink)]"
                       >
-                        <span>
-                          {slot.startTime} - {computeEndTime(slot.startTime, durationMinutes)}
+                        <span className="tabular">
+                          {slot.startTime}–{computeEndTime(slot.startTime, durationMinutes)}
                         </span>
                         <button
                           type="button"
-                          className="text-[var(--danger-fg)] hover:underline"
+                          aria-label={`${scheduleLabels.removeSlot} ${scheduleLabels.weekdays[weekday]} ${slot.startTime}`}
+                          className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[var(--danger-fg)] transition-colors hover:bg-[var(--danger-bg)]"
                           onClick={() => onRemoveSlot(slot.weekday, slot.startTime)}
                         >
-                          {scheduleLabels.removeSlot}
+                          <X size={16} aria-hidden="true" />
                         </button>
                       </div>
                     ))}

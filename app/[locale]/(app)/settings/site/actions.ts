@@ -1,5 +1,7 @@
 "use server";
 
+import { formatDateTimeForApp } from "@/lib/date-time";
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import nodemailer from "nodemailer";
 
@@ -119,6 +121,7 @@ export async function saveSiteSettingsAction(formData: FormData): Promise<SaveSe
 
     return { ok: true, message: t.saved };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.failed,
@@ -178,6 +181,7 @@ export async function sendTestSiteEmailAction(formData: FormData): Promise<TestS
 
     return { ok: true, message: t.smtpTestSent };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.smtpTestFailed,
@@ -211,8 +215,8 @@ export async function sendTestSiteTelegramAction(formData: FormData): Promise<Te
         chat_id: userWithTelegram.telegramChatId,
         text:
           locale === "it"
-            ? `Test Telegram NekoGym (${new Date().toLocaleString("it-IT")})`
-            : `NekoGym Telegram test (${new Date().toLocaleString("en-US")})`,
+            ? `Test Telegram NekoGym (${formatDateTimeForApp(new Date())})`
+            : `NekoGym Telegram test (${formatDateTimeForApp(new Date())})`,
       }),
     });
 
@@ -222,6 +226,7 @@ export async function sendTestSiteTelegramAction(formData: FormData): Promise<Te
 
     return { ok: true, message: t.telegramTestSent };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.telegramTestFailed,

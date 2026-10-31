@@ -1,10 +1,12 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { MembershipStatus, SubscriptionPlanType, UserRole } from "@prisma/client";
 
 import { requireAnyRole } from "@/lib/authorization";
 import { sendEmailVerification } from "@/lib/auth";
+import { refundFixedPlanUnit } from "@/lib/booking-rules";
 import {
   parseDateInputEndOfDayToUtc,
   parseDateInputToUtc,
@@ -230,6 +232,7 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
     revalidatePath(`/${locale}/users`);
     return { ok: true, message: msg.created };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.createFailed,
@@ -354,11 +357,14 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
               lessonTypeId: { in: newlyDenied },
             },
           },
-          select: { id: true },
+          select: { id: true, status: true },
         });
 
         if (futureBookings.length > 0) {
           revokedFutureBookingsCount = futureBookings.length;
+          for (const booking of futureBookings) {
+            await refundFixedPlanUnit(tx, id, booking.status);
+          }
           await tx.lessonBooking.deleteMany({
             where: {
               id: { in: futureBookings.map((booking) => booking.id) },
@@ -407,6 +413,7 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
     revalidatePath(`/${locale}/lessons`);
     return { ok: true, message: msg.updated };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.updateFailed,
@@ -430,6 +437,7 @@ export async function deleteUserAction(formData: FormData): Promise<UserMutation
 
     return { ok: true, message: msg.deleted };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.deleteFailed,
@@ -473,6 +481,7 @@ export async function toggleUserActivationAction(formData: FormData): Promise<Us
     revalidatePath(`/${locale}/users`);
     return { ok: true, message: disable ? msg.accountDisabled : msg.accountEnabled };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.accountToggleFailed,
@@ -502,6 +511,7 @@ export async function terminateUserSessionsAction(formData: FormData): Promise<U
     revalidatePath(`/${locale}/users`);
     return { ok: true, message: msg.sessionsTerminated };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.terminateSessionsFailed,
@@ -541,6 +551,7 @@ export async function sendUserMessageAction(formData: FormData): Promise<UserMut
     revalidatePath(`/${locale}/users`);
     return { ok: true, message: msg.messageQueued };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.messageFailed,

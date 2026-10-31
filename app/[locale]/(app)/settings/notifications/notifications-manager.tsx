@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { RotateCw, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -9,9 +10,10 @@ import {
   retryOutboxItemsBulkAction,
   sendManualNotificationAction,
 } from "@/app/[locale]/(app)/settings/notifications/actions";
+import { PageBand } from "@/components/layout/page-band";
+import { SettingsSection } from "@/components/settings/settings-ui";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -119,12 +121,6 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
   const [fromFilter, setFromFilter] = useState(filters.from);
   const [toFilter, setToFilter] = useState(filters.to);
 
-  function channelVariant(channel: "EMAIL" | "TELEGRAM" | "WEBPUSH") {
-    if (channel === "EMAIL") return "info" as const;
-    if (channel === "TELEGRAM") return "success" as const;
-    return "warning" as const;
-  }
-
   function statusVariant(status: "PENDING" | "PROCESSING" | "SENT" | "FAILED") {
     if (status === "FAILED") return "danger" as const;
     if (status === "SENT") return "success" as const;
@@ -217,63 +213,63 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
     });
   }
 
-  return (
-    <section className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
-      </header>
+  const pageFigures: Record<string, number> = { page: filters.page, totalPages: filters.totalPages, total: filters.total };
+  // Only the figures are set as ticket numerals, never the sentence around them.
+  const pageInfo = labels.outbox.pagination.pageInfo.split(/(\{\w+\})/).map((part, index) => {
+    const key = part.match(/^\{(\w+)\}$/)?.[1];
+    return key && key in pageFigures ? (
+      <span key={index} className="tabular">
+        {pageFigures[key]}
+      </span>
+    ) : (
+      part
+    );
+  });
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.title}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-3" onSubmit={onSubmit}>
-            <div className="space-y-1">
+  return (
+    <div className="space-y-5">
+      <PageBand title={labels.title} description={labels.subtitle} />
+
+      <div className="max-w-5xl">
+        <SettingsSection>
+          <form className="space-y-4 sm:max-w-2xl" onSubmit={onSubmit}>
+            <div className="space-y-1.5">
               <Label htmlFor="notifications-audience">{labels.fields.audience}</Label>
               <select
                 id="notifications-audience"
                 value={audience}
                 onChange={(event) => setAudience(event.target.value as "ALL" | "TRAINERS" | "TRAINEES")}
-                className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                className="ui-select w-full sm:max-w-xs"
               >
                 <option value="ALL">{labels.audienceOptions.ALL}</option>
                 <option value="TRAINERS">{labels.audienceOptions.TRAINERS}</option>
                 <option value="TRAINEES">{labels.audienceOptions.TRAINEES}</option>
               </select>
             </div>
-
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="notifications-subject">{labels.fields.subject}</Label>
               <Input id="notifications-subject" value={subject} onChange={(event) => setSubject(event.target.value)} required />
             </div>
-
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="notifications-body">{labels.fields.body}</Label>
               <Textarea id="notifications-body" value={body} onChange={(event) => setBody(event.target.value)} rows={6} required />
             </div>
-
             <Button type="submit" disabled={isPending}>
+              <Send size={16} aria-hidden="true" />
               {isPending ? labels.actions.sending : labels.actions.send}
             </Button>
           </form>
-        </CardContent>
-      </Card>
+        </SettingsSection>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.outbox.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-2 md:grid-cols-6">
-            <div className="space-y-1">
+        <SettingsSection title={labels.outbox.title} description={pageInfo}>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] md:items-end">
+            <div className="space-y-1.5">
               <Label htmlFor="outbox-status">{labels.outbox.filters.status}</Label>
               <select
                 id="outbox-status"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-                className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
+                className="ui-select w-full"
               >
                 <option value="ALL">{labels.outbox.statusOptions.ALL}</option>
                 <option value="PENDING">{labels.outbox.statusOptions.PENDING}</option>
@@ -282,13 +278,13 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
                 <option value="FAILED">{labels.outbox.statusOptions.FAILED}</option>
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="outbox-channel">{labels.outbox.filters.channel}</Label>
               <select
                 id="outbox-channel"
                 value={channelFilter}
                 onChange={(event) => setChannelFilter(event.target.value as typeof channelFilter)}
-                className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
+                className="ui-select w-full"
               >
                 <option value="ALL">{labels.outbox.channelOptions.ALL}</option>
                 <option value="EMAIL">{labels.outbox.channelOptions.EMAIL}</option>
@@ -296,108 +292,107 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
                 <option value="WEBPUSH">{labels.outbox.channelOptions.WEBPUSH}</option>
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="outbox-from">{labels.outbox.filters.from}</Label>
               <Input id="outbox-from" type="date" value={fromFilter} onChange={(event) => setFromFilter(event.target.value)} />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor="outbox-to">{labels.outbox.filters.to}</Label>
               <Input id="outbox-to" type="date" value={toFilter} onChange={(event) => setToFilter(event.target.value)} />
             </div>
-            <div className="inline-flex items-end gap-2 md:col-span-2">
+            <div className="col-span-2 flex gap-2 md:col-span-1">
               <Button type="button" variant="outline" onClick={applyFilters}>
                 {labels.outbox.filters.apply}
               </Button>
-              <Button type="button" variant="secondary" onClick={resetFilters}>
+              <Button type="button" variant="ghost" onClick={resetFilters}>
                 {labels.outbox.filters.reset}
               </Button>
             </div>
           </div>
 
-          <Button type="button" variant="outline" disabled={isRetryPending || selectedIds.length === 0} onClick={retrySelected}>
-            {isRetryPending ? labels.actions.retrying : labels.actions.retrySelected}
-          </Button>
-
-          <p className="text-xs text-[var(--muted-foreground)]">
-            {labels.outbox.pagination.pageInfo
-              .replace("{page}", String(filters.page))
-              .replace("{totalPages}", String(filters.totalPages))
-              .replace("{total}", String(filters.total))}
-          </p>
-
           {outboxFailed.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">{labels.outbox.empty}</p>
+            <p className="py-4 text-[15px] text-[var(--muted-foreground)]">{labels.outbox.empty}</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--surface-border)] text-left">
-                    <th className="py-2 pr-2" />
-                    <th className="py-2 pr-2">{labels.outbox.columns.channel}</th>
-                    <th className="py-2 pr-2">{labels.outbox.filters.status}</th>
-                    <th className="py-2 pr-2">{labels.outbox.columns.recipient}</th>
-                    <th className="py-2 pr-2">{labels.outbox.columns.subject}</th>
-                    <th className="py-2 pr-2">{labels.outbox.columns.attempts}</th>
-                    <th className="py-2 pr-2">{labels.outbox.columns.error}</th>
-                    <th className="py-2 pr-2">{labels.outbox.columns.createdAt}</th>
-                    <th className="py-2 text-right">{labels.outbox.columns.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {outboxFailed.map((item) => (
-                    <tr key={item.id} className="border-b border-[var(--surface-border)]/70">
-                      <td className="py-2 pr-2">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(item.id)}
-                          onChange={(event) => toggleSelect(item.id, event.target.checked)}
-                        />
-                      </td>
-                      <td className="py-2 pr-2">
-                        <Badge variant={channelVariant(item.channel)}>
-                          {labels.outbox.channelOptions[item.channel]}
-                        </Badge>
-                      </td>
-                      <td className="py-2 pr-2">
+            <>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button type="button" variant="outline" disabled={isRetryPending || selectedIds.length === 0} onClick={retrySelected}>
+                  <RotateCw size={16} aria-hidden="true" />
+                  {isRetryPending ? labels.actions.retrying : labels.actions.retrySelected}
+                  {selectedIds.length > 0 ? <span className="tabular">({selectedIds.length})</span> : null}
+                </Button>
+              </div>
+              <ul className="border-t border-[var(--rule)]">
+                {outboxFailed.map((item) => (
+                  <li key={item.id} className="flex items-start gap-3 border-b border-[var(--rule)] py-4">
+                    <label className="-m-2.5 inline-flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center">
+                      <input
+                        type="checkbox"
+                        className="h-5 w-5"
+                        aria-label={`${item.user.name} · ${item.subject ?? labels.outbox.channelOptions[item.channel]}`}
+                        checked={selectedIds.includes(item.id)}
+                        onChange={(event) => toggleSelect(item.id, event.target.checked)}
+                      />
+                    </label>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                         <Badge variant={statusVariant(item.status)}>{labels.outbox.statusOptions[item.status]}</Badge>
-                      </td>
-                      <td className="py-2 pr-2">{item.user.name} ({item.user.email})</td>
-                      <td className="py-2 pr-2">{item.subject ?? "-"}</td>
-                      <td className="py-2 pr-2">{item.attempts}</td>
-                      <td className="py-2 pr-2">{item.lastError ?? "-"}</td>
-                      <td className="py-2 pr-2">{formatDateTimeForApp(item.createdAt)}</td>
-                      <td className="py-2 text-right">
-                        <Button type="button" size="sm" variant="outline" disabled={isRetryPending} onClick={() => retrySingle(item.id)}>
-                          {isRetryPending ? labels.actions.retrying : labels.actions.retry}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <span className="text-sm font-semibold text-[var(--muted-foreground)]">
+                          {labels.outbox.channelOptions[item.channel]}
+                        </span>
+                        <span className="tabular text-sm text-[var(--muted-foreground)]">
+                          {formatDateTimeForApp(item.createdAt, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+                        </span>
+                      </div>
+                      <p className="text-[16px] font-semibold leading-snug">{item.subject ?? "—"}</p>
+                      <p className="break-words text-[15px] text-[var(--muted-foreground)]">
+                        {item.user.name} · <span className="break-all">{item.user.email}</span>
+                      </p>
+                      {item.lastError ? (
+                        <p className="break-words text-sm text-[var(--danger-fg)]">{item.lastError}</p>
+                      ) : null}
+                      <p className="text-sm text-[var(--muted-foreground)]">
+                        {labels.outbox.columns.attempts}: <span className="tabular">{item.attempts}</span>
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      className="shrink-0"
+                      disabled={isRetryPending}
+                      onClick={() => retrySingle(item.id)}
+                    >
+                      <RotateCw size={16} aria-hidden="true" />
+                      <span className="hidden sm:inline">{isRetryPending ? labels.actions.retrying : labels.actions.retry}</span>
+                      <span className="sr-only sm:hidden">{labels.actions.retry}</span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </>
           )}
 
-          <div className="inline-flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={filters.page <= 1}
-              onClick={() => pushFilters({ status: statusFilter, channel: channelFilter, from: fromFilter, to: toFilter, page: filters.page - 1 })}
-            >
-              {labels.outbox.pagination.prev}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={filters.page >= filters.totalPages}
-              onClick={() => pushFilters({ status: statusFilter, channel: channelFilter, from: fromFilter, to: toFilter, page: filters.page + 1 })}
-            >
-              {labels.outbox.pagination.next}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </section>
+          {filters.totalPages > 1 ? (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={filters.page <= 1}
+                onClick={() => pushFilters({ status: statusFilter, channel: channelFilter, from: fromFilter, to: toFilter, page: filters.page - 1 })}
+              >
+                {labels.outbox.pagination.prev}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={filters.page >= filters.totalPages}
+                onClick={() => pushFilters({ status: statusFilter, channel: channelFilter, from: fromFilter, to: toFilter, page: filters.page + 1 })}
+              >
+                {labels.outbox.pagination.next}
+              </Button>
+            </div>
+          ) : null}
+        </SettingsSection>
+      </div>
+    </div>
   );
 }

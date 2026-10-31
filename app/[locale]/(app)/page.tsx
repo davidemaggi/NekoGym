@@ -1,37 +1,71 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { AlertTriangle, CalendarCheck, ChevronRight } from "lucide-react";
+
 import { requireAuth } from "@/lib/authorization";
-import { createAppDateTimeFormatter, getAppDateTimeConfig, parseDateInputToUtc } from "@/lib/date-time";
+import { appDayRange } from "@/lib/booking-rules";
+import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
+import { loadMemberPass } from "@/lib/member-pass";
+import { withLessonPlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
+import { textLinkActionClass } from "@/lib/ui-classes";
+import { cn } from "@/lib/utils";
+import { PassCard, fill, fillNodes } from "@/components/bookings/pass-card";
+import { LessonManageButton, type ManageableLesson } from "@/components/lessons/lesson-manage-button";
+import { SeatStrip } from "@/components/lessons/seat-strip";
 import { PwaInstallBanner } from "@/components/pwa/install-banner";
-import { DashboardPendingApprovals } from "@/app/[locale]/(app)/dashboard-pending-approvals";
-import { DashboardUserInsights } from "@/app/[locale]/(app)/dashboard-user-insights";
+import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { DashboardCrowdingChart } from "@/app/[locale]/(app)/dashboard-crowding-chart";
+import { DashboardPendingApprovals } from "@/app/[locale]/(app)/dashboard-pending-approvals";
+import { DashboardTypeChart, type TypeChartLesson } from "@/app/[locale]/(app)/dashboard-type-chart";
 
-function toDateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+type HomeLesson = ManageableLesson & {
+  timeLabel: string;
+  bookedCount: number;
+  pendingCount: number;
+  phase: "ended" | "inProgress" | "upcoming";
+};
 
-function weekdayInAppTimeZone(date: Date): number {
-  const { timeZone } = getAppDateTimeConfig();
-  const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone,
-    weekday: "short",
-  }).format(date);
-  const map: Record<string, number> = {
-    Sun: 0,
-    Mon: 1,
-    Tue: 2,
-    Wed: 3,
-    Thu: 4,
-    Fri: 5,
-    Sat: 6,
-  };
-  return map[parts] ?? date.getDay();
+
+/** Seat strip: one segment per seat up to 16, a continuous bar beyond. */
+
+
+
+function TodoItem({
+  count,
+  icon,
+  tone,
+  title,
+  children,
+}: {
+  count?: number;
+  icon?: ReactNode;
+  tone: "warning" | "info" | "danger";
+  title: string;
+  children: ReactNode;
+}) {
+  const toneClass = {
+    warning: "bg-[var(--warning-bg)] text-[var(--warning-fg)]",
+    info: "bg-[var(--info-bg)] text-[var(--info-fg)]",
+    danger: "bg-[var(--danger-bg)] text-[var(--danger-fg)]",
+  }[tone];
+  return (
+    <li className="flex gap-3 border-b border-[var(--rule)] py-4 first:pt-1 last:border-b-0">
+      <span aria-hidden="true" className={cn("tabular inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl font-bold", toneClass)}>
+        {icon ?? count}
+      </span>
+      <div className="min-w-0">
+        <h3 className="text-[15px] font-semibold">
+          {title}
+          {count !== undefined ? <span className="sr-only">: {count}</span> : null}
+        </h3>
+        {children}
+      </div>
+    </li>
+  );
 }
 
 export default async function DashboardPage({
@@ -47,274 +81,523 @@ export default async function DashboardPage({
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
   const labels = dictionary.appPages.dashboard;
-  const lessonLabels = dictionary.lessonsPage;
-  const bookingLabels = dictionary.bookings;
+  const home = labels.home;
   const now = new Date();
+  const { timeZone } = getAppDateTimeConfig();
+  const intlLocale = safeLocale === "it" ? "it-IT" : "en-GB";
   const iconOptions = await getLessonTypeIconOptions();
-  const canManageLessons = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
+  const isStaff = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
+  const trainerScope = currentUser.role === "TRAINER" ? { trainerId: currentUser.id } : {};
 
-  const trainerCandidates =
-    currentUser.role === "ADMIN"
-      ? await prisma.user.findMany({
-          where: { role: { in: ["ADMIN", "TRAINER"] } },
-          select: { id: true, name: true, email: true },
-          orderBy: { name: "asc" },
-        })
-      : currentUser.role === "TRAINER"
-        ? [{ id: currentUser.id, name: currentUser.name, email: currentUser.email }]
-        : [];
+  const timeFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const longDayFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "long", day: "numeric", month: "long" });
+  const shortWhenFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "short", day: "numeric", month: "short" });
+  const hour = Number(new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" }).format(now));
+  const greeting = fill(hour < 13 ? home.greetingMorning : hour < 18 ? home.greetingAfternoon : home.greetingEvening, {
+    name: currentUser.name.split(" ")[0] ?? currentUser.name,
+  });
+  const todayLabel = longDayFormat.format(now);
+  const today = appDayRange(now);
 
-  const lessonTypeCandidates = canManageLessons
-    ? await prisma.lessonType.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
-
-  const attendeeCandidates = canManageLessons
-    ? await prisma.user.findMany({
-        select: { id: true, name: true, email: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
-
-  const pendingWhere = currentUser.role === "ADMIN"
-    ? {
-        status: "PENDING" as const,
-        lesson: {
-          status: "SCHEDULED" as const,
-          deletedAt: null,
-          startsAt: { gt: now },
-        },
-      }
-    : currentUser.role === "TRAINER"
-      ? {
-          status: "PENDING" as const,
-          lesson: {
-            status: "SCHEDULED" as const,
-            deletedAt: null,
-            startsAt: { gt: now },
-            trainerId: currentUser.id,
-          },
-        }
-      : null;
-
-  const pendingApprovals = pendingWhere
-    ? await prisma.lessonBooking.findMany({
-        where: pendingWhere,
-        select: {
-          lessonId: true,
-          traineeId: true,
-          trainee: { select: { name: true } },
-          lesson: {
-            select: {
-              title: true,
-              startsAt: true,
-              course: { select: { name: true } },
-              lessonType: { select: { name: true } },
-            },
-          },
-        },
-        orderBy: { createdAt: "asc" },
-      })
-    : [];
-
-  const todayKey = toDateKey(now);
-  const selectedCrowdingDayKey =
-    crowdingDay && /^\d{4}-\d{2}-\d{2}$/.test(crowdingDay) ? crowdingDay : todayKey;
-  const selectedCrowdingDayStart =
-    parseDateInputToUtc(selectedCrowdingDayKey) ??
-    (() => {
-      const fallback = new Date(now);
-      fallback.setHours(0, 0, 0, 0);
-      return fallback;
-    })();
-  const selectedCrowdingDayEnd = new Date(selectedCrowdingDayStart.getTime() + 24 * 60 * 60 * 1000);
-  const crowdingWindowStart = new Date(selectedCrowdingDayStart.getTime() - 84 * 24 * 60 * 60 * 1000);
-  const targetWeekday = weekdayInAppTimeZone(selectedCrowdingDayStart);
-  const prevCrowdingDate = new Date(selectedCrowdingDayStart);
-  prevCrowdingDate.setDate(prevCrowdingDate.getDate() - 1);
-  const nextCrowdingDate = new Date(selectedCrowdingDayStart);
-  nextCrowdingDate.setDate(nextCrowdingDate.getDate() + 1);
-
-  const crowdingLessons =
-    currentUser.role === "ADMIN" || currentUser.role === "TRAINER"
-      ? await prisma.lesson.findMany({
-          where: {
-            deletedAt: null,
-            status: "SCHEDULED",
-            startsAt: {
-              gte: crowdingWindowStart,
-              lt: selectedCrowdingDayEnd,
-            },
-            ...(currentUser.role === "TRAINER" ? { trainerId: currentUser.id } : {}),
-          },
-          select: {
-            startsAt: true,
-            bookings: {
-              where: { status: "CONFIRMED" },
-              select: { id: true },
-            },
-          },
-          orderBy: { startsAt: "asc" },
-        })
-      : [];
-
-  const crowdingByHour = new Map<number, { lessonsCount: number; totalBookings: number }>();
-  const sampleDayKeys = new Set<string>();
-  for (const lesson of crowdingLessons) {
-    if (weekdayInAppTimeZone(lesson.startsAt) !== targetWeekday) continue;
-    const hour = lesson.startsAt.getHours();
-    const current = crowdingByHour.get(hour) ?? { lessonsCount: 0, totalBookings: 0 };
-    current.lessonsCount += 1;
-    current.totalBookings += lesson.bookings.length;
-    crowdingByHour.set(hour, current);
-    sampleDayKeys.add(toDateKey(lesson.startsAt));
-  }
-  const crowdingRows = Array.from(crowdingByHour.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([hour, value]) => ({
-      hourLabel: `${String(hour).padStart(2, "0")}:00`,
-      avgAttendees: Math.round((value.totalBookings / Math.max(1, value.lessonsCount)) * 10) / 10,
-      lessonsCount: value.lessonsCount,
-    }));
-
-  const personalLessons = await prisma.lesson.findMany({
+  // Lessons-per-type chart, current year only: the whole gym for admins, own lessons (taught or booked) otherwise.
+  const { year } = getAppDateParts(now);
+  const typeChartLessons = await prisma.lesson.findMany({
     where: {
       deletedAt: null,
       status: "SCHEDULED",
-      OR: [
-        { trainerId: currentUser.id },
-        {
-          bookings: {
-            some: {
-              traineeId: currentUser.id,
-              status: { in: ["CONFIRMED", "PENDING"] },
-            },
-          },
-        },
-      ],
+      startsAt: { gte: appStartOfDayUtc(year, 1, 1), lt: appStartOfDayUtc(year + 1, 1, 1) },
+      ...(currentUser.role === "ADMIN"
+        ? {}
+        : {
+            OR: [
+              { trainerId: currentUser.id },
+              { bookings: { some: { traineeId: currentUser.id, status: { in: ["CONFIRMED", "PENDING"] } } } },
+            ],
+          }),
     },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      startsAt: true,
-      endsAt: true,
-      maxAttendees: true,
-      cancellationWindowHours: true,
-      trainerId: true,
-      trainer: { select: { id: true, name: true } },
+    select: { startsAt: true, lessonType: { select: { name: true, colorHex: true } } },
+  });
+  const typeChartData: TypeChartLesson[] = typeChartLessons.map((lesson) => ({
+    startsAt: lesson.startsAt.toISOString(),
+    lessonTypeName: lesson.lessonType?.name ?? "-",
+    lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
+  }));
+  const typeChart = (
+    <DashboardTypeChart
+      locale={safeLocale}
+      lessons={typeChartData}
+      defaultRange={isStaff ? "month" : "week"}
+      labels={{
+        chartTitle: labels.userInsights.chartTitle,
+        chartDescription: labels.userInsights.chartDescription,
+        chartRangeLabel: labels.userInsights.chartRangeLabel,
+        chartRangeWeek: labels.userInsights.chartRangeWeek,
+        chartRangeMonth: labels.userInsights.chartRangeMonth,
+        chartRangeYear: labels.userInsights.chartRangeYear,
+        chartEmpty: labels.userInsights.chartEmpty,
+        chartFutureSuffix: labels.userInsights.chartFutureSuffix,
+        chartFutureNote: labels.userInsights.chartFutureNote,
+      }}
+    />
+  );
+
+  /* ---------------------------------------------------------------- */
+  /* Member home                                                       */
+  /* ---------------------------------------------------------------- */
+  if (!isStaff) {
+    const { pass, upcoming } = await loadMemberPass({
+      userId: currentUser.id,
+      role: currentUser.role,
+      locale: safeLocale,
+      iconOptions,
+      now,
+    });
+    const [next, ...later] = upcoming;
+    const bookingsHref = (dayKey?: string) => `/${safeLocale}/bookings${dayKey ? `?day=${dayKey}` : ""}`;
+
+    return (
+      <div className="mx-auto max-w-3xl">
+        <div
+          data-page-band
+          className="-mt-4 bg-[var(--stock)] pb-6 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pt-10"
+        >
+          <header>
+            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{greeting}</h1>
+            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75 first-letter:uppercase">{todayLabel}</p>
+          </header>
+          {pass ? (
+            <div className="mt-5">
+              <PassCard pass={pass} labels={dictionary.bookings.pass} />
+            </div>
+          ) : null}
+        </div>
+
+        <PwaInstallBanner labels={dictionary.pwaInstall} />
+
+        <section aria-labelledby="next-heading" className="pt-6">
+          <h2 id="next-heading" className="text-[17px] font-semibold">{home.nextLessonTitle}</h2>
+          {next ? (
+            <Link
+              href={bookingsHref(next.dayKey)}
+              className="mt-3 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-3 rounded-2xl bg-[var(--surface)] p-4 shadow-[var(--shadow-lift)] transition-colors hover:bg-[var(--surface-sunken)] sm:grid-cols-[5rem_minmax(0,1fr)_auto] sm:p-5"
+            >
+              {/* Phones read it like a ticket: time and stamp on top, the lesson below at full width. */}
+              <span className="tabular text-[2rem] font-bold leading-none">{next.timeLabel}</span>
+              <span className="col-span-2 row-start-2 min-w-0 sm:col-span-1 sm:col-start-2 sm:row-start-1">
+                <span className="flex items-start gap-2 text-[17px] font-semibold leading-snug">
+                  {next.lessonTypeIcon ? (
+                    <LessonTypeIcon iconPath={next.lessonTypeIcon} colorHex={next.lessonTypeColor} size={18} className="mt-[3px]" />
+                  ) : null}
+                  <span className="min-w-0 break-words">{next.title}</span>
+                </span>
+                <span className="mt-0.5 block text-[15px] text-[var(--muted-foreground)] first-letter:uppercase">
+                  <span className="tabular">{next.dateLabel}</span>
+                  {next.trainerName ? ` · ${next.trainerName}` : null}
+                </span>
+              </span>
+              <span
+                className={cn(
+                  "col-start-2 row-start-1 inline-flex min-w-[5.75rem] flex-col items-center justify-self-end rounded-lg border-2 border-[var(--stamp)] px-2 py-1.5 text-center leading-tight text-[var(--stamp)] sm:col-start-3",
+                  next.isPending ? "border-dashed" : ""
+                )}
+              >
+                <span className="text-[11px] font-extrabold uppercase tracking-[0.08em]">
+                  {next.isPending ? dictionary.bookings.stampPending : dictionary.bookings.stampBooked}
+                </span>
+                <span className="tabular text-[15px] font-bold">{next.stampDateLabel}</span>
+              </span>
+            </Link>
+          ) : (
+            <p className="mt-2 text-[15px] text-[var(--muted-foreground)]">{home.memberEmpty}</p>
+          )}
+
+          {later.length > 0 ? (
+            <>
+              <h2 className="mt-7 text-[17px] font-semibold">{home.laterTitle}</h2>
+              <ul className="mt-1">
+                {later.map((item) => (
+                  <li key={item.id} className="border-b border-[var(--rule)] last:border-b-0">
+                    <Link
+                      href={bookingsHref(item.dayKey)}
+                      className="-mx-2 grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--surface)]"
+                    >
+                      <span className="min-w-0">
+                        <span className="flex items-center gap-2 font-semibold">
+                          {item.lessonTypeIcon ? (
+                            <LessonTypeIcon iconPath={item.lessonTypeIcon} colorHex={item.lessonTypeColor} size={16} />
+                          ) : null}
+                          <span className="truncate">{item.title}</span>
+                        </span>
+                        <span className="tabular mt-0.5 block text-[15px] text-[var(--muted-foreground)] first-letter:uppercase">
+                          {item.whenLabel}
+                        </span>
+                      </span>
+                      <span
+                        className={cn(
+                          "rounded-lg border-2 border-[var(--stamp)] px-2 py-1 text-xs font-extrabold uppercase tracking-[0.06em] text-[var(--stamp)]",
+                          item.isPending ? "border-dashed" : ""
+                        )}
+                      >
+                        {item.isPending ? dictionary.bookings.stampPending : dictionary.bookings.stampBooked}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+
+          <Link
+            href={bookingsHref()}
+            className="mt-6 inline-flex h-11 items-center gap-2 rounded-xl bg-[var(--primary)] px-5 text-[15px] font-semibold text-[var(--primary-foreground)] transition-colors hover:bg-[var(--primary-hover)]"
+          >
+            <CalendarCheck size={18} aria-hidden="true" />
+            {home.bookCta}
+          </Link>
+        </section>
+
+        <div className="mt-10 border-t border-[var(--rule)] pt-6">{typeChart}</div>
+      </div>
+    );
+  }
+
+  /* ---------------------------------------------------------------- */
+  /* Staff home: today on the left, to-do on the right                 */
+  /* ---------------------------------------------------------------- */
+  const [trainerCandidates, lessonTypeCandidates, attendeeCandidates] = await Promise.all([
+    currentUser.role === "ADMIN"
+      ? prisma.user.findMany({ where: { role: { in: ["ADMIN", "TRAINER"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+      : Promise.resolve([{ id: currentUser.id, name: currentUser.name }]),
+    prisma.lessonType.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
+  ]);
+
+  const todayLessons = await prisma.lesson.findMany({
+    where: { status: "SCHEDULED", deletedAt: null, startsAt: { gte: today.start, lt: today.end }, ...trainerScope },
+    include: {
       course: { select: { id: true, name: true } },
-      lessonType: { select: { id: true, name: true, iconSvg: true, colorHex: true } },
+      trainer: { select: { id: true, name: true } },
+      lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: {
-        select: {
-          status: true,
-          attendanceStatus: true,
-          trainee: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
+        select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true } } },
       },
       waitlistEntries: {
-        select: {
-          trainee: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-            },
-          },
-        },
+        select: { trainee: { select: { id: true, name: true, email: true } } },
         orderBy: { createdAt: "asc" },
       },
-      _count: { select: { bookings: true, waitlistEntries: true } },
     },
     orderBy: { startsAt: "asc" },
   });
 
-  const activeCoursesCount = await prisma.course.count({ where: { deletedAt: null } });
-  const todayLessonsCount = personalLessons.filter((lesson) => {
-    const date = lesson.startsAt;
-    return (
-      date.getFullYear() === now.getFullYear() &&
-      date.getMonth() === now.getMonth() &&
-      date.getDate() === now.getDate()
-    );
-  }).length;
-  const futureBookingsCount = personalLessons.filter((lesson) => lesson.startsAt > now).length;
+  // Plan spent by each person in the lesson's own week/month (staff only reads it).
+  const planUsage = await withLessonPlanUsage(prisma, todayLessons, (lesson) => [
+    ...lesson.bookings.map((booking) => booking.trainee),
+    ...lesson.waitlistEntries.map((entry) => entry.trainee),
+  ]);
+  const withUsage = <P extends { id: string }>(lessonId: string, person: P) => ({
+    ...person,
+    planUsage: planUsage.get(lessonId)?.get(person.id),
+  });
+  const rows: HomeLesson[] = todayLessons.map((lesson) => {
+    const confirmed = lesson.bookings.filter((booking) => booking.status === "CONFIRMED");
+    const canManageLesson = currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id;
+    return {
+      id: lesson.id,
+      title: lesson.title ?? null,
+      description: lesson.description ?? null,
+      startsAt: lesson.startsAt.toISOString(),
+      endsAt: lesson.endsAt.toISOString(),
+      startsAtLocal: appDateTimeLocalValue(lesson.startsAt),
+      timeLabel: timeFormat.format(lesson.startsAt),
+      durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
+      hasStarted: lesson.startsAt <= now,
+      phase: lesson.endsAt <= now ? "ended" : lesson.startsAt <= now ? "inProgress" : "upcoming",
+      maxAttendees: lesson.maxAttendees,
+      cancellationWindowHours: lesson.cancellationWindowHours,
+      trainerId: lesson.trainerId ?? "",
+      trainerName: lesson.trainer?.name ?? null,
+      lessonTypeId: lesson.lessonTypeId ?? "",
+      lessonTypeName: lesson.lessonType?.name ?? null,
+      lessonTypeIcon: lesson.lessonType ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions) : null,
+      lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
+      isCourseLesson: Boolean(lesson.course?.id),
+      courseName: lesson.course?.name ?? "-",
+      bookedCount: confirmed.length,
+      pendingCount: lesson.bookings.length - confirmed.length,
+      occupancy: `${confirmed.length}/${lesson.maxAttendees}`,
+      queueLength: lesson.waitlistEntries.length,
+      canViewWaitlist: true,
+      canManageLesson,
+      canManageAttendance: canManageLesson && lesson.endsAt <= now,
+      attendees: confirmed.map((booking) => withUsage(lesson.id, booking.trainee)),
+      attendeeAttendance: Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])),
+      pendingApprovals: lesson.bookings
+        .filter((booking) => booking.status === "PENDING")
+        .map((booking) => withUsage(lesson.id, booking.trainee)),
+      waitlist: lesson.waitlistEntries.map((entry) => withUsage(lesson.id, entry.trainee)),
+    };
+  });
+  const peopleToday = rows.reduce((sum, lesson) => sum + lesson.bookedCount, 0);
+  const summary =
+    rows.length === 0
+      ? home.summaryNone
+      : fill(rows.length === 1 ? home.summaryTodayOne : home.summaryToday, { lessons: rows.length, people: peopleToday });
 
-  const dateFmt = createAppDateTimeFormatter({
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+  // To-do 1: booking requests waiting for staff confirmation.
+  const pendingApprovals = await prisma.lessonBooking.findMany({
+    where: { status: "PENDING", lesson: { status: "SCHEDULED", deletedAt: null, startsAt: { gt: now }, ...trainerScope } },
+    select: {
+      lessonId: true,
+      traineeId: true,
+      trainee: { select: { name: true } },
+      lesson: { select: { title: true, startsAt: true, course: { select: { name: true } }, lessonType: { select: { name: true } } } },
+    },
+    orderBy: { createdAt: "asc" },
   });
 
-  return (
-    <section className="space-y-6">
-      <PwaInstallBanner labels={dictionary.pwaInstall} />
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">Ciao {currentUser.name}!</h2>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-      </header>
+  // To-do 2: lessons that ended today with attendance still unmarked (the nightly job marks the rest PRESENT).
+  const attendanceToMark = rows.filter(
+    (lesson) => lesson.phase === "ended" && lesson.canManageLesson && Object.values(lesson.attendeeAttendance).some((value) => value === null)
+  );
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.stats.activeCourses}</p>
-          <p className="mt-2 text-2xl font-semibold">{activeCoursesCount}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.stats.todayLessons}</p>
-          <p className="mt-2 text-2xl font-semibold">{todayLessonsCount}</p>
-        </div>
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.stats.bookings}</p>
-          <p className="mt-2 text-2xl font-semibold">{futureBookingsCount}</p>
-        </div>
-        {currentUser.role === "ADMIN" || currentUser.role === "TRAINER" ? (
-          <DashboardPendingApprovals
-            locale={locale}
-            count={pendingApprovals.length}
-            canGrantOpenAccess={currentUser.role === "ADMIN"}
-            items={pendingApprovals.map((entry) => ({
-              lessonId: entry.lessonId,
-              traineeId: entry.traineeId,
-              traineeName: entry.trainee.name,
-              lessonTitle: entry.lesson.title?.trim() || entry.lesson.course?.name || "-",
-              lessonTypeName: entry.lesson.lessonType?.name ?? "-",
-              startsAtLabel: dateFmt(entry.lesson.startsAt),
-            }))}
-            labels={{
-              statLabel: labels.stats.pendingApprovals,
-              openCta: labels.pending.openCta,
-              dialogTitle: labels.pending.dialogTitle,
-              dialogDescription: labels.pending.dialogDescription,
-              empty: labels.pending.empty,
-              approveCta: labels.pending.approveCta,
-              approveAndUnlockCta: labels.pending.approveAndUnlockCta,
-              rejectCta: labels.pending.rejectCta,
-              closeCta: labels.pending.closeCta,
-            }}
-          />
-        ) : null}
+  // To-do 3: empty lessons whose auto-cancel deadline falls within the next 24 hours.
+  const riskCandidates = await prisma.lesson.findMany({
+    where: {
+      status: "SCHEDULED",
+      deletedAt: null,
+      startsAt: { gt: now, lt: new Date(now.getTime() + 8 * 24 * 60 * 60 * 1000) },
+      bookings: { none: {} },
+      ...trainerScope,
+    },
+    select: { id: true, title: true, startsAt: true, cancellationWindowHours: true, course: { select: { name: true } } },
+    orderBy: { startsAt: "asc" },
+  });
+  const atRisk = riskCandidates
+    .map((lesson) => ({ ...lesson, deadline: new Date(lesson.startsAt.getTime() - lesson.cancellationWindowHours * 60 * 60 * 1000) }))
+    .filter((lesson) => lesson.deadline > now && lesson.deadline.getTime() - now.getTime() <= 24 * 60 * 60 * 1000);
+
+  const todoCount = (pendingApprovals.length > 0 ? 1 : 0) + attendanceToMark.length + atRisk.length;
+  const manageProps = {
+    locale: safeLocale,
+    labels: dictionary.bookings,
+    lessonCreateLabels: dictionary.lessonsPage,
+    canUpdateTrainer: currentUser.role === "ADMIN",
+    isAdmin: currentUser.role === "ADMIN",
+    trainerCandidates,
+    lessonTypeCandidates,
+    attendeeCandidates,
+  };
+
+  // Crowding: average attendees per hour slot on the selected weekday, over the last 12 weeks.
+  const selectedCrowdingKey = crowdingDay && /^\d{4}-\d{2}-\d{2}$/.test(crowdingDay) ? crowdingDay : appDateKey(now);
+  const [cy, cm, cd] = selectedCrowdingKey.split("-").map((part) => Number.parseInt(part, 10));
+  const crowdingStart = appStartOfDayUtc(cy, cm, cd);
+  const crowdingEnd = appStartOfDayUtc(cy, cm, cd + 1);
+  const targetWeekday = getAppDateParts(crowdingStart).weekday;
+  const crowdingLessons = await prisma.lesson.findMany({
+    where: {
+      deletedAt: null,
+      status: "SCHEDULED",
+      startsAt: { gte: appStartOfDayUtc(cy, cm, cd - 84), lt: crowdingEnd },
+      ...trainerScope,
+    },
+    select: { startsAt: true, bookings: { where: { status: "CONFIRMED" }, select: { id: true } } },
+  });
+  const byHour = new Map<number, { lessons: number; bookings: number }>();
+  const sampleDays = new Set<string>();
+  const hourFormat = new Intl.DateTimeFormat("en-GB", { timeZone, hour: "2-digit", hourCycle: "h23" });
+  for (const lesson of crowdingLessons) {
+    if (getAppDateParts(lesson.startsAt).weekday !== targetWeekday) continue;
+    const slot = Number(hourFormat.format(lesson.startsAt));
+    const entry = byHour.get(slot) ?? { lessons: 0, bookings: 0 };
+    entry.lessons += 1;
+    entry.bookings += lesson.bookings.length;
+    byHour.set(slot, entry);
+    sampleDays.add(appDateKey(lesson.startsAt));
+  }
+  const crowdingRows = Array.from(byHour.entries())
+    .sort((a, b) => a[0] - b[0])
+    .map(([slot, value]) => ({
+      hourLabel: `${String(slot).padStart(2, "0")}:00`,
+      avgAttendees: Math.round((value.bookings / Math.max(1, value.lessons)) * 10) / 10,
+      lessonsCount: value.lessons,
+    }));
+
+  return (
+    <div>
+      <div
+        data-page-band
+        className="-mt-4 bg-[var(--stock)] pb-6 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-8 lg:pt-10"
+      >
+        <header>
+          <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{greeting}</h1>
+          <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">
+            <span className="inline-block first-letter:uppercase">{todayLabel}</span> · {summary}
+          </p>
+        </header>
       </div>
 
-      {currentUser.role === "ADMIN" || currentUser.role === "TRAINER" ? (
+      <PwaInstallBanner labels={dictionary.pwaInstall} />
+
+      <div className="grid gap-8 pt-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10">
+        <section aria-labelledby="today-heading" className="min-w-0">
+          <h2 id="today-heading" className="text-[17px] font-semibold">{home.todayTitle}</h2>
+          {rows.length === 0 ? (
+            <p className="mt-2 text-[15px] text-[var(--muted-foreground)]">{home.todayEmpty}</p>
+          ) : (
+            <ul className="-mx-4 mt-1 sm:mx-0">
+              {rows.map((lesson) => {
+                const meta = [
+                  lesson.trainerName,
+                  lesson.phase === "inProgress" ? home.inProgress : lesson.phase === "ended" ? home.ended : null,
+                  lesson.queueLength > 0 ? fill(home.queueShort, { n: lesson.queueLength }) : null,
+                  lesson.pendingCount > 0 ? fill(home.pendingShort, { n: lesson.pendingCount }) : null,
+                ].filter(Boolean);
+                const needsAttendance = attendanceToMark.some((item) => item.id === lesson.id);
+                const occupancyLabel = fill(home.occupancyLabel, { booked: lesson.bookedCount, max: lesson.maxAttendees });
+                return (
+                  <li
+                    key={lesson.id}
+                    className={cn(
+                      "grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-[var(--rule)] px-4 py-3.5 last:border-b-0 sm:grid-cols-[4.25rem_minmax(0,1fr)_8.5rem_auto] sm:px-0",
+                      lesson.phase === "inProgress"
+                        ? "my-1 rounded-none border-b-0 bg-[var(--surface)] shadow-[var(--shadow-lift)] sm:-mx-4 sm:rounded-2xl sm:px-4"
+                        : ""
+                    )}
+                  >
+                    <p className={cn("leading-none", lesson.phase === "ended" ? "text-[var(--muted-foreground)]" : "")}>
+                      <span className="tabular block text-[1.375rem] font-bold sm:text-[1.625rem]">{lesson.timeLabel}</span>
+                      <span className="tabular mt-1 block text-[13px] font-medium text-[var(--muted-foreground)]">
+                        {lesson.durationMinutes} min
+                      </span>
+                      <span className="tabular mt-1 block text-[13px] font-semibold text-[var(--foreground)] sm:hidden">
+                        {lesson.occupancy}
+                        {lesson.pendingCount > 0 ? ` +${lesson.pendingCount}` : ""}
+                      </span>
+                    </p>
+                    <div className="min-w-0">
+                      <p className="flex items-start gap-2 text-[17px] font-semibold leading-snug">
+                        {lesson.lessonTypeIcon ? (
+                          <LessonTypeIcon iconPath={lesson.lessonTypeIcon} colorHex={lesson.lessonTypeColor} size={18} className="mt-[3px]" />
+                        ) : null}
+                        <span className="min-w-0 break-words">{lesson.title ?? lesson.courseName}</span>
+                      </p>
+                      <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
+                        {meta.map((part, index) => (
+                          <span key={index} className={part === home.inProgress ? "font-semibold text-[var(--success-fg)]" : undefined}>
+                            {index > 0 ? " · " : null}
+                            {part}
+                          </span>
+                        ))}
+
+                      </p>
+                    </div>
+                    <div className="hidden sm:block">
+                      <SeatStrip booked={lesson.bookedCount} pending={lesson.pendingCount} max={lesson.maxAttendees} label={occupancyLabel} />
+                    </div>
+                    <div className="justify-self-end">
+                      {lesson.canManageLesson ? (
+                        <LessonManageButton
+                          {...manageProps}
+                          lesson={lesson}
+                          triggerLabel={needsAttendance ? home.attendeesCta : home.manageCta}
+                        />
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section aria-labelledby="todo-heading" className={cn("min-w-0", todoCount > 0 ? "order-first lg:order-none" : "")}>
+          <h2 id="todo-heading" className="flex items-baseline justify-between text-[17px] font-semibold">
+            {home.todoTitle}
+            {todoCount > 0 ? <span className="tabular text-[15px] font-medium text-[var(--muted-foreground)]">{todoCount}</span> : null}
+          </h2>
+          {todoCount === 0 ? (
+            <p className="mt-2 text-[15px] text-[var(--muted-foreground)]">{home.todoEmpty}</p>
+          ) : (
+            <ul className="mt-2">
+              {pendingApprovals.length > 0 ? (
+                <TodoItem count={pendingApprovals.length} tone="warning" title={home.todoPendingTitle}>
+                  <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
+                    {pendingApprovals.slice(0, 3).map((entry, index) => (
+                      <span key={`${entry.lessonId}:${entry.traineeId}`} className="block">
+                        {entry.trainee.name} · {entry.lesson.title?.trim() || entry.lesson.course?.name || "-"} ·{" "}
+                        <span className="tabular">{shortWhenFormat.format(entry.lesson.startsAt)}, {timeFormat.format(entry.lesson.startsAt)}</span>
+                        {index === 2 && pendingApprovals.length > 3 ? ` +${pendingApprovals.length - 3}` : null}
+                      </span>
+                    ))}
+                  </p>
+                  <DashboardPendingApprovals
+                    locale={safeLocale}
+                    canGrantOpenAccess={currentUser.role === "ADMIN"}
+                    items={pendingApprovals.map((entry) => ({
+                      lessonId: entry.lessonId,
+                      traineeId: entry.traineeId,
+                      traineeName: entry.trainee.name,
+                      lessonTitle: entry.lesson.title?.trim() || entry.lesson.course?.name || "-",
+                      lessonTypeName: entry.lesson.lessonType?.name ?? "-",
+                      startsAtLabel: `${shortWhenFormat.format(entry.lesson.startsAt)}, ${timeFormat.format(entry.lesson.startsAt)}`,
+                    }))}
+                    labels={{
+                      openCta: labels.pending.openCta,
+                      dialogTitle: labels.pending.dialogTitle,
+                      dialogDescription: labels.pending.dialogDescription,
+                      empty: labels.pending.empty,
+                      approveCta: labels.pending.approveCta,
+                      approveAndUnlockCta: labels.pending.approveAndUnlockCta,
+                      rejectCta: labels.pending.rejectCta,
+                      closeCta: labels.pending.closeCta,
+                    }}
+                  />
+                </TodoItem>
+              ) : null}
+
+              {attendanceToMark.map((lesson) => (
+                <TodoItem key={`att-${lesson.id}`} count={lesson.attendees.length} tone="info" title={home.todoAttendanceTitle}>
+                  <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
+                    {fillNodes(home.todoAttendanceBody, {
+                      lesson: lesson.title ?? lesson.courseName,
+                      time: <span className="tabular">{lesson.timeLabel}</span>,
+                      n: <span className="tabular">{lesson.attendees.length}</span>,
+                    })}
+                  </p>
+                  <LessonManageButton {...manageProps} lesson={lesson} triggerLabel={home.todoAttendanceCta} triggerVariant="link" />
+                </TodoItem>
+              ))}
+
+              {atRisk.map((lesson) => (
+                <TodoItem key={`risk-${lesson.id}`} icon={<AlertTriangle size={20} />} tone="danger" title={home.todoRiskTitle}>
+                  <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
+                    {fillNodes(home.todoRiskBody, {
+                      lesson: lesson.title ?? lesson.course?.name ?? "-",
+                      when: <span className="tabular">{shortWhenFormat.format(lesson.startsAt)}, {timeFormat.format(lesson.startsAt)}</span>,
+                      deadline: `${longDayFormat.format(lesson.deadline)} ${safeLocale === "it" ? "alle" : "at"} ${timeFormat.format(lesson.deadline)}`,
+                    })}
+                  </p>
+                  <Link
+                    href={`/${safeLocale}/bookings?day=${appDateKey(lesson.startsAt)}`}
+                    className={textLinkActionClass}
+                  >
+                    {home.todoRiskCta}
+                    <ChevronRight size={16} aria-hidden="true" />
+                  </Link>
+                </TodoItem>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
+
+      <div className="mt-10 grid gap-10 border-t border-[var(--rule)] pt-6 xl:grid-cols-2 [&>*]:min-w-0">
         <DashboardCrowdingChart
-          dayLabel={createAppDateTimeFormatter({
-            weekday: "long",
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-          })(selectedCrowdingDayStart)}
-          contextLabel={labels.crowding.contextLabel.replace("{days}", String(sampleDayKeys.size))}
-          prevHref={`/${locale}?crowdingDay=${toDateKey(prevCrowdingDate)}`}
-          nextHref={`/${locale}?crowdingDay=${toDateKey(nextCrowdingDate)}`}
+          dayLabel={longDayFormat.format(new Date(crowdingStart.getTime() + 12 * 60 * 60 * 1000))}
+          contextLabel={(sampleDays.size === 1 ? labels.crowding.contextLabelOne : labels.crowding.contextLabel).replace("{days}", String(sampleDays.size))}
+          prevHref={`/${safeLocale}?crowdingDay=${appDateKey(appStartOfDayUtc(cy, cm, cd - 1))}`}
+          nextHref={`/${safeLocale}?crowdingDay=${appDateKey(appStartOfDayUtc(cy, cm, cd + 1))}`}
           rows={crowdingRows}
           labels={{
             title: labels.crowding.title,
@@ -325,126 +608,8 @@ export default async function DashboardPage({
             avgAttendees: labels.crowding.avgAttendees,
           }}
         />
-      ) : null}
-
-      <DashboardUserInsights
-        locale={locale}
-        lessons={personalLessons.map((lesson) => ({
-          id: lesson.id,
-          title: lesson.title?.trim() || lesson.course?.name || "-",
-          description: lesson.description ?? null,
-          startsAt: lesson.startsAt.toISOString(),
-          endsAt: lesson.endsAt.toISOString(),
-          trainerName: lesson.trainer?.name ?? null,
-          occupancy: `${lesson._count.bookings}/${lesson.maxAttendees}`,
-          maxAttendees: lesson.maxAttendees,
-          cancellationWindowHours: lesson.cancellationWindowHours,
-          queueLength: lesson._count.waitlistEntries,
-          canViewWaitlist: true,
-          isCourseLesson: Boolean(lesson.course?.id),
-          lessonTypeName: lesson.lessonType?.name ?? "-",
-          lessonTypeId: lesson.lessonType?.id ?? "",
-          lessonTypeIcon: lesson.lessonType
-            ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)
-            : null,
-          lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
-          canBroadcast: currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id,
-          canManage: currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id,
-          canGrantOpenAccess: currentUser.role === "ADMIN",
-          canManageTrainer: currentUser.role === "ADMIN",
-          trainerIdForManage: lesson.trainer?.id ?? "",
-          attendees: lesson.bookings
-            .filter((booking) => booking.status === "CONFIRMED")
-            .map((booking) => ({
-              id: booking.trainee.id,
-              name: booking.trainee.name,
-              email: booking.trainee.email,
-            })),
-          attendeeAttendance: Object.fromEntries(
-            lesson.bookings
-              .filter((booking) => booking.status === "CONFIRMED")
-              .map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])
-          ),
-          pendingApprovals: lesson.bookings
-            .filter((booking) => booking.status === "PENDING")
-            .map((booking) => ({
-              id: booking.trainee.id,
-              name: booking.trainee.name,
-              email: booking.trainee.email,
-            })),
-          waitlist: lesson.waitlistEntries.map((entry) => ({
-            id: entry.trainee.id,
-            name: entry.trainee.name,
-            email: entry.trainee.email,
-          })),
-          roleKind: lesson.trainerId === currentUser.id ? "TRAINER" : "TRAINEE",
-          bookingStatus: lesson.bookings.find((booking) => booking.trainee.id === currentUser.id)?.status ?? null,
-        }))}
-        lessonManageData={{
-          trainerCandidates,
-          lessonTypeCandidates,
-          attendeeCandidates,
-        }}
-        lessonDetailsLabels={{
-          detailsTitle: lessonLabels.detailsTitle,
-          detailsDescription: lessonLabels.detailsDescription,
-          startsAtLabel: lessonLabels.startsAtLabel,
-          endsAtLabel: bookingLabels.endsAtLabel,
-          trainerLabel: lessonLabels.trainerLabel,
-          bookedLabel: lessonLabels.bookedLabel,
-          queuedLabel: bookingLabels.queuedLabel,
-          closeCta: lessonLabels.closeCta,
-          courseTag: lessonLabels.courseTag,
-          lessonDescriptionLabel: lessonLabels.lessonDescriptionLabel,
-          notifySectionTitle: lessonLabels.notifySectionTitle,
-          notifyMessagePlaceholder: lessonLabels.notifyMessagePlaceholder,
-          notifySendCta: lessonLabels.notifySendCta,
-        }}
-        lessonManageLabels={{
-          title: lessonLabels.manageTitle,
-          description: lessonLabels.manageDescription,
-          tabMain: lessonLabels.manageTabMain,
-          tabPeople: lessonLabels.manageTabPeople,
-          startsAtLabel: lessonLabels.startsAtLabel,
-          trainerLabel: lessonLabels.trainerLabel,
-          standaloneDuration: lessonLabels.standaloneDuration,
-          standaloneMaxAttendees: lessonLabels.standaloneMaxAttendees,
-          standaloneCancellationWindow: lessonLabels.standaloneCancellationWindow,
-          standaloneLessonType: lessonLabels.standaloneLessonType,
-          lessonTitleLabel: lessonLabels.lessonTitleLabel,
-          lessonDescriptionLabel: lessonLabels.lessonDescriptionLabel,
-          updateStandaloneCta: lessonLabels.updateStandaloneCta,
-          updateTrainerCta: lessonLabels.updateTrainerCta,
-          attendeesLabel: lessonLabels.attendeesLabel,
-          noAttendees: lessonLabels.noAttendees,
-          attendeeSelectLabel: lessonLabels.attendeeSelectLabel,
-          addAttendeeCta: lessonLabels.addAttendeeCta,
-          removeAttendeeCta: lessonLabels.removeAttendeeCta,
-          markAttendancePresentCta: lessonLabels.markAttendancePresentCta,
-          markAttendanceNoShowCta: lessonLabels.markAttendanceNoShowCta,
-          attendanceStatusLabel: lessonLabels.attendanceStatusLabel,
-          attendanceStatusPresent: lessonLabels.attendanceStatusPresent,
-          attendanceStatusNoShow: lessonLabels.attendanceStatusNoShow,
-          attendanceStatusUnmarked: lessonLabels.attendanceStatusUnmarked,
-          pendingApprovalsLabel: lessonLabels.pendingApprovalsLabel,
-          noPendingApprovals: lessonLabels.noPendingApprovals,
-          confirmPendingCta: lessonLabels.confirmPendingCta,
-          confirmPendingAndGrantAccessCta: lessonLabels.confirmPendingAndGrantAccessCta,
-          rejectPendingCta: lessonLabels.rejectPendingCta,
-          waitlistLabel: lessonLabels.waitlistLabel,
-          noWaitlist: lessonLabels.noWaitlist,
-          confirmWaitlistCta: lessonLabels.confirmWaitlistCta,
-          removeWaitlistCta: lessonLabels.removeWaitlistCta,
-          processing: lessonLabels.processing,
-          closeCta: lessonLabels.closeCta,
-          manageTriggerLabel: lessonLabels.manageTriggerLabel,
-          notifySectionTitle: lessonLabels.notifySectionTitle,
-          notifyMessageLabel: lessonLabels.notifyMessageLabel,
-          notifyMessagePlaceholder: lessonLabels.notifyMessagePlaceholder,
-          notifySendCta: lessonLabels.notifySendCta,
-        }}
-        labels={labels.userInsights}
-      />
-    </section>
+        {typeChart}
+      </div>
+    </div>
   );
 }

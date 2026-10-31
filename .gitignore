@@ -40,3 +40,8 @@ next-env.d.ts
 
 
 dev.db
+# impeccable: local caches, decision mocks and review captures
+.impeccable/hook.cache.json
+.impeccable/mocks/
+.impeccable/questions/
+.impeccable/review/

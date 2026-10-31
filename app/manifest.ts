@@ -9,11 +9,12 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     name: siteName,
     short_name: siteName,
-    description: "Gym management platform",
+    description: "Prenotazioni, lezioni e corsi della palestra",
     start_url: "/",
     display: "standalone",
-    background_color: "#ffffff",
-    theme_color: "#111827",
+    // Splash and system bars match the app paper (same as the light themeColor in app/layout.tsx).
+    background_color: "#f5f6f8",
+    theme_color: "#f5f6f8",
     icons: [
       {
         src: "/api/pwa-icon?size=192",

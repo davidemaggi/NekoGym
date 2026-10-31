@@ -9,6 +9,11 @@ import next from "next";
 
 loadEnvConfig(process.cwd());
 
+// Server-side date math (jobs, server components, reports) must follow the gym time zone, not the host one
+// (Docker images default to UTC). Same resolution order as lib/date-time.ts.
+process.env.TZ =
+  process.env.NEXT_PUBLIC_APP_DATETIME_TIMEZONE?.trim() || process.env.APP_DATETIME_TIMEZONE?.trim() || "Europe/Rome";
+
 const dev = process.env.NODE_ENV !== "production";
 const hostname = process.env.HOSTNAME ?? "0.0.0.0";
 const port = Number.parseInt(process.env.PORT ?? "3000", 10);
@@ -59,8 +64,9 @@ function normalizeForwardedHeaders(req: IncomingMessage) {
 }
 
 function prepareDatabase() {
-  mkdirSync("data", { recursive: true });
-  mkdirSync("data/backups", { recursive: true });
+  const dataDir = process.env.NEKOGYM_DATA_DIR?.trim() || "data";
+  mkdirSync(dataDir, { recursive: true });
+  mkdirSync(`${dataDir}/backups`, { recursive: true });
 
   const result = spawnSync(npxCommand, ["prisma", "migrate", "deploy"], {
     stdio: "inherit",

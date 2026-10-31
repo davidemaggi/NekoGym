@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import type { Weekday } from "@prisma/client";
 
@@ -309,6 +310,7 @@ export async function createCourseAction(formData: FormData): Promise<CourseMuta
 
     return { ok: true, message: messages.created };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.createFailed,
@@ -405,6 +407,7 @@ export async function updateCourseAction(formData: FormData): Promise<CourseMuta
 
     return { ok: true, message: messages.updated };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.updateFailed,
@@ -446,6 +449,7 @@ export async function createLessonTypeAction(formData: FormData): Promise<Lesson
     revalidatePath(`/${locale}/settings/registries`);
     return { ok: true, message: messages.lessonTypeCreated };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.lessonTypeCreateFailed,
@@ -476,6 +480,7 @@ export async function deleteLessonTypeAction(formData: FormData): Promise<Lesson
     revalidatePath(`/${locale}/settings/registries`);
     return { ok: true, message: messages.lessonTypeDeleted };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.lessonTypeDeleteFailed,
@@ -520,6 +525,7 @@ export async function updateLessonTypeAction(formData: FormData): Promise<Lesson
     revalidatePath(`/${locale}/settings/registries`);
     return { ok: true, message: messages.lessonTypeUpdated };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.lessonTypeUpdateFailed,
@@ -572,6 +578,7 @@ export async function deleteCourseAction(formData: FormData): Promise<CourseMuta
 
     return { ok: true, message: messages.deleted };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.deleteFailed,
@@ -627,6 +634,7 @@ export async function restoreCourseAction(formData: FormData): Promise<CourseMut
 
     return { ok: true, message: messages.restored };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.restoreFailed,

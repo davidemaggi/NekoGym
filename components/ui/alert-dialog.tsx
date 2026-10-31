@@ -13,10 +13,11 @@ export const AlertDialogAction = AlertDialogPrimitive.Action;
 export function AlertDialogContent({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <AlertDialogPrimitive.Portal>
-      <AlertDialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
+      <AlertDialogPrimitive.Overlay className="fixed inset-0 z-50 bg-[var(--overlay)]" />
       <AlertDialogPrimitive.Content
         className={cn(
-          "fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-6 shadow-lg",
+          "fixed inset-x-0 bottom-0 z-50 w-full rounded-t-3xl bg-[var(--surface)] p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] shadow-[var(--shadow-sheet)] outline-none",
+          "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-3xl sm:p-6",
           className
         )}
       >
@@ -27,18 +28,17 @@ export function AlertDialogContent({ children, className }: { children: ReactNod
 }
 
 export function AlertDialogHeader({ children }: { children: ReactNode }) {
-  return <div className="space-y-1">{children}</div>;
+  return <div className="space-y-1.5">{children}</div>;
 }
 
 export function AlertDialogTitle({ children }: { children: ReactNode }) {
-  return <AlertDialogPrimitive.Title className="text-lg font-semibold">{children}</AlertDialogPrimitive.Title>;
+  return <AlertDialogPrimitive.Title className="text-xl font-bold leading-tight text-balance">{children}</AlertDialogPrimitive.Title>;
 }
 
 export function AlertDialogDescription({ children }: { children: ReactNode }) {
-  return <AlertDialogPrimitive.Description className="text-sm text-[var(--muted-foreground)]">{children}</AlertDialogPrimitive.Description>;
+  return <AlertDialogPrimitive.Description className="text-[15px] text-[var(--muted-foreground)]">{children}</AlertDialogPrimitive.Description>;
 }
 
 export function AlertDialogFooter({ children }: { children: ReactNode }) {
-  return <div className="mt-4 flex justify-end gap-2">{children}</div>;
+  return <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">{children}</div>;
 }
-

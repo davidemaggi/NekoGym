@@ -50,7 +50,7 @@ export function ChartContainer({ id, className, children, config, style, ...prop
         id={resolvedId}
         data-chart={resolvedId}
         className={cn(
-          "flex aspect-video w-full items-center justify-center text-xs",
+          "flex aspect-video w-full items-center justify-center text-[13px]",
           "[&_.recharts-cartesian-grid_line[stroke='#ccc']]:stroke-[var(--surface-border)]",
           "[&_.recharts-text]:fill-[var(--muted-foreground)]",
           className
@@ -78,8 +78,8 @@ export function ChartTooltipContent({ active, payload, label, hideLabel = false 
   }
 
   return (
-    <div className="min-w-40 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] p-2 text-xs shadow-sm">
-      {!hideLabel ? <p className="mb-1 font-medium text-[var(--foreground)]">{String(label ?? "")}</p> : null}
+    <div className="min-w-44 rounded-xl border border-[var(--rule)] bg-[var(--surface)] px-3 py-2.5 text-sm text-[var(--muted-foreground)] shadow-[var(--shadow-sheet)]">
+      {!hideLabel ? <p className="mb-1.5 font-semibold text-[var(--foreground)]">{String(label ?? "")}</p> : null}
       <div className="space-y-1">
         {payload.map((item: TooltipPayloadEntry) => {
           const key = String(item.dataKey ?? "");
@@ -88,10 +88,10 @@ export function ChartTooltipContent({ active, payload, label, hideLabel = false 
           return (
             <div key={key} className="flex items-center justify-between gap-2">
               <span className="inline-flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-sm" style={{ background: conf.color }} />
+                <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-[3px]" style={{ background: conf.color }} />
                 <span>{conf.label}</span>
               </span>
-              <span className="font-medium text-[var(--foreground)]">{Number(item.value ?? 0)}</span>
+              <span className="tabular font-semibold text-[var(--foreground)]">{Number(item.value ?? 0)}</span>
             </div>
           );
         })}

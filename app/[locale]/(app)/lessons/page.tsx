@@ -1,20 +1,13 @@
-import type { CSSProperties } from "react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CalendarX2, Check, ChevronLeft, ChevronRight, Plus, RotateCcw } from "lucide-react";
 
-import { requireAnyRole } from "@/lib/authorization";
-import { getDictionary, isLocale } from "@/lib/i18n";
-import { hexToRgba, sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
-import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
-import { prisma } from "@/lib/prisma";
-import { AlertTriangle, RotateCcw, Trash2, Users } from "lucide-react";
-
-import {
-  deleteStandaloneLessonAction,
-  restoreLessonAction,
-} from "@/app/[locale]/(app)/lessons/actions";
-import { BookingBadgeToggle } from "@/components/bookings/booking-badge-toggle";
-import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
+import { deleteStandaloneLessonAction, restoreLessonAction } from "@/app/[locale]/(app)/lessons/actions";
 import { LessonsFlashToast } from "@/app/[locale]/(app)/lessons/lessons-flash-toast";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
+import { fillNodes } from "@/components/bookings/pass-card";
+import { LessonManageButton, type ManageableLesson } from "@/components/lessons/lesson-manage-button";
+import { SeatStrip } from "@/components/lessons/seat-strip";
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -25,84 +18,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
+import { requireAuth } from "@/lib/authorization";
+import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
+import { getDictionary, isLocale } from "@/lib/i18n";
+import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
+import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
+import { withLessonPlanUsage } from "@/lib/plan-usage";
+import { prisma } from "@/lib/prisma";
+import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
+import { textLinkActionClass } from "@/lib/ui-classes";
+import { cn } from "@/lib/utils";
 
-function parseMonthInput(value: string | undefined): { year: number; month: number } {
-  if (!value) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
+const MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
 
-  const match = /^(\d{4})-(\d{2})$/.exec(value);
-  if (!match) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
-
-  const year = Number.parseInt(match[1] ?? "", 10);
-  const monthIndex = Number.parseInt(match[2] ?? "", 10) - 1;
-  if (Number.isNaN(year) || Number.isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11) {
-    const now = new Date();
-    return { year: now.getFullYear(), month: now.getMonth() };
-  }
-
-  return { year, month: monthIndex };
-}
-
-function monthValue(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function dateKey(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function toDateTimeLocalValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function lessonDifferenceReasons(input: {
-  isCustomized: boolean;
-  startsAt: Date;
-  endsAt: Date;
-  sourceStartTime: string | null;
-  trainerId: string | null;
-  course: { id: string; trainerId: string | null; durationMinutes: number } | null;
-}): Array<"trainer" | "time"> {
-  if (!input.course?.id) return [];
-
-  const reasons = new Set<"trainer" | "time">();
-  if (input.isCustomized) {
-    reasons.add("trainer");
-    reasons.add("time");
-  }
-
-  if (input.trainerId !== input.course.trainerId) {
-    reasons.add("trainer");
-  }
-
-  const actualDuration = Math.round((input.endsAt.getTime() - input.startsAt.getTime()) / 60000);
-  if (actualDuration !== input.course.durationMinutes) {
-    reasons.add("time");
-  }
-
-  const hh = String(input.startsAt.getHours()).padStart(2, "0");
-  const mm = String(input.startsAt.getMinutes()).padStart(2, "0");
-  const localStartTime = `${hh}:${mm}`;
-  if (input.sourceStartTime && input.sourceStartTime !== localStartTime) {
-    reasons.add("time");
-  }
-
-  return Array.from(reasons);
+function monthParam(year: number, month: number) {
+  const normalized = new Date(Date.UTC(year, month - 1, 1));
+  return `${normalized.getUTCFullYear()}-${String(normalized.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 export default async function LessonsPage({
@@ -110,564 +43,448 @@ export default async function LessonsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ month?: string; flash?: string; flashType?: "success" | "error"; showDeleted?: string; showPast?: string }>;
+  searchParams: Promise<{ month?: string; flash?: string; flashType?: "success" | "error"; showDeleted?: string; showPast?: string; mine?: string }>;
 }) {
   const { locale } = await params;
-  const { month, flash, flashType, showDeleted, showPast } = await searchParams;
-  const currentUser = await requireAnyRole(["ADMIN", "TRAINER", "TRAINEE"], locale);
+  const { month, flash, flashType, showDeleted, showPast, mine } = await searchParams;
+  const currentUser = await requireAuth(locale);
   const safeLocale = isLocale(locale) ? locale : "it";
+  // Lessons is a staff screen; members book from Bookings.
+  if (currentUser.role === "TRAINEE") redirect(`/${safeLocale}/bookings`);
+
   const dictionary = getDictionary(safeLocale);
   const labels = dictionary.lessonsPage;
-  const bookingLabels = dictionary.bookings;
-  const canCreateStandaloneLesson = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
-  const includeDeleted = currentUser.role === "ADMIN" && showDeleted === "1";
+  const isAdmin = currentUser.role === "ADMIN";
+  const isTrainer = currentUser.role === "TRAINER";
+  const includeDeleted = showDeleted === "1";
   const includePast = showPast === "1";
-
-  const trainerCandidates =
-    canCreateStandaloneLesson
-      ? currentUser.role === "ADMIN"
-        ? await prisma.user.findMany({
-            where: { role: { in: ["ADMIN", "TRAINER"] } },
-            select: { id: true, name: true, email: true },
-            orderBy: { name: "asc" },
-          })
-        : [{ id: currentUser.id, name: currentUser.name, email: currentUser.email }]
-      : [];
-
-  const lessonTypeCandidates = canCreateStandaloneLesson
-    ? await prisma.lessonType.findMany({
-        select: { id: true, name: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
-  const iconOptions = await getLessonTypeIconOptions();
-
-  const attendeeCandidates = canCreateStandaloneLesson
-    ? await prisma.user.findMany({
-        select: { id: true, name: true, email: true },
-        orderBy: { name: "asc" },
-      })
-    : [];
-
-  const selectedMonth = parseMonthInput(month);
-  const monthStart = new Date(selectedMonth.year, selectedMonth.month, 1, 0, 0, 0, 0);
-  const monthEnd = new Date(selectedMonth.year, selectedMonth.month + 1, 1, 0, 0, 0, 0);
-  const previousMonth = new Date(selectedMonth.year, selectedMonth.month - 1, 1);
-  const nextMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 1);
+  // Trainers start on their own lessons; they can widen to the whole gym.
+  const onlyMine = isTrainer && mine !== "0";
+  const { timeZone } = getAppDateTimeConfig();
+  const intlLocale = safeLocale === "it" ? "it-IT" : "en-GB";
   const now = new Date();
-  const startsAtFrom = includePast
-    ? monthStart
-    : monthStart > now
-      ? monthStart
-      : now;
+
+  const today = getAppDateParts(now);
+  const todayStart = appStartOfDayUtc(today.year, today.month, today.day);
+  const todayKey = appDateKey(now);
+  const match = MONTH_PATTERN.exec(month ?? "");
+  const year = match ? Number.parseInt(match[1], 10) : today.year;
+  const monthNumber = match ? Math.min(12, Math.max(1, Number.parseInt(match[2], 10))) : today.month;
+  const monthStart = appStartOfDayUtc(year, monthNumber, 1);
+  const monthEnd = appStartOfDayUtc(year, monthNumber + 1, 1);
+  const currentMonth = monthParam(year, monthNumber);
+
+  const [iconOptions, siteSettings, trainerCandidates, lessonTypeCandidates, attendeeCandidates] = await Promise.all([
+    getLessonTypeIconOptions(),
+    prisma.siteSettings.findUnique({ where: { id: 1 }, select: { openWeekdaysCsv: true, closedDatesCsv: true } }),
+    isAdmin
+      ? prisma.user.findMany({ where: { role: { in: ["ADMIN", "TRAINER"] } }, select: { id: true, name: true }, orderBy: { name: "asc" } })
+      : Promise.resolve([{ id: currentUser.id, name: currentUser.name }]),
+    prisma.lessonType.findMany({ select: { id: true, name: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ select: { id: true, name: true, email: true }, orderBy: { name: "asc" } }),
+  ]);
 
   const lessons = await prisma.lesson.findMany({
     where: {
       deletedAt: includeDeleted ? undefined : null,
-      startsAt: {
-        gte: startsAtFrom,
-        lt: monthEnd,
-      },
+      // Default lower bound is the start of today (gym time zone): lessons in progress or ended today stay listed.
+      startsAt: { gte: includePast || monthStart > todayStart ? monthStart : todayStart, lt: monthEnd },
+      ...(onlyMine ? { trainerId: currentUser.id } : {}),
     },
     include: {
       course: { select: { id: true, name: true, trainerId: true, durationMinutes: true } },
       trainer: { select: { id: true, name: true } },
-      lessonType: { select: { id: true, name: true, iconSvg: true, colorHex: true } },
-      bookings: {
-        select: {
-          traineeId: true,
-          status: true,
-          attendanceStatus: true,
-          trainee: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-      },
-      waitlistEntries: {
-        include: {
-          trainee: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-        orderBy: { createdAt: "asc" },
-      },
-      _count: { select: { bookings: true } },
+      lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
+      bookings: { select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true } } } },
+      waitlistEntries: { select: { trainee: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: "asc" } },
     },
     orderBy: { startsAt: "asc" },
   });
 
-  const lessonTypeIds = Array.from(new Set(lessons.map((lesson) => lesson.lessonTypeId).filter((value): value is string => Boolean(value))));
-  const accessRows = lessonTypeIds.length > 0
-    ? await prisma.userLessonTypeAccess.findMany({
-        where: {
-          userId: currentUser.id,
-          lessonTypeId: { in: lessonTypeIds },
-        },
-        select: { lessonTypeId: true, mode: true },
-      })
-    : [];
-  const accessByTypeId = new Map(accessRows.map((row) => [row.lessonTypeId, row.mode]));
+  const timeFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const dayFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "long", day: "numeric", month: "long" });
+  const monthFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, month: "long", year: "numeric" });
 
-  function effectiveAccessMode(lessonTypeId: string | null): "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED" {
-    if (!lessonTypeId) return "ALLOWED";
-    if (currentUser.role !== "TRAINEE") return "ALLOWED";
-    return accessByTypeId.get(lessonTypeId) ?? "REQUIRES_CONFIRMATION";
-  }
+  type Row = ManageableLesson & {
+    dayKey: string;
+    timeLabel: string;
+    endTimeLabel: string;
+    bookedCount: number;
+    pendingCount: number;
+    isDeleted: boolean;
+    modifiedReasons: Array<"trainer" | "time">;
+    isCustomizedOnly: boolean;
+    phase: "ended" | "inProgress" | "upcoming";
+  };
 
-  const grouped = new Map<string, typeof lessons>();
-  for (const lesson of lessons) {
-    const key = dateKey(lesson.startsAt);
-    const list = grouped.get(key) ?? [];
-    list.push(lesson);
-    grouped.set(key, list);
-  }
-
-  const daysInMonth = new Date(selectedMonth.year, selectedMonth.month + 1, 0).getDate();
-  const monthDays = Array.from({ length: daysInMonth }, (_, index) => {
-    const date = new Date(monthStart);
-    date.setDate(monthStart.getDate() + index);
-    const key = dateKey(date);
+  // Plan spent by each person in the lesson's own week/month (staff only reads it).
+  const planUsage = await withLessonPlanUsage(prisma, lessons, (lesson) => [
+    ...lesson.bookings.map((booking) => booking.trainee),
+    ...lesson.waitlistEntries.map((entry) => entry.trainee),
+  ]);
+  const withUsage = <P extends { id: string }>(lessonId: string, person: P) => ({
+    ...person,
+    planUsage: planUsage.get(lessonId)?.get(person.id),
+  });
+  const rows: Row[] = lessons.map((lesson) => {
+    const confirmed = lesson.bookings.filter((booking) => booking.status === "CONFIRMED");
+    const canManageLesson = isAdmin || lesson.trainerId === currentUser.id;
+    const isDeleted = Boolean(lesson.deletedAt);
+    // A generated lesson that no longer matches its course (time or trainer changed by hand).
+    const modifiedReasons = new Set<"trainer" | "time">();
+    if (lesson.course && !isDeleted) {
+      if (lesson.trainerId !== lesson.course.trainerId) modifiedReasons.add("trainer");
+      const duration = Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000);
+      if (duration !== lesson.course.durationMinutes) modifiedReasons.add("time");
+      if (lesson.sourceStartTime && lesson.sourceStartTime !== timeFormat.format(lesson.startsAt)) modifiedReasons.add("time");
+    }
     return {
-      key,
-      date,
-      lessons: grouped.get(key) ?? [],
+      id: lesson.id,
+      dayKey: appDateKey(lesson.startsAt),
+      title: lesson.title ?? null,
+      description: lesson.description ?? null,
+      startsAt: lesson.startsAt.toISOString(),
+      endsAt: lesson.endsAt.toISOString(),
+      startsAtLocal: appDateTimeLocalValue(lesson.startsAt),
+      timeLabel: timeFormat.format(lesson.startsAt),
+      endTimeLabel: timeFormat.format(lesson.endsAt),
+      durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
+      hasStarted: lesson.startsAt <= now,
+      maxAttendees: lesson.maxAttendees,
+      cancellationWindowHours: lesson.cancellationWindowHours,
+      trainerId: lesson.trainerId ?? "",
+      trainerName: lesson.trainer?.name ?? null,
+      lessonTypeId: lesson.lessonTypeId ?? "",
+      lessonTypeName: lesson.lessonType?.name ?? null,
+      lessonTypeIcon: lesson.lessonType ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions) : null,
+      lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
+      isCourseLesson: Boolean(lesson.course?.id),
+      courseName: lesson.course?.name ?? "-",
+      bookedCount: confirmed.length,
+      pendingCount: lesson.bookings.length - confirmed.length,
+      occupancy: `${confirmed.length}/${lesson.maxAttendees}`,
+      queueLength: lesson.waitlistEntries.length,
+      canViewWaitlist: true,
+      canManageLesson,
+      canManageAttendance: canManageLesson && lesson.endsAt <= now && !isDeleted,
+      attendees: confirmed.map((booking) => withUsage(lesson.id, booking.trainee)),
+      attendeeAttendance: Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])),
+      pendingApprovals: lesson.bookings
+        .filter((booking) => booking.status === "PENDING")
+        .map((booking) => withUsage(lesson.id, booking.trainee)),
+      waitlist: lesson.waitlistEntries.map((entry) => withUsage(lesson.id, entry.trainee)),
+      isDeleted,
+      modifiedReasons: Array.from(modifiedReasons),
+      // (On a cancelled lesson isCustomized only marks a staff cancellation, not an edit.)
+      isCustomizedOnly: Boolean(lesson.course) && !isDeleted && lesson.isCustomized && modifiedReasons.size === 0,
+      phase: lesson.endsAt <= now ? "ended" : lesson.startsAt <= now ? "inProgress" : "upcoming",
     };
   });
 
-  const daysWithLessons = monthDays.filter((day) => day.lessons.length > 0);
+  const days = new Map<string, Row[]>();
+  for (const row of rows) days.set(row.dayKey, [...(days.get(row.dayKey) ?? []), row]);
+  const monthPeople = rows.filter((row) => !row.isDeleted).reduce((sum, row) => sum + row.bookedCount, 0);
+  const activeCount = rows.filter((row) => !row.isDeleted).length;
 
-  const dateFmt = new Intl.DateTimeFormat(safeLocale === "it" ? "it-IT" : "en-US", {
-    weekday: "long",
-    day: "2-digit",
-    month: "2-digit",
-  });
-  const monthFmt = new Intl.DateTimeFormat(safeLocale === "it" ? "it-IT" : "en-US", {
-    month: "long",
-    year: "numeric",
-  });
-  const timeFmt = new Intl.DateTimeFormat(safeLocale === "it" ? "it-IT" : "en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-  const monthLabel = monthFmt.format(monthStart);
-  const prevMonthHref = `/${locale}/lessons?month=${monthValue(previousMonth)}${includeDeleted ? "&showDeleted=1" : ""}${includePast ? "&showPast=1" : ""}`;
-  const nextMonthHref = `/${locale}/lessons?month=${monthValue(nextMonth)}${includeDeleted ? "&showDeleted=1" : ""}${includePast ? "&showPast=1" : ""}`;
-  const toggleDeletedHref = `/${locale}/lessons?month=${monthValue(monthStart)}${includeDeleted ? "" : "&showDeleted=1"}${includePast ? "&showPast=1" : ""}`;
-  const togglePastHref = `/${locale}/lessons?month=${monthValue(monthStart)}${includeDeleted ? "&showDeleted=1" : ""}${includePast ? "" : "&showPast=1"}`;
+  const href = (overrides: Partial<Record<"month" | "showDeleted" | "showPast" | "mine", string | null>>) => {
+    const state = {
+      month: currentMonth,
+      showDeleted: includeDeleted ? "1" : null,
+      showPast: includePast ? "1" : null,
+      mine: isTrainer && !onlyMine ? "0" : null,
+      ...overrides,
+    };
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(state)) if (value) search.set(key, value);
+    return `/${safeLocale}/lessons?${search.toString()}`;
+  };
+
+  const hiddenState = (
+    <>
+      <input type="hidden" name="locale" value={safeLocale} />
+      <input type="hidden" name="month" value={currentMonth} />
+      {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
+      {includePast ? <input type="hidden" name="showPast" value="1" /> : null}
+      {isTrainer ? <input type="hidden" name="mine" value={onlyMine ? "1" : "0"} /> : null}
+    </>
+  );
+
+  const filters: Array<{ label: string; active: boolean; href: string }> = [
+    ...(isTrainer ? [{ label: labels.onlyMineCta, active: onlyMine, href: href({ mine: onlyMine ? "0" : null }) }] : []),
+    { label: labels.showPastCta, active: includePast, href: href({ showPast: includePast ? null : "1" }) },
+    { label: labels.showDeletedCta, active: includeDeleted, href: href({ showDeleted: includeDeleted ? null : "1" }) },
+  ];
+
+  const manageProps = {
+    locale: safeLocale,
+    labels: dictionary.bookings,
+    lessonCreateLabels: labels,
+    canUpdateTrainer: isAdmin,
+    isAdmin,
+    trainerCandidates,
+    lessonTypeCandidates,
+    attendeeCandidates,
+  };
 
   return (
-    <section className="space-y-4">
+    <div>
       <LessonsFlashToast message={flash ?? null} type={flashType ?? null} />
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-        </div>
 
-        <div className="inline-flex items-center gap-2 text-sm">
-          <a className="text-[var(--foreground)] hover:underline" href={prevMonthHref}>
-            {labels.prevMonth}
-          </a>
-          <span className="rounded-md bg-[var(--muted)] px-2 py-1 text-xs capitalize">{monthLabel}</span>
-          <span className="rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs">{labels.monthNavigationLabel}</span>
-          <a className="text-[var(--foreground)] hover:underline" href={nextMonthHref}>
-            {labels.nextMonth}
-          </a>
-          {currentUser.role === "ADMIN" ? (
-            <a className="rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs hover:bg-[var(--muted)]" href={toggleDeletedHref}>
-              {includeDeleted ? labels.hideDeletedCta : labels.showDeletedCta}
-            </a>
-          ) : null}
-          <a className="rounded-md border border-[var(--surface-border)] px-2 py-1 text-xs hover:bg-[var(--muted)]" href={togglePastHref}>
-            {includePast ? labels.hidePastCta : labels.showPastCta}
-          </a>
-        </div>
-      </header>
+      <div
+        data-page-band
+        className="-mt-4 bg-[var(--stock)] pb-5 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-6 lg:pt-10"
+      >
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
+            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">
+              {fillNodes(labels.monthLessonsSummary, {
+                lessons: <span className="tabular">{activeCount}</span>,
+                people: <span className="tabular">{monthPeople}</span>,
+              })}
+            </p>
+          </div>
+          <StandaloneLessonCreateDialog
+            locale={safeLocale}
+            trainerCandidates={trainerCandidates}
+            lessonTypeCandidates={lessonTypeCandidates}
+            openWeekdays={parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv)}
+            closedDates={parseClosedDatesCsv(siteSettings?.closedDatesCsv)}
+            defaultTrainerId={isTrainer ? currentUser.id : undefined}
+            disableTrainerSelection={isTrainer}
+            labels={{
+              triggerCta: labels.createStandaloneCta,
+              title: labels.standaloneTitle,
+              description: labels.standaloneDescription,
+              trainerLabel: labels.trainerLabel,
+              standaloneDuration: labels.standaloneDuration,
+              standaloneMaxAttendees: labels.standaloneMaxAttendees,
+              standaloneCancellationWindow: labels.standaloneCancellationWindow,
+              standaloneLessonType: labels.standaloneLessonType,
+              lessonTitleLabel: labels.lessonTitleLabel,
+              lessonDescriptionLabel: labels.lessonDescriptionLabel,
+              startsAtLabel: labels.startsAtLabel,
+              submitCta: labels.createStandaloneCta,
+              processing: labels.processing,
+              closeCta: labels.closeCta,
+            }}
+            trigger={
+              <Button aria-label={labels.createStandaloneCta} className="w-11 px-0 sm:w-auto sm:px-4">
+                <Plus size={18} aria-hidden="true" />
+                <span className="hidden sm:inline">{labels.createStandaloneCta}</span>
+              </Button>
+            }
+          />
+        </header>
 
-      <div className="space-y-3">
-        <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-semibold">{labels.standaloneTitle}</h3>
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.standaloneDescription}</p>
-            </div>
-            {canCreateStandaloneLesson ? (
-              <StandaloneLessonCreateDialog
-                locale={locale}
-                trainerCandidates={trainerCandidates}
-                lessonTypeCandidates={lessonTypeCandidates}
-                defaultTrainerId={currentUser.role === "TRAINER" ? currentUser.id : undefined}
-                disableTrainerSelection={currentUser.role === "TRAINER"}
-                labels={{
-                  triggerCta: labels.createStandaloneCta,
-                  title: labels.standaloneTitle,
-                  description: labels.standaloneDescription,
-                  trainerLabel: labels.trainerLabel,
-                  standaloneDuration: labels.standaloneDuration,
-                  standaloneMaxAttendees: labels.standaloneMaxAttendees,
-                  standaloneCancellationWindow: labels.standaloneCancellationWindow,
-                  standaloneLessonType: labels.standaloneLessonType,
-                  lessonTitleLabel: labels.lessonTitleLabel,
-                  lessonDescriptionLabel: labels.lessonDescriptionLabel,
-                  startsAtLabel: labels.startsAtLabel,
-                  submitCta: labels.createStandaloneCta,
-                  processing: labels.processing,
-                  closeCta: labels.closeCta,
-                }}
-              />
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <nav aria-label={labels.monthNavigationLabel} className="inline-flex items-center gap-1">
+            <Link
+              href={href({ month: monthParam(year, monthNumber - 1) })}
+              aria-label={labels.prevMonth}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-[var(--surface)]/70"
+            >
+              <ChevronLeft size={20} aria-hidden="true" />
+            </Link>
+            <span className="min-w-[9.5rem] text-center text-[17px] font-semibold first-letter:uppercase">
+              {monthFormat.format(new Date(monthStart.getTime() + 12 * 60 * 60 * 1000))}
+            </span>
+            <Link
+              href={href({ month: monthParam(year, monthNumber + 1) })}
+              aria-label={labels.nextMonth}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl transition-colors hover:bg-[var(--surface)]/70"
+            >
+              <ChevronRight size={20} aria-hidden="true" />
+            </Link>
+          </nav>
+          <ul aria-label={labels.filtersLabel} className="flex flex-wrap gap-2">
+            {filters.map((filter) => (
+              <li key={filter.label}>
+                <Link
+                  href={filter.href}
+                  role="button"
+                  aria-pressed={filter.active}
+                  className={cn(
+                    "inline-flex h-11 items-center gap-1.5 rounded-xl border-[1.5px] px-3.5 text-[15px] font-semibold transition-colors",
+                    filter.active
+                      ? "border-[var(--foreground)] bg-[var(--surface)] text-[var(--foreground)]"
+                      : "border-[var(--stock-edge)] text-[var(--stock-ink)]/80 hover:bg-[var(--surface)]/60"
+                  )}
+                >
+                  {filter.active ? <Check size={16} aria-hidden="true" /> : null}
+                  {filter.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+
+      {days.size === 0 ? (
+        <div className="pt-8">
+          <h2 className="text-[17px] font-semibold">{labels.emptyMonthTitle}</h2>
+          <p className="mt-1 max-w-[60ch] text-[15px] text-[var(--muted-foreground)]">
+            {filters.some((filter) => filter.active && filter.label !== labels.onlyMineCta) || onlyMine
+              ? labels.emptyMonthFiltered
+              : labels.emptyMonth}
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-6">
+            {currentMonth !== monthParam(today.year, today.month) ? (
+              <Link href={href({ month: monthParam(today.year, today.month) })} className={textLinkActionClass}>
+                {labels.backToCurrentMonth}
+                <ChevronRight size={16} aria-hidden="true" />
+              </Link>
+            ) : null}
+            {onlyMine ? (
+              <Link href={href({ mine: "0" })} className={textLinkActionClass}>
+                {labels.showAllLessonsCta}
+                <ChevronRight size={16} aria-hidden="true" />
+              </Link>
             ) : null}
           </div>
         </div>
-
-        {daysWithLessons.length === 0 ? (
-          <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4 text-sm text-[var(--muted-foreground)]">
-            {labels.emptyDay}
-          </div>
-        ) : null}
-
-        {daysWithLessons.map((day) => (
-          <div key={day.key} className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-            <h3 className="text-sm font-semibold capitalize">{dateFmt.format(day.date)}</h3>
-
-            <div className="mt-2 space-y-2">
-              {day.lessons.map((lesson) => (
-                (() => {
-                  const isPastOrNow = lesson.startsAt <= now;
-                  const isDeleted = Boolean(lesson.deletedAt);
-                  const currentUserBooking = lesson.bookings.find((booking) => booking.trainee.id === currentUser.id) ?? null;
-                  const isBookedByCurrentUser = Boolean(currentUserBooking);
-                  const isPendingByCurrentUser = currentUserBooking?.status === "PENDING";
-                  const isQueuedByCurrentUser = lesson.waitlistEntries.some((entry) => entry.trainee.id === currentUser.id);
-                  const pendingApprovalsCount = lesson.bookings.filter((booking) => booking.status === "PENDING").length;
-                  const canManageLesson = currentUser.role === "ADMIN" || lesson.trainerId === currentUser.id;
-                  const lessonTypeColor = lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null;
-                  const cardBorderStyle: CSSProperties["borderStyle"] = isBookedByCurrentUser ? "solid" : "dashed";
-                  const cardStyle: CSSProperties | undefined = lessonTypeColor
-                    ? {
-                        backgroundColor: hexToRgba(lessonTypeColor, 0.16),
-                        borderColor: hexToRgba(lessonTypeColor, 0.7),
-                        borderWidth: isBookedByCurrentUser ? 1 : 2,
-                        borderStyle: cardBorderStyle,
-                      }
-                    : {
-                        borderColor: "var(--surface-border)",
-                        borderWidth: isBookedByCurrentUser ? 1 : 2,
-                        borderStyle: cardBorderStyle,
-                      };
-                  const isAccessDenied = effectiveAccessMode(lesson.lessonTypeId) === "DENIED";
-                  const cancellationDeadline = new Date(lesson.startsAt.getTime() - lesson.cancellationWindowHours * 60 * 60 * 1000);
-                  const canBook =
-                    !isDeleted &&
-                    lesson.status === "SCHEDULED" &&
-                    lesson.startsAt > now &&
-                    !isAccessDenied &&
-                    !isBookedByCurrentUser &&
-                    !isQueuedByCurrentUser;
-                  const canUnbook = !isDeleted && isBookedByCurrentUser && now <= cancellationDeadline;
+      ) : (
+        <div className="space-y-6 pt-6">
+          {Array.from(days.entries()).map(([dayKey, dayRows]) => (
+            <section key={dayKey} aria-labelledby={`day-${dayKey}`}>
+              <h2 id={`day-${dayKey}`} className="flex items-baseline justify-between gap-2 text-[17px] font-semibold">
+                <span className="first-letter:uppercase">
+                  {dayFormat.format(new Date(dayRows[0].startsAt))}
+                  {dayKey === todayKey ? (
+                    <span className="ml-2 rounded-lg bg-[var(--surface)] px-2 py-0.5 align-[2px] text-[13px] font-semibold">{labels.todayTag}</span>
+                  ) : null}
+                </span>
+                <span className="text-[15px] font-medium text-[var(--muted-foreground)]">
+                  {dayRows.length === 1
+                    ? labels.lessonsCountOne
+                    : fillNodes(labels.lessonsCount, { n: <span className="tabular">{dayRows.length}</span> })}
+                </span>
+              </h2>
+              <ul className="-mx-4 mt-1 sm:mx-0">
+                {dayRows.map((lesson) => {
+                  const name = lesson.title ?? lesson.courseName;
+                  const muted = lesson.isDeleted || lesson.phase === "ended";
+                  const meta = [
+                    lesson.trainerName,
+                    lesson.isCourseLesson ? null : labels.standaloneTag,
+                    lesson.queueLength > 0 ? `${labels.waitlistLabel} ${lesson.queueLength}` : null,
+                  ].filter(Boolean);
                   return (
-                <div
-                  key={lesson.id}
-                  className={[
-                    "rounded-md border p-2 text-sm",
-                    isAccessDenied ? "opacity-50 saturate-0" : "",
-                    lessonDifferenceReasons({
-                      isCustomized: lesson.isCustomized,
-                      startsAt: lesson.startsAt,
-                      endsAt: lesson.endsAt,
-                      sourceStartTime: lesson.sourceStartTime,
-                      trainerId: lesson.trainerId,
-                      course: lesson.course,
-                    }).length > 0
-                      ? "ring-1 ring-amber-400/70"
-                      : "border-[var(--surface-border)]",
-                  ].join(" ")}
-                  style={cardStyle}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className="min-w-0 flex-1">
-                      <LessonDetailsDialogTrigger
-                        locale={locale}
-                        lesson={{
-                          id: lesson.id,
-                          title: lesson.title?.trim() || lesson.course?.name || "-",
-                          description: lesson.description ?? null,
-                          startsAt: lesson.startsAt.toISOString(),
-                          endsAt: lesson.endsAt.toISOString(),
-                          trainerName: lesson.trainer?.name ?? null,
-                          occupancy: `${lesson._count.bookings}/${lesson.maxAttendees}`,
-                          queueLength: lesson.waitlistEntries.length,
-                          canViewWaitlist: currentUser.role === "ADMIN" || currentUser.role === "TRAINER",
-                          isCourseLesson: Boolean(lesson.course?.id),
-                          lessonTypeName: lesson.lessonType?.name ?? null,
-                          lessonTypeIcon: lesson.lessonType
-                            ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)
-                            : null,
-                          lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
-                          canBroadcast: canManageLesson,
-                        }}
-                        labels={{
-                          detailsTitle: labels.detailsTitle,
-                          detailsDescription: labels.detailsDescription,
-                          startsAtLabel: labels.startsAtLabel,
-                          endsAtLabel: bookingLabels.endsAtLabel,
-                          trainerLabel: labels.trainerLabel,
-                          bookedLabel: labels.bookedLabel,
-                          queuedLabel: bookingLabels.queuedLabel,
-                          closeCta: labels.closeCta,
-                          courseTag: labels.courseTag,
-                          lessonDescriptionLabel: labels.lessonDescriptionLabel,
-                          notifySectionTitle: labels.notifySectionTitle,
-                          notifyMessagePlaceholder: labels.notifyMessagePlaceholder,
-                          notifySendCta: labels.notifySendCta,
-                        }}
-                        manage={canManageLesson ? {
-                      lesson: {
-                        id: lesson.id,
-                        canEditMain: !lesson.course?.id && !isPastOrNow && !isDeleted,
-                        title: lesson.title ?? "",
-                        description: lesson.description ?? "",
-                        startsAt: toDateTimeLocalValue(lesson.startsAt),
-                        durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
-                        maxAttendees: lesson.maxAttendees,
-                        cancellationWindowHours: lesson.cancellationWindowHours,
-                        trainerId: lesson.trainer?.id ?? "",
-                        lessonTypeId: lesson.lessonTypeId ?? "",
-                        canManageTrainer: currentUser.role === "ADMIN" && !isPastOrNow && !isDeleted,
-                        canManageAttendance: lesson.endsAt <= now && !isDeleted,
-                        attendees: lesson.bookings.filter((booking) => booking.status === "CONFIRMED").map((booking) => ({
-                          id: booking.trainee.id,
-                          name: booking.trainee.name,
-                          email: booking.trainee.email,
-                        })),
-                        attendeeAttendance: Object.fromEntries(
-                          lesson.bookings
-                            .filter((booking) => booking.status === "CONFIRMED")
-                            .map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])
-                        ),
-                        pendingApprovals: lesson.bookings.filter((booking) => booking.status === "PENDING").map((booking) => ({
-                          id: booking.trainee.id,
-                          name: booking.trainee.name,
-                          email: booking.trainee.email,
-                        })),
-                        waitlist: lesson.waitlistEntries.map((entry) => ({
-                          id: entry.trainee.id,
-                          name: entry.trainee.name,
-                          email: entry.trainee.email,
-                        })),
-                      },
-                      trainerCandidates,
-                      lessonTypeCandidates,
-                      attendeeCandidates,
-                      canBroadcastToAttendees: true,
-                      canGrantOpenAccess: currentUser.role === "ADMIN",
-                      labels: {
-                        title: labels.manageTitle,
-                        description: labels.manageDescription,
-                        tabMain: labels.manageTabMain,
-                        tabPeople: labels.manageTabPeople,
-                        startsAtLabel: labels.startsAtLabel,
-                        trainerLabel: labels.trainerLabel,
-                        standaloneDuration: labels.standaloneDuration,
-                        standaloneMaxAttendees: labels.standaloneMaxAttendees,
-                        standaloneCancellationWindow: labels.standaloneCancellationWindow,
-                        standaloneLessonType: labels.standaloneLessonType,
-                        lessonTitleLabel: labels.lessonTitleLabel,
-                        lessonDescriptionLabel: labels.lessonDescriptionLabel,
-                        updateStandaloneCta: labels.updateStandaloneCta,
-                        updateTrainerCta: labels.updateTrainerCta,
-                        attendeesLabel: labels.attendeesLabel,
-                        noAttendees: labels.noAttendees,
-                        attendeeSelectLabel: labels.attendeeSelectLabel,
-                        addAttendeeCta: labels.addAttendeeCta,
-                        removeAttendeeCta: labels.removeAttendeeCta,
-                        markAttendancePresentCta: labels.markAttendancePresentCta,
-                        markAttendanceNoShowCta: labels.markAttendanceNoShowCta,
-                        attendanceStatusLabel: labels.attendanceStatusLabel,
-                        attendanceStatusPresent: labels.attendanceStatusPresent,
-                        attendanceStatusNoShow: labels.attendanceStatusNoShow,
-                        attendanceStatusUnmarked: labels.attendanceStatusUnmarked,
-                        pendingApprovalsLabel: labels.pendingApprovalsLabel,
-                        noPendingApprovals: labels.noPendingApprovals,
-                        confirmPendingCta: labels.confirmPendingCta,
-                        confirmPendingAndGrantAccessCta: labels.confirmPendingAndGrantAccessCta,
-                        rejectPendingCta: labels.rejectPendingCta,
-                        waitlistLabel: labels.waitlistLabel,
-                        noWaitlist: labels.noWaitlist,
-                        confirmWaitlistCta: labels.confirmWaitlistCta,
-                        removeWaitlistCta: labels.removeWaitlistCta,
-                        processing: labels.processing,
-                        closeCta: labels.closeCta,
-                        manageTriggerLabel: labels.manageTriggerLabel,
-                        notifySectionTitle: labels.notifySectionTitle,
-                        notifyMessageLabel: labels.notifyMessageLabel,
-                        notifyMessagePlaceholder: labels.notifyMessagePlaceholder,
-                        notifySendCta: labels.notifySendCta,
-                      },
-                        } : undefined}
-                        trigger={(
-                          <div
-                            className="w-full cursor-pointer rounded text-left hover:opacity-95"
-                            aria-label={labels.detailsTriggerLabel}
-                            title={labels.detailsTriggerLabel}
-                          >
-                            <div className="flex items-center gap-3">
-                              {lesson.lessonType ? (
-                                <LessonTypeIcon
-                                  iconPath={sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions)}
-                                  colorHex={sanitizeLessonTypeColor(lesson.lessonType.colorHex)}
-                                  size={22}
-                                  title={lesson.lessonType.name}
-                                />
-                              ) : null}
-                              <div className="min-w-0">
-                                <p className="truncate text-base font-semibold">{lesson.title?.trim() || lesson.course?.name || "-"}</p>
-                                <p className="text-xs text-[var(--muted-foreground)]">
-                                  {timeFmt.format(lesson.startsAt)} - {timeFmt.format(lesson.endsAt)}
-                                </p>
-                                <p className="text-xs text-[var(--muted-foreground)]">
-                                  {labels.trainerLabel}: {lesson.trainer?.name ?? "-"} ·{" "}
-                                  <span className="inline-flex items-center gap-1">
-                                    {currentUser.role === "ADMIN" && pendingApprovalsCount > 0 ? (
-                                      <span title={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}>
-                                        <AlertTriangle
-                                          className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400"
-                                          aria-label={`${labels.pendingApprovalsLabel}: ${pendingApprovalsCount}`}
-                                        />
-                                      </span>
-                                    ) : (
-                                      <Users className="h-3.5 w-3.5" />
-                                    )}
-                                    {labels.bookedLabel}: {lesson._count.bookings}/{lesson.maxAttendees}
-                                  </span>
-                                </p>
-                                {lesson.description ? <p className="text-xs text-[var(--muted-foreground)]">{lesson.description}</p> : null}
-                                <div className="mt-1 inline-flex flex-wrap items-center gap-1">
-                                  {lesson.course?.id ? (
-                                    <Badge variant="info" className="text-[10px]">
-                                      {labels.courseTag}
-                                    </Badge>
-                                  ) : null}
-                                  {isDeleted ? (
-                                    <Badge variant="warning" className="text-[10px]">
-                                      {labels.deletedTag}
-                                    </Badge>
-                                  ) : null}
-                                  {(() => {
-                                    const reasons = lessonDifferenceReasons({
-                                      isCustomized: lesson.isCustomized,
-                                      startsAt: lesson.startsAt,
-                                      endsAt: lesson.endsAt,
-                                      sourceStartTime: lesson.sourceStartTime,
-                                      trainerId: lesson.trainerId,
-                                      course: lesson.course,
-                                    });
-                                    if (reasons.length === 0) return null;
-
-                                    return (
-                                      <div className="inline-flex items-center gap-1">
-                                        <Badge variant="warning" className="text-[10px]">
-                                          {labels.modifiedTag}
-                                        </Badge>
-                                        <span className="text-[10px] text-amber-700 dark:text-amber-300">
-                                          {labels.modifiedReasonsLabel}: {reasons
-                                            .map((reason) => (reason === "trainer" ? labels.modifiedReasonTrainer : labels.modifiedReasonTime))
-                                            .join(", ")}
-                                        </span>
-                                      </div>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      />
-                    </div>
-                    <div className="inline-flex shrink-0 items-center gap-1 self-center">
-                    {isAccessDenied ? null : !isQueuedByCurrentUser ? (
-                      <BookingBadgeToggle
-                        locale={locale}
-                        lessonId={lesson.id}
-                        isBooked={isBookedByCurrentUser}
-                        isPendingApproval={isPendingByCurrentUser}
-                        canBook={canBook}
-                        canUnbook={canUnbook}
-                        labels={{
-                          bookCta: bookingLabels.bookCta,
-                          bookedCta: bookingLabels.youAreBooked,
-                          pendingCta: bookingLabels.awaitingConfirmation,
-                          processing: bookingLabels.processing,
-                          confirmUnbookTitle: bookingLabels.confirmUnbookTitle,
-                          confirmUnbookDescription: bookingLabels.confirmUnbookDescription,
-                          confirmUnbookCta: bookingLabels.confirmUnbookCta,
-                          confirmKeepBookingCta: bookingLabels.confirmKeepBookingCta,
-                        }}
-                      />
-                    ) : (
-                      <Badge variant="warning">{bookingLabels.youAreQueued}</Badge>
-                    )}
-                      {canManageLesson && !isDeleted ? (
-                        <AlertDialog>
-                          <AlertDialogTrigger
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--danger-hover)] text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] dark:border-red-800 dark:text-red-300 dark:hover:bg-red-950/30"
-                            title={labels.deleteLessonCta}
-                            aria-label={labels.deleteLessonCta}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>{labels.confirmDeleteLessonTitle}</AlertDialogTitle>
-                              <AlertDialogDescription>{labels.confirmDeleteLessonDescription}</AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel className="inline-flex h-9 items-center rounded-md border px-3 text-sm">
-                                {labels.closeCta}
-                              </AlertDialogCancel>
-                              <form id={`delete-lesson-${lesson.id}`} action={deleteStandaloneLessonAction}>
-                                <input type="hidden" name="locale" value={locale} />
-                                <input type="hidden" name="month" value={monthValue(monthStart)} />
-                                {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
-                                {includePast ? <input type="hidden" name="showPast" value="1" /> : null}
-                                <input type="hidden" name="lessonId" value={lesson.id} />
-                                <button
-                                  type="submit"
-                                  className="inline-flex h-9 items-center rounded-md bg-[var(--destructive-bg)] px-3 text-sm text-[var(--destructive-fg)] hover:bg-[var(--destructive-hover)]"
-                                >
-                                  {labels.deleteLessonCta}
-                                </button>
-                              </form>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      ) : null}
-                      {canManageLesson && isDeleted ? (
-                        <form action={restoreLessonAction}>
-                          <input type="hidden" name="locale" value={locale} />
-                          <input type="hidden" name="month" value={monthValue(monthStart)} />
-                          {includeDeleted ? <input type="hidden" name="showDeleted" value="1" /> : null}
-                          {includePast ? <input type="hidden" name="showPast" value="1" /> : null}
-                          <input type="hidden" name="lessonId" value={lesson.id} />
-                          <button
-                            type="submit"
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--success-hover)] text-[var(--success-fg)] hover:bg-[var(--success-bg)] dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30"
-                            title={labels.restoreLessonCta}
-                            aria-label={labels.restoreLessonCta}
-                          >
-                            <RotateCcw className="h-3.5 w-3.5" />
-                          </button>
-                        </form>
-                      ) : null}
-                  </div>
-                  </div>
-                </div>
+                    <li
+                      key={lesson.id}
+                      className={cn(
+                        "grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-x-3 border-b border-[var(--rule)] px-4 py-3.5 last:border-b-0 sm:grid-cols-[4.25rem_minmax(0,1fr)_8.5rem_auto] sm:px-0",
+                        lesson.phase === "inProgress" && !lesson.isDeleted
+                          ? "my-1 border-b-0 bg-[var(--surface)] shadow-[var(--shadow-lift)] sm:-mx-4 sm:rounded-2xl sm:px-4"
+                          : ""
+                      )}
+                    >
+                      <p className={cn("leading-none", muted ? "text-[var(--muted-foreground)]" : "")}>
+                        <span className="tabular block text-[1.375rem] font-bold sm:text-[1.625rem]">{lesson.timeLabel}</span>
+                        <span className="tabular mt-1 block text-[13px] font-medium text-[var(--muted-foreground)]">
+                          {lesson.durationMinutes} min
+                        </span>
+                        <span className={cn("tabular mt-1 block text-[13px] font-semibold sm:hidden", muted ? "" : "text-[var(--foreground)]")}>
+                          {lesson.occupancy}
+                          {lesson.pendingCount > 0 ? ` +${lesson.pendingCount}` : ""}
+                        </span>
+                      </p>
+                      <div className="min-w-0">
+                        <p className={cn("flex items-start gap-2 text-[17px] font-semibold leading-snug", lesson.isDeleted ? "text-[var(--muted-foreground)] line-through decoration-1" : "")}>
+                          {lesson.lessonTypeIcon ? (
+                            <LessonTypeIcon iconPath={lesson.lessonTypeIcon} colorHex={lesson.lessonTypeColor} size={18} className="mt-[3px]" />
+                          ) : null}
+                          <span className="min-w-0 break-words">{name}</span>
+                        </p>
+                        <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">{meta.join(" · ")}</p>
+                        {lesson.isDeleted || lesson.modifiedReasons.length > 0 || lesson.isCustomizedOnly ? (
+                          <p className="mt-1.5 flex flex-wrap gap-1.5">
+                            {lesson.isDeleted ? (
+                              <span className="rounded-lg bg-[var(--danger-bg)] px-2 py-0.5 text-[13px] font-semibold text-[var(--danger-fg)]">
+                                {labels.cancelledTag}
+                              </span>
+                            ) : null}
+                            {lesson.modifiedReasons.length > 0 || lesson.isCustomizedOnly ? (
+                              <span className="rounded-lg bg-[var(--warning-bg)] px-2 py-0.5 text-[13px] font-semibold text-[var(--warning-fg)]">
+                                {labels.modifiedTag}
+                                {lesson.modifiedReasons.length > 0
+                                  ? `: ${lesson.modifiedReasons
+                                      .map((reason) => (reason === "trainer" ? labels.modifiedReasonTrainer : labels.modifiedReasonTime))
+                                      .join(", ")}`
+                                  : null}
+                              </span>
+                            ) : null}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="hidden sm:block">
+                        <SeatStrip
+                          booked={lesson.bookedCount}
+                          pending={lesson.pendingCount}
+                          max={lesson.maxAttendees}
+                          label={`${labels.bookedLabel} ${lesson.occupancy}`}
+                          muted={lesson.isDeleted}
+                        />
+                      </div>
+                      <div className="flex items-center justify-end gap-1">
+                        {lesson.canManageLesson && !lesson.isDeleted ? (
+                          <LessonManageButton
+                            {...manageProps}
+                            lesson={lesson}
+                            triggerLabel={labels.manageCta}
+                            footerSlot={
+                              lesson.phase === "upcoming" ? (
+                                <AlertDialog>
+                                  <AlertDialogTrigger asChild>
+                                    <Button variant="ghost" className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] sm:mr-auto">
+                                      <CalendarX2 size={18} aria-hidden="true" />
+                                      {labels.deleteLessonCta}
+                                    </Button>
+                                  </AlertDialogTrigger>
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>{labels.confirmDeleteLessonTitle}</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {name} · <span className="tabular">{lesson.timeLabel}</span>. {labels.confirmDeleteLessonDescription}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel asChild>
+                                        <Button variant="outline">{labels.closeCta}</Button>
+                                      </AlertDialogCancel>
+                                      <form action={deleteStandaloneLessonAction} className="contents">
+                                        {hiddenState}
+                                        <input type="hidden" name="lessonId" value={lesson.id} />
+                                        <Button type="submit" variant="destructive">
+                                          {labels.deleteLessonCta}
+                                        </Button>
+                                      </form>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                </AlertDialog>
+                              ) : null
+                            }
+                          />
+                        ) : null}
+                        {lesson.canManageLesson && lesson.isDeleted ? (
+                          <form action={restoreLessonAction}>
+                            {hiddenState}
+                            <input type="hidden" name="lessonId" value={lesson.id} />
+                            <Button type="submit" variant="outline">
+                              <RotateCcw size={16} aria-hidden="true" />
+                              {labels.restoreLessonCta}
+                            </Button>
+                          </form>
+                        ) : null}
+                      </div>
+                    </li>
                   );
-                })()
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    </section>
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }

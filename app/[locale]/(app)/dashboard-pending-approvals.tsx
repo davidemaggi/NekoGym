@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight } from "lucide-react";
 import { toast } from "sonner";
-import { ListChecks, ThumbsDown, ThumbsUp } from "lucide-react";
 
 import { confirmLessonBookingAction, rejectLessonBookingAction } from "@/app/[locale]/(app)/bookings/actions";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { textLinkActionClass } from "@/lib/ui-classes";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserQuickProfileTooltip } from "@/components/users/user-quick-profile-tooltip";
 
 type PendingApprovalItem = {
@@ -21,11 +22,9 @@ type PendingApprovalItem = {
 
 type DashboardPendingApprovalsProps = {
   locale: string;
-  count: number;
   items: PendingApprovalItem[];
   canGrantOpenAccess: boolean;
   labels: {
-    statLabel: string;
     openCta: string;
     dialogTitle: string;
     dialogDescription: string;
@@ -37,26 +36,15 @@ type DashboardPendingApprovalsProps = {
   };
 };
 
-export function DashboardPendingApprovals({
-  locale,
-  count,
-  items,
-  canGrantOpenAccess,
-  labels,
-}: DashboardPendingApprovalsProps) {
+/** "Rivedi le richieste": opens the approval sheet with one row per pending request. */
+export function DashboardPendingApprovals({ locale, items, canGrantOpenAccess, labels }: DashboardPendingApprovalsProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [busyKey, setBusyKey] = useState<string | null>(null);
-  const hasItems = useMemo(() => items.length > 0, [items.length]);
 
-  function act(input: {
-    lessonId: string;
-    traineeId: string;
-    kind: "approve" | "approveUnlock" | "reject";
-  }) {
-    const key = `${input.lessonId}:${input.traineeId}:${input.kind}`;
-    setBusyKey(key);
+  function act(input: { lessonId: string; traineeId: string; kind: "approve" | "approveUnlock" | "reject" }) {
+    setBusyKey(`${input.lessonId}:${input.traineeId}`);
     startTransition(async () => {
       const formData = new FormData();
       formData.set("locale", locale);
@@ -64,9 +52,8 @@ export function DashboardPendingApprovals({
       formData.set("traineeId", input.traineeId);
       if (input.kind === "approveUnlock") formData.set("grantOpenAccess", "1");
 
-      const result = input.kind === "reject"
-        ? await rejectLessonBookingAction(formData)
-        : await confirmLessonBookingAction(formData);
+      const result =
+        input.kind === "reject" ? await rejectLessonBookingAction(formData) : await confirmLessonBookingAction(formData);
 
       if (result.ok) {
         toast.success(result.message);
@@ -80,84 +67,67 @@ export function DashboardPendingApprovals({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.statLabel}</p>
-        <p className="mt-2 text-2xl font-semibold">{count}</p>
-        <DialogTrigger asChild>
-          <Button className="mt-3" variant="outline" size="sm">
-            {labels.openCta}
-          </Button>
-        </DialogTrigger>
-      </div>
+      <DialogTrigger asChild>
+        <button
+          type="button"
+          className={textLinkActionClass}
+        >
+          {labels.openCta}
+          <ChevronRight size={16} aria-hidden="true" />
+        </button>
+      </DialogTrigger>
 
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
+      <DialogContent closeLabel={labels.closeCta}>
         <DialogHeader>
           <DialogTitle>{labels.dialogTitle}</DialogTitle>
           <DialogDescription>{labels.dialogDescription}</DialogDescription>
         </DialogHeader>
 
-        {!hasItems ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
+        {items.length === 0 ? (
+          <p className="text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
         ) : (
-          <div className="space-y-2">
-            {items.map((item) => (
-              <div
-                key={`${item.lessonId}:${item.traineeId}`}
-                className="rounded-md border border-[var(--surface-border)] p-2"
-              >
-                <p className="text-sm font-medium">{item.lessonTitle}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">
-                  {item.lessonTypeName} · {item.startsAtLabel}
-                </p>
-                <p className="mt-1 text-xs">
-                  <UserQuickProfileTooltip userId={item.traineeId} locale={locale}>
-                    {item.traineeName}
-                  </UserQuickProfileTooltip>
-                </p>
-                <div className="mt-2 inline-flex flex-wrap gap-1">
-                  {canGrantOpenAccess ? (
+          <ul className="divide-y divide-[var(--rule)]">
+            {items.map((item) => {
+              const busy = busyKey === `${item.lessonId}:${item.traineeId}`;
+              return (
+                <li key={`${item.lessonId}:${item.traineeId}`} className="py-4 first:pt-0">
+                  <p className="text-[17px] font-semibold">
+                    <UserQuickProfileTooltip userId={item.traineeId} locale={locale}>
+                      {item.traineeName}
+                    </UserQuickProfileTooltip>
+                  </p>
+                  <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
+                    {item.lessonTitle} · <span className="tabular">{item.startsAtLabel}</span>
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" className="h-11 px-4" disabled={isPending} onClick={() => act({ ...item, kind: "approve" })}>
+                      {busy ? "…" : labels.approveCta}
+                    </Button>
                     <Button
                       size="sm"
-                      className="h-8 w-8 bg-[var(--info-bg)] p-0 text-[var(--info-fg)] hover:bg-[var(--info-hover)]"
-                      onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "approveUnlock" })}
-                      disabled={isPending || busyKey !== null}
-                      title={labels.approveAndUnlockCta}
-                      aria-label={labels.approveAndUnlockCta}
+                      variant="outline"
+                      className="h-11 px-4"
+                      disabled={isPending}
+                      onClick={() => act({ ...item, kind: "reject" })}
                     >
-                      <ListChecks className="h-4 w-4" />
+                      {labels.rejectCta}
                     </Button>
-                  ) : null}
-                  <Button
-                    size="sm"
-                    className="h-8 w-8 bg-[var(--success-bg)] p-0 text-[var(--success-fg)] hover:bg-[var(--success-hover)] dark:bg-emerald-900/40 dark:text-emerald-200 dark:hover:bg-emerald-900/60"
-                    onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "approve" })}
-                    disabled={isPending || busyKey !== null}
-                    title={labels.approveCta}
-                    aria-label={labels.approveCta}
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="h-8 w-8 bg-[var(--danger-bg)] p-0 text-[var(--danger-fg)] hover:bg-[var(--danger-hover)] dark:bg-rose-900/40 dark:text-rose-200 dark:hover:bg-rose-900/60"
-                    onClick={() => act({ lessonId: item.lessonId, traineeId: item.traineeId, kind: "reject" })}
-                    disabled={isPending || busyKey !== null}
-                    title={labels.rejectCta}
-                    aria-label={labels.rejectCta}
-                  >
-                    <ThumbsDown className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
+                    {canGrantOpenAccess ? (
+                      <button
+                        type="button"
+                        className="inline-flex min-h-11 basis-full items-center text-[15px] font-semibold underline decoration-[1.5px] underline-offset-4 hover:decoration-2 disabled:opacity-45 sm:basis-auto"
+                        disabled={isPending}
+                        onClick={() => act({ ...item, kind: "approveUnlock" })}
+                      >
+                        {labels.approveAndUnlockCta}
+                      </button>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
         )}
-
-        <DialogFooter>
-          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
-            {labels.closeCta}
-          </Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

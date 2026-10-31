@@ -24,7 +24,7 @@ function InputOTPGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="input-otp-group"
-      className={cn("flex items-center", className)}
+      className={cn("flex items-center gap-1.5", className)}
       {...props}
     />
   );
@@ -45,8 +45,9 @@ function InputOTPSlot({
       data-slot="input-otp-slot"
       data-active={slot.isActive}
       className={cn(
-        "relative flex h-10 w-10 items-center justify-center border-y border-r border-[var(--surface-border)] text-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md",
-        "data-[active=true]:z-10 data-[active=true]:ring-2 data-[active=true]:ring-[var(--primary)]",
+        // One ticket-figure box per digit: 48px tall, readable at a glance, separate so the count is obvious.
+        "tabular relative flex h-12 w-11 items-center justify-center rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] text-[1.375rem] font-semibold transition-shadow",
+        "data-[active=true]:z-10 data-[active=true]:border-[var(--foreground)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--foreground)]/20",
         className
       )}
       {...props}

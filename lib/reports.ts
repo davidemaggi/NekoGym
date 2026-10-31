@@ -1,3 +1,4 @@
+import { getAppDateParts, getAppTimeParts } from "@/lib/date-time";
 import type { Prisma, PrismaClient } from "@prisma/client";
 
 export const REPORT_IDS = [
@@ -134,8 +135,9 @@ export function selectedReportIdsToCsv(ids: ReportId[]): string {
   return (safe.length > 0 ? safe : [...REPORT_IDS]).join(",");
 }
 
+// Weekday and hour on the gym's clock, never the server's.
 function weekdayFromDate(date: Date): TimeCrowdingRow["weekday"] {
-  const day = date.getDay();
+  const day = getAppDateParts(date).weekday;
   if (day === 0) return "SUNDAY";
   if (day === 1) return "MONDAY";
   if (day === 2) return "TUESDAY";
@@ -259,7 +261,7 @@ export async function buildReportsSnapshot(
     }
 
     const weekday = weekdayFromDate(lesson.startsAt);
-    const hour = lesson.startsAt.getHours();
+    const hour = getAppTimeParts(lesson.startsAt).hour;
     const key = `${weekday}:${String(hour).padStart(2, "0")}`;
     const slot = timeMap.get(key) ?? {
       weekday,

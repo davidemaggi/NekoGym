@@ -1,6 +1,6 @@
 import "server-only";
 
-import { copyFile, mkdir, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, open, readdir, stat, unlink, writeFile } from "node:fs/promises";
 import { basename, extname, join } from "node:path";
 
 import { prisma } from "@/lib/prisma";
@@ -74,12 +74,31 @@ export async function listBackups(): Promise<DbBackupFile[]> {
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
+const SQLITE_HEADER = "SQLite format 3\u0000";
+
+async function assertSqliteFile(path: string) {
+  const handle = await open(path, "r");
+  try {
+    const buffer = Buffer.alloc(SQLITE_HEADER.length);
+    await handle.read(buffer, 0, buffer.length, 0);
+    if (buffer.toString("latin1") !== SQLITE_HEADER) {
+      throw new Error("File is not a valid SQLite database.");
+    }
+  } finally {
+    await handle.close();
+  }
+}
+
+/** Consistent online snapshot (a plain file copy can catch a write half-way). */
+async function snapshotDatabaseTo(targetPath: string) {
+  await prisma.$executeRawUnsafe(`VACUUM INTO '${targetPath.replaceAll("'", "''")}'`);
+}
+
 export async function createBackup() {
   await ensureBackupDir();
-  const dbPath = resolveSqliteDbPath();
   const fileName = `${BACKUP_PREFIX}${formatBackupTimestamp(new Date())}${BACKUP_SUFFIX}`;
   const targetPath = join(BACKUP_DIR, fileName);
-  await copyFile(dbPath, targetPath);
+  await snapshotDatabaseTo(targetPath);
   return { fileName, fullPath: targetPath };
 }
 
@@ -115,6 +134,9 @@ export async function importUploadedBackup(file: File) {
   const targetPath = join(BACKUP_DIR, fileName);
 
   const bytes = new Uint8Array(await file.arrayBuffer());
+  if (Buffer.from(bytes.subarray(0, SQLITE_HEADER.length)).toString("latin1") !== SQLITE_HEADER) {
+    throw new Error("Uploaded file is not a valid SQLite database.");
+  }
   await writeFile(targetPath, bytes);
 
   return { fileName, fullPath: targetPath };
@@ -129,11 +151,12 @@ export async function restoreFromBackupFileName(fileName: string) {
   if (!sourceInfo.isFile()) {
     throw new Error("Backup file not found.");
   }
+  await assertSqliteFile(sourcePath);
 
   const dbPath = resolveSqliteDbPath();
   const rollbackBackup = `${BACKUP_PREFIX}auto-before-restore-${formatBackupTimestamp(new Date())}${BACKUP_SUFFIX}`;
   const rollbackPath = join(BACKUP_DIR, rollbackBackup);
-  await copyFile(dbPath, rollbackPath);
+  await snapshotDatabaseTo(rollbackPath);
 
   await prisma.$disconnect();
   await copyFile(sourcePath, dbPath);

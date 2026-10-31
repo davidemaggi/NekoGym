@@ -1,21 +1,63 @@
 "use client";
 
-import { type CSSProperties, useMemo } from "react";
-import Link from "next/link";
-import { AlertTriangle, Clock3, Hourglass, Plus, UserRound, Users } from "lucide-react";
-import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
-import { BookingBadgeToggle } from "@/components/bookings/booking-badge-toggle";
-import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
-import { Badge } from "@/components/ui/badge";
-import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
-import { hexToRgba } from "@/lib/lesson-type-icons";
+import { getAppTimeParts } from "@/lib/date-time";
+import type { PlanUsage } from "@/lib/plan-usage";
 
-type LessonCalendarItem = {
+import { useId, useState, useTransition, type ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  CalendarX2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Clock3,
+  Lock,
+  Plus,
+  ShieldCheck,
+  Ticket,
+  UserRound,
+  Users,
+} from "lucide-react";
+import { toast } from "sonner";
+
+import { bookLessonAction, unbookLessonAction } from "@/app/[locale]/(app)/bookings/actions";
+import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
+import { LessonManageButton } from "@/components/lessons/lesson-manage-button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { PassCard, fill, type BookingPass } from "@/components/bookings/pass-card";
+import { Button } from "@/components/ui/button";
+import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
+import type { Dictionary } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+
+type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
+type Person = { id: string; name: string; email: string; planUsage?: PlanUsage };
+
+export type BookingsLesson = {
   id: string;
+  dayKey: string;
   title: string | null;
   description: string | null;
   startsAt: string;
   endsAt: string;
+  startsAtLocal: string;
+  timeLabel: string;
+  endTimeLabel: string;
+  stampDateLabel: string;
+  cancelDeadlineLabel: string;
+  durationMinutes: number;
+  hasStarted: boolean;
+  hasEnded: boolean;
   maxAttendees: number;
   cancellationWindowHours: number;
   bookedCount: number;
@@ -24,6 +66,7 @@ type LessonCalendarItem = {
   isPendingByCurrentUser: boolean;
   isQueuedByCurrentUser: boolean;
   isAccessDenied: boolean;
+  requiresConfirmation: boolean;
   canViewWaitlist: boolean;
   queueLength: number;
   pendingApprovalsCount: number;
@@ -39,197 +82,381 @@ type LessonCalendarItem = {
   lessonTypeColor: string | null;
   trainerId: string;
   trainerName: string | null;
-  attendees: Array<{ id: string; name: string; email: string }>;
+  attendees: Person[];
   attendeeAttendance: Record<string, "PRESENT" | "NO_SHOW" | null>;
   canManageAttendance: boolean;
-  pendingApprovals: Array<{ id: string; name: string; email: string }>;
-  waitlist: Array<{ id: string; name: string; email: string }>;
+  pendingApprovals: Person[];
+  waitlist: Person[];
 };
 
-type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
-const WEEKDAY_BY_INDEX: Weekday[] = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-const DEFAULT_OPEN_WEEKDAYS: Weekday[] = ["MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+export type BookingsDay = {
+  key: string;
+  weekdayLabel: string;
+  dayNumberLabel: string;
+  longLabel: string;
+  isToday: boolean;
+  isPast: boolean;
+  isClosed: boolean;
+  lessonCount: number;
+  hasOwnBooking: boolean;
+};
+
+export type { BookingPass };
+
+type UpcomingBooking = {
+  id: string;
+  dayKey: string;
+  title: string;
+  whenLabel: string;
+  isPending: boolean;
+  lessonTypeIcon: string | null;
+  lessonTypeColor: string | null;
+};
+
+type BookingsLabels = Dictionary["bookings"];
+type LessonCreateLabels = Dictionary["lessonsPage"];
 
 type BookingsManagerProps = {
   locale: string;
-  labels: {
-    title: string;
-    description: string;
-    calendarTitle: string;
-    monthNavigationLabel: string;
-    empty: string;
-    seatsLabel: string;
-    bookedLabel: string;
-    youAreBooked: string;
-    awaitingConfirmation: string;
-    accessDenied: string;
-    courseTag: string;
-    detailsCta: string;
-    detailsTitle: string;
-    detailsDescription: string;
-    startsAtLabel: string;
-    endsAtLabel: string;
-    trainerLabel: string;
-    closeCta: string;
-    prevMonth: string;
-    nextMonth: string;
-    bookCta: string;
-    unbookCta: string;
-    confirmUnbookTitle: string;
-    confirmUnbookDescription: string;
-    confirmUnbookCta: string;
-    confirmKeepBookingCta: string;
-    processing: string;
-    youAreQueued: string;
-    queuedLabel: string;
-    joinQueueCta: string;
-  };
-  lessonCreateLabels: {
-    standaloneTitle: string;
-    standaloneDescription: string;
-    trainerLabel: string;
-    startsAtLabel: string;
-    standaloneDuration: string;
-    standaloneMaxAttendees: string;
-    standaloneCancellationWindow: string;
-    standaloneLessonType: string;
-    lessonTitleLabel: string;
-    lessonDescriptionLabel: string;
-    createStandaloneCta: string;
-    updateStandaloneCta: string;
-    updateTrainerCta: string;
-    attendeesLabel: string;
-    noAttendees: string;
-    attendeeSelectLabel: string;
-    addAttendeeCta: string;
-    removeAttendeeCta: string;
-    markAttendancePresentCta: string;
-    markAttendanceNoShowCta: string;
-    attendanceStatusLabel: string;
-    attendanceStatusPresent: string;
-    attendanceStatusNoShow: string;
-    attendanceStatusUnmarked: string;
-    pendingApprovalsLabel: string;
-    noPendingApprovals: string;
-    confirmPendingCta: string;
-    confirmPendingAndGrantAccessCta: string;
-    rejectPendingCta: string;
-    waitlistLabel: string;
-    noWaitlist: string;
-    confirmWaitlistCta: string;
-    removeWaitlistCta: string;
-    notifySectionTitle: string;
-    notifyMessageLabel: string;
-    notifyMessagePlaceholder: string;
-    notifySendCta: string;
-    manageTitle: string;
-    manageDescription: string;
-    manageTriggerLabel: string;
-    manageTabMain: string;
-    manageTabPeople: string;
-    processing: string;
-    closeCta: string;
-  };
-  lessons: LessonCalendarItem[];
-  month: string;
-  previousMonth: string;
-  nextMonth: string;
+  labels: BookingsLabels;
+  lessonCreateLabels: LessonCreateLabels;
+  lessons: BookingsLesson[];
+  days: BookingsDay[];
+  initialDayKey: string;
+  previousWeekKey: string;
+  nextWeekKey: string;
+  todayKey: string;
+  pass: BookingPass | null;
+  upcoming: UpcomingBooking[];
   canCreateStandaloneLesson: boolean;
   canUpdateTrainer: boolean;
   defaultTrainerId?: string;
   trainerCandidates: Array<{ id: string; name: string }>;
   lessonTypeCandidates: Array<{ id: string; name: string }>;
-  attendeeCandidates: Array<{ id: string; name: string; email: string }>;
+  attendeeCandidates: Person[];
   openWeekdays: Weekday[];
   closedDates: string[];
   isAdmin: boolean;
 };
 
-function formatTime(value: string, locale: string): string {
-  const date = new Date(value);
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+
+function bookingsHref(locale: string, dayKey: string) {
+  return `/${locale}/bookings?day=${dayKey}`;
 }
 
-function parseMonth(value: string): Date {
-  const [yRaw, mRaw] = value.split("-");
-  const year = Number.parseInt(yRaw ?? "", 10);
-  const month = Number.parseInt(mRaw ?? "", 10) - 1;
-  if (Number.isNaN(year) || Number.isNaN(month)) return new Date();
-  return new Date(year, month, 1);
+/* ------------------------------------------------------------------ */
+/* Row action: Prenota / stamp / queue                                 */
+/* ------------------------------------------------------------------ */
+
+function StampFace({ label, detail, dashed = false, neutral = false }: { label: string; detail?: string; dashed?: boolean; neutral?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex min-w-[5.75rem] flex-col items-center justify-center rounded-lg border-2 px-2 py-1.5 text-center leading-tight sm:min-w-[6.75rem] sm:px-2.5",
+        dashed ? "border-dashed" : "",
+        neutral ? "border-[var(--muted-foreground)] text-[var(--muted-foreground)]" : "border-[var(--stamp)] text-[var(--stamp)]"
+      )}
+    >
+      <span className="text-[11px] font-extrabold uppercase tracking-[0.08em]">{label}</span>
+      {detail ? <span className="tabular text-[15px] font-bold">{detail}</span> : null}
+    </span>
+  );
 }
 
-function monthLabel(value: string, locale: string): string {
-  const date = parseMonth(value);
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-    month: "long",
-    year: "numeric",
-  }).format(date);
-}
+function BookingAction({
+  lesson,
+  locale,
+  labels,
+  justStamped,
+  onBooked,
+}: {
+  lesson: BookingsLesson;
+  locale: string;
+  labels: BookingsLabels;
+  justStamped: boolean;
+  onBooked: (lessonId: string) => void;
+}) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
-function formatDayLabel(value: Date, locale: string): string {
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-    weekday: "long",
-    day: "2-digit",
-    month: "2-digit",
-  }).format(value);
-}
-
-function localDateKeyFromDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function localDateKeyFromIso(value: string): string {
-  return localDateKeyFromDate(new Date(value));
-}
-
-function toDateTimeLocalValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
-function defaultStartsAtForDay(day: Date): string {
-  const value = new Date(day);
-  const now = new Date();
-  const isToday = localDateKeyFromDate(value) === localDateKeyFromDate(now);
-
-  if (isToday) {
-    value.setHours(now.getHours() + 1, 0, 0, 0);
-  } else {
-    value.setHours(8, 0, 0, 0);
+  function run(kind: "book" | "unbook") {
+    startTransition(async () => {
+      const formData = new FormData();
+      formData.set("lessonId", lesson.id);
+      formData.set("locale", locale);
+      const result = kind === "book" ? await bookLessonAction(formData) : await unbookLessonAction(formData);
+      if (result.ok) {
+        toast.success(result.message);
+        if (kind === "book") onBooked(lesson.id);
+        router.refresh();
+      } else {
+        toast.error(result.message);
+      }
+    });
   }
 
-  return toDateTimeLocalValue(value);
+  if (lesson.isBookedByCurrentUser) {
+    const face = (
+      <StampFace
+        label={lesson.isPendingByCurrentUser ? labels.stampPending : labels.stampBooked}
+        detail={`${lesson.stampDateLabel} · ${lesson.timeLabel}`}
+        dashed={lesson.isPendingByCurrentUser}
+      />
+    );
+    if (!lesson.canUnbook) {
+      return (
+        <span className={justStamped ? "stamp-land inline-block" : "inline-block"} title={labels.cancelClosed}>
+          {face}
+          <span className="sr-only">. {labels.cancelClosed}</span>
+        </span>
+      );
+    }
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setConfirmOpen(true)}
+          disabled={isPending}
+          aria-label={`${lesson.isPendingByCurrentUser ? labels.stampPending : labels.stampBooked} ${lesson.stampDateLabel} ${lesson.timeLabel}. ${labels.unbookCta}`}
+          className={cn(
+            "rounded-xl p-1 transition-colors hover:bg-[var(--stamp-soft)] disabled:opacity-60",
+            justStamped ? "stamp-land" : ""
+          )}
+        >
+          {face}
+        </button>
+        <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{labels.confirmUnbookTitle}</AlertDialogTitle>
+              <AlertDialogDescription>
+                {lesson.title ?? lesson.courseName} · {lesson.stampDateLabel} {lesson.timeLabel}. {labels.confirmUnbookDescription}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel asChild>
+                <Button variant="outline">{labels.confirmKeepBookingCta}</Button>
+              </AlertDialogCancel>
+              <AlertDialogAction asChild>
+                <Button variant="destructive" onClick={() => run("unbook")}>
+                  {labels.confirmUnbookCta}
+                </Button>
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    );
+  }
+
+  if (lesson.isQueuedByCurrentUser) {
+    return <StampFace label={labels.stampQueued} dashed neutral />;
+  }
+
+  if (lesson.isAccessDenied) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--muted-foreground)]">
+        <Lock size={15} aria-hidden="true" />
+        {labels.accessDenied}
+      </span>
+    );
+  }
+
+  if (lesson.hasStarted) {
+    return lesson.hasEnded ? (
+      <span className="text-sm font-semibold text-[var(--muted-foreground)]">{labels.lessonEnded}</span>
+    ) : (
+      <span className="text-sm font-semibold text-[var(--success-fg)]">{labels.lessonInProgress}</span>
+    );
+  }
+
+  const isFull = lesson.availableSeats <= 0;
+  return (
+    <Button
+      variant="outline"
+      disabled={!lesson.canBook || isPending}
+      onClick={() => run("book")}
+      className={cn(
+        "min-w-[5.75rem] px-3 sm:min-w-[6.75rem] sm:px-4",
+        // Waitlist keeps the same weight as Prenota, marked by the dashed perforation.
+        isFull ? "h-auto min-h-11 whitespace-normal border-dashed py-1.5 text-sm leading-tight sm:text-[15px]" : ""
+      )}
+      aria-label={`${isFull ? labels.joinQueueCta : labels.bookCta}: ${lesson.title ?? lesson.courseName}, ${lesson.timeLabel}`}
+    >
+      {isPending ? labels.processing : isFull ? labels.joinQueueCta : labels.bookCta}
+    </Button>
+  );
 }
 
-function lessonCardStyle(lesson: LessonCalendarItem, isSelected: boolean): CSSProperties | undefined {
-  const borderStyle: CSSProperties["borderStyle"] = lesson.isBookedByCurrentUser ? "solid" : "dashed";
-  if (!lesson.lessonTypeColor) return { borderStyle };
-  return {
-    backgroundColor: hexToRgba(lesson.lessonTypeColor, isSelected ? 0.24 : 0.16),
-    borderColor: hexToRgba(lesson.lessonTypeColor, isSelected ? 0.9 : 0.55),
-    borderWidth: 1,
-    borderStyle,
-  };
+/* ------------------------------------------------------------------ */
+/* Lesson row                                                          */
+/* ------------------------------------------------------------------ */
+
+function LessonRow({
+  lesson,
+  locale,
+  labels,
+  lessonCreateLabels,
+  expanded,
+  onToggle,
+  justStamped,
+  onBooked,
+  showPlanCost,
+  manage,
+  dimmed,
+}: {
+  lesson: BookingsLesson;
+  locale: string;
+  labels: BookingsLabels;
+  lessonCreateLabels: LessonCreateLabels;
+  expanded: boolean;
+  onToggle: () => void;
+  justStamped: boolean;
+  onBooked: (lessonId: string) => void;
+  showPlanCost: "fixed" | "period" | null;
+  manage: ReactNode;
+  dimmed: boolean;
+}) {
+  const panelId = useId();
+  const name = lesson.title ?? lesson.courseName;
+  const seats =
+    lesson.availableSeats <= 0
+      ? lesson.queueLength > 0
+        ? `${labels.full} · ${fill(labels.queueCount, { n: lesson.queueLength })}`
+        : labels.full
+      : lesson.availableSeats === 1
+        ? labels.seatFreeOne
+        : fill(labels.seatsFree, { n: lesson.availableSeats });
+  const meta = [lesson.trainerName, seats].filter(Boolean).join(" · ");
+  // Another row is open, or this one cannot be booked: step back to secondary ink.
+  const quiet = dimmed || lesson.isAccessDenied || (lesson.hasStarted && !lesson.isBookedByCurrentUser);
+
+  return (
+    <li
+      className={cn(
+        "border-b border-[var(--rule)] transition-colors duration-150 last:border-b-0 lg:rounded-xl",
+        expanded ? "bg-[var(--surface)] shadow-[var(--shadow-lift)]" : ""
+      )}
+    >
+      <div className="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-3.5 sm:grid-cols-[4.25rem_minmax(0,1fr)_auto] sm:px-6 lg:px-5">
+        {/* Phones: the disclosure chevron sits under the duration, so the meta line keeps its full width.
+            The time column is a pointer shortcut to the same toggle; the name button stays the accessible control. */}
+        <div
+          onClick={onToggle}
+          className={cn("cursor-pointer leading-none transition-colors duration-150 sm:cursor-auto", quiet ? "text-[var(--muted-foreground)]" : "")}
+        >
+          <span className="tabular block text-[1.375rem] font-bold sm:text-[1.625rem]">{lesson.timeLabel}</span>
+          <span className="tabular mt-1 flex items-center gap-1 text-[13px] font-medium text-[var(--muted-foreground)]">
+            {lesson.durationMinutes} min
+            <ChevronDown
+              size={14}
+              aria-hidden="true"
+              className={cn("transition-transform duration-150 sm:hidden", expanded ? "rotate-180" : "")}
+            />
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={expanded}
+          aria-controls={panelId}
+          aria-label={fill(labels.showDetails, { name })}
+          className="-my-2 flex min-h-11 min-w-0 items-center gap-2 rounded-xl py-2 text-left"
+        >
+          <span className="min-w-0 flex-1">
+            <span className={cn("flex items-start gap-2 text-[17px] font-semibold leading-snug transition-colors duration-150", quiet ? "text-[var(--muted-foreground)]" : "")}>
+              {lesson.lessonTypeIcon ? (
+                <LessonTypeIcon iconPath={lesson.lessonTypeIcon} colorHex={lesson.lessonTypeColor} size={18} className="mt-[3px]" />
+              ) : null}
+              <span className="min-w-0 break-words sm:truncate">{name}</span>
+            </span>
+            <span className="mt-0.5 block text-[15px] text-[var(--muted-foreground)] sm:truncate">
+              {meta}
+            </span>
+          </span>
+          <ChevronDown
+            size={18}
+            aria-hidden="true"
+            className={cn("hidden shrink-0 text-[var(--muted-foreground)] transition-transform duration-150 sm:block", expanded ? "rotate-180" : "")}
+          />
+        </button>
+
+        <div className="justify-self-end">
+          <BookingAction lesson={lesson} locale={locale} labels={labels} justStamped={justStamped} onBooked={onBooked} />
+        </div>
+      </div>
+
+      <div id={panelId} hidden={!expanded} className="pb-4 pl-[5.5rem] pr-4 sm:pl-[6.75rem] sm:pr-6 lg:pl-[6.25rem] lg:pr-5">
+        <ul className="space-y-2 text-[15px]">
+          <li className="flex items-center gap-2.5">
+            <Clock3 size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+            <span className="tabular">{lesson.timeLabel}–{lesson.endTimeLabel}</span>
+            {lesson.lessonTypeName ? <span className="text-[var(--muted-foreground)]">· {lesson.lessonTypeName}</span> : null}
+          </li>
+          {lesson.trainerName ? (
+            <li className="flex items-center gap-2.5">
+              <UserRound size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              {lesson.trainerName}
+            </li>
+          ) : null}
+          {!lesson.hasStarted && (lesson.isBookedByCurrentUser || lesson.canBook) ? (
+            <li className="flex items-center gap-2.5">
+              <CalendarX2 size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              {lesson.isBookedByCurrentUser && !lesson.canUnbook
+                ? labels.cancelClosed
+                : fill(labels.cancelBy, { date: lesson.cancelDeadlineLabel })}
+            </li>
+          ) : null}
+          {showPlanCost && lesson.canBook ? (
+            <li className="flex items-center gap-2.5">
+              <Ticket size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              {showPlanCost === "fixed" ? labels.costFixed : labels.costPeriod}
+            </li>
+          ) : null}
+          {lesson.requiresConfirmation && lesson.canBook ? (
+            <li className="flex items-center gap-2.5">
+              <ShieldCheck size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              {labels.requiresConfirmation}
+            </li>
+          ) : null}
+          {lesson.canViewWaitlist ? (
+            <li className="flex items-center gap-2.5">
+              <Users size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              <span className="tabular">
+                {labels.bookedLabel} {lesson.occupancy}
+                {lesson.queueLength > 0 ? ` · ${labels.queuedLabel} ${lesson.queueLength}` : ""}
+                {lesson.pendingApprovalsCount > 0 ? ` · ${lessonCreateLabels.pendingApprovalsLabel} ${lesson.pendingApprovalsCount}` : ""}
+              </span>
+            </li>
+          ) : null}
+        </ul>
+        {lesson.description ? (
+          <p className="mt-3 max-w-[65ch] text-[15px] text-[var(--muted-foreground)]">{lesson.description}</p>
+        ) : null}
+        {manage ? <div className="mt-3 w-fit">{manage}</div> : null}
+      </div>
+    </li>
+  );
 }
+
+/* ------------------------------------------------------------------ */
+/* Page                                                                */
+/* ------------------------------------------------------------------ */
 
 export function BookingsManager({
   locale,
   labels,
   lessonCreateLabels,
   lessons,
-  month,
-  previousMonth,
-  nextMonth,
+  days,
+  initialDayKey,
+  previousWeekKey,
+  nextWeekKey,
+  todayKey,
+  pass,
+  upcoming,
   canCreateStandaloneLesson,
   canUpdateTrainer,
   defaultTrainerId,
@@ -240,602 +467,254 @@ export function BookingsManager({
   closedDates,
   isAdmin,
 }: BookingsManagerProps) {
-  const monthDate = parseMonth(month);
-  const firstGridDate = useMemo(() => {
-    const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-    const dayOffset = (firstDay.getDay() + 6) % 7;
-    const start = new Date(firstDay);
-    start.setDate(firstDay.getDate() - dayOffset);
-    return start;
-  }, [monthDate]);
+  const [selectedKey, setSelectedKey] = useState(initialDayKey);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [justStampedId, setJustStampedId] = useState<string | null>(null);
 
-  const calendarDays = useMemo(() => {
-    return Array.from({ length: 42 }, (_, index) => {
-      const date = new Date(firstGridDate);
-      date.setDate(firstGridDate.getDate() + index);
-      const key = localDateKeyFromDate(date);
-      const items = lessons
-        .filter((lesson) => localDateKeyFromIso(lesson.startsAt) === key)
-        .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
-      return {
-        key,
-        date,
-        items,
-        isCurrentMonth: date.getMonth() === monthDate.getMonth(),
-      };
-    });
-  }, [firstGridDate, lessons, monthDate]);
+  const selectedDay = days.find((day) => day.key === selectedKey) ?? days[0];
+  const dayLessons = lessons.filter((lesson) => lesson.dayKey === selectedDay.key);
+  const showPlanCost = pass && (pass.kind === "fixed" ? "fixed" : pass.kind === "weekly" || pass.kind === "monthly" ? "period" : null);
+  const weekHasToday = days.some((day) => day.key === todayKey);
+  const showUpcoming = upcoming.length > 0 || pass !== null;
 
-  const todayKey = localDateKeyFromDate(new Date());
-  const mobileDays = calendarDays.filter((day) => day.isCurrentMonth && day.items.length > 0);
-  const openWeekdaySet = useMemo(
-    () => new Set<Weekday>(openWeekdays.length > 0 ? openWeekdays : DEFAULT_OPEN_WEEKDAYS),
-    [openWeekdays]
-  );
-  const closedDateSet = useMemo(() => new Set(closedDates), [closedDates]);
-
-  function isClosedDay(date: Date): boolean {
-    const weekday = WEEKDAY_BY_INDEX[date.getDay()];
-    const dateKey = localDateKeyFromDate(date);
-    return !openWeekdaySet.has(weekday) || closedDateSet.has(dateKey);
+  function selectDay(key: string) {
+    setSelectedKey(key);
+    setExpandedId(null);
+    window.history.replaceState(null, "", bookingsHref(locale, key));
   }
 
-  // Details are rendered through the shared LessonDetailsDialogTrigger component.
+  function defaultStartsAt(dayKey: string) {
+    const hour = dayKey === todayKey ? Math.min(23, getAppTimeParts(new Date()).hour + 1) : 8;
+    return `${dayKey}T${String(hour).padStart(2, "0")}:00`;
+  }
+
+  function renderManage(lesson: BookingsLesson) {
+    if (!lesson.canManageLesson) return null;
+    return (
+      <LessonManageButton
+        locale={locale}
+        lesson={lesson}
+        labels={labels}
+        lessonCreateLabels={lessonCreateLabels}
+        canUpdateTrainer={canUpdateTrainer}
+        isAdmin={isAdmin}
+        trainerCandidates={trainerCandidates}
+        lessonTypeCandidates={lessonTypeCandidates}
+        attendeeCandidates={attendeeCandidates}
+      />
+    );
+  }
+
+  const createLessonButton =
+    canCreateStandaloneLesson && !selectedDay.isClosed && !selectedDay.isPast ? (
+      <StandaloneLessonCreateDialog
+        locale={locale}
+        trainerCandidates={trainerCandidates}
+        lessonTypeCandidates={lessonTypeCandidates}
+        openWeekdays={openWeekdays}
+        closedDates={closedDates}
+        defaultTrainerId={defaultTrainerId}
+        disableTrainerSelection={!canUpdateTrainer}
+        defaultStartsAt={defaultStartsAt(selectedDay.key)}
+        labels={{
+          triggerCta: lessonCreateLabels.createStandaloneCta,
+          title: lessonCreateLabels.standaloneTitle,
+          description: lessonCreateLabels.standaloneDescription,
+          trainerLabel: lessonCreateLabels.trainerLabel,
+          standaloneDuration: lessonCreateLabels.standaloneDuration,
+          standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
+          standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
+          standaloneLessonType: lessonCreateLabels.standaloneLessonType,
+          lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
+          lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
+          startsAtLabel: labels.startsAtLabel,
+          submitCta: lessonCreateLabels.createStandaloneCta,
+          processing: labels.processing,
+          closeCta: labels.closeCta,
+        }}
+        trigger={
+          <Button variant="ghost" size="sm" className="h-11 gap-1.5 px-3">
+            <Plus size={18} aria-hidden="true" />
+            {lessonCreateLabels.createStandaloneCta}
+          </Button>
+        }
+      />
+    ) : null;
+
+  function renderUpcoming(headingId: string, className: string) {
+    return (
+      <aside aria-labelledby={headingId} className={className}>
+        <h2 id={headingId} className="text-[17px] font-semibold">{labels.upcomingTitle}</h2>
+        {upcoming.length === 0 ? (
+          <p className="mt-2 text-[15px] text-[var(--muted-foreground)]">{labels.upcomingEmpty}</p>
+        ) : (
+          <ul className="mt-3 space-y-1">
+            {upcoming.map((item) => (
+              <li key={item.id}>
+                <Link
+                  href={bookingsHref(locale, item.dayKey)}
+                  onClick={(event) => {
+                    if (days.some((day) => day.key === item.dayKey)) {
+                      event.preventDefault();
+                      selectDay(item.dayKey);
+                      setExpandedId(item.id);
+                    }
+                  }}
+                  className="-mx-2 flex min-h-11 items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--muted)]"
+                >
+                  {item.lessonTypeIcon ? (
+                    <LessonTypeIcon iconPath={item.lessonTypeIcon} colorHex={item.lessonTypeColor} size={18} />
+                  ) : (
+                    <span aria-hidden="true" className="h-[18px] w-[18px]" />
+                  )}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold">{item.title}</span>
+                    <span className="tabular block text-sm text-[var(--muted-foreground)] first-letter:uppercase">{item.whenLabel}</span>
+                  </span>
+                  <span
+                    className={cn(
+                      "shrink-0 rounded-lg border-2 border-[var(--stamp)] px-2 py-1 text-xs font-extrabold uppercase tracking-[0.06em] text-[var(--stamp)]",
+                      item.isPending ? "border-dashed" : ""
+                    )}
+                  >
+                    {item.isPending ? labels.stampPending : labels.stampBooked}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </aside>
+    );
+  }
+
+  const columns = showUpcoming ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : "max-w-4xl";
 
   return (
-    <section className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-      </header>
-
-      <div className="rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div>
-            <h3 className="text-base font-semibold">{labels.calendarTitle}</h3>
-            <p className="text-xs text-[var(--muted-foreground)]">{labels.monthNavigationLabel}</p>
+    <div>
+      {/* The page owns its stock band: title, pass and day strip sit on the section card stock,
+          and the band ends exactly on the strip's edge, never across a line of text. */}
+      <div
+        data-page-band
+        className="-mt-4 bg-[var(--stock)] pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pt-10"
+      >
+        <header>
+        <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
+        <p className="mt-1 hidden text-[15px] text-[var(--stock-ink)]/75 lg:block">{labels.description}</p>
+        </header>
+        <div className={cn("mt-5 grid gap-5 lg:gap-8", columns)}>
+          <div className="min-w-0 space-y-4">
+            {pass ? <PassCard pass={pass} labels={labels.pass} /> : null}
+            <div className="-mx-4 flex items-center gap-1 px-1.5 pb-2 sm:-mx-6 sm:px-4 lg:mx-0 lg:px-0">
+              <Link
+                href={bookingsHref(locale, previousWeekKey)}
+                aria-label={labels.prevWeek}
+                className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)] sm:w-11"
+              >
+                <ChevronLeft size={20} aria-hidden="true" />
+              </Link>
+              <div role="group" aria-label={labels.weekNavigationLabel} className="grid flex-1 grid-cols-7 gap-0.5 sm:gap-1">
+                {days.map((day) => {
+                  const selected = day.key === selectedDay.key;
+                  return (
+                    <button
+                      key={day.key}
+                      type="button"
+                      onClick={() => selectDay(day.key)}
+                      aria-pressed={selected}
+                      aria-label={`${day.longLabel}${day.isToday ? `, ${labels.today}` : ""}${day.hasOwnBooking ? `, ${labels.stampBooked}` : ""}`}
+                      className={cn(
+                        "relative flex min-h-[3.75rem] flex-col items-center justify-center rounded-xl transition-colors",
+                        selected
+                          ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                          : day.isClosed || day.isPast
+                            ? "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+                            : "hover:bg-[var(--muted)]"
+                      )}
+                    >
+                      <span className={cn("text-xs font-semibold uppercase", selected ? "opacity-80" : "text-[var(--muted-foreground)]")}>
+                        {day.weekdayLabel}
+                      </span>
+                      <span
+                        className={cn(
+                          "tabular text-xl font-bold leading-tight",
+                          day.isToday && !selected ? "underline decoration-2 underline-offset-4" : ""
+                        )}
+                      >
+                        {day.dayNumberLabel}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          "absolute bottom-1.5 h-1.5 w-1.5 rounded-full",
+                          day.hasOwnBooking ? (selected ? "bg-[var(--primary-foreground)]" : "bg-[var(--stamp)]") : "bg-transparent"
+                        )}
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+              <Link
+                href={bookingsHref(locale, nextWeekKey)}
+                aria-label={labels.nextWeek}
+                className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)] sm:w-11"
+              >
+                <ChevronRight size={20} aria-hidden="true" />
+              </Link>
+            </div>
           </div>
-          <div className="inline-flex items-center gap-2">
-            <Link href={`/${locale}/bookings?month=${previousMonth}`} className="text-sm text-[var(--foreground)] hover:underline">
-              {labels.prevMonth}
-            </Link>
-            <span className="rounded-md bg-[var(--muted)] px-2 py-1 text-xs capitalize">{monthLabel(month, locale)}</span>
-            <Link href={`/${locale}/bookings?month=${nextMonth}`} className="text-sm text-[var(--foreground)] hover:underline">
-              {labels.nextMonth}
-            </Link>
-          </div>
+          {showUpcoming ? renderUpcoming("upcoming-heading-desktop", "hidden pb-6 lg:block lg:pt-1") : null}
         </div>
-
-        {lessons.length === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
-        ) : (
-          <>
-            <div className="space-y-3 md:hidden">
-              {mobileDays.map((day) => (
-                <div key={`mobile-${day.key}`} className="rounded-md border border-[var(--surface-border)] p-2">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="text-xs font-semibold capitalize">{formatDayLabel(day.date, locale)}</p>
-                    {canCreateStandaloneLesson && !isClosedDay(day.date) ? (
-                      <StandaloneLessonCreateDialog
-                        locale={locale}
-                        trainerCandidates={trainerCandidates}
-                        lessonTypeCandidates={lessonTypeCandidates}
-                        openWeekdays={openWeekdays}
-                        closedDates={closedDates}
-                        defaultTrainerId={defaultTrainerId}
-                        disableTrainerSelection={!canUpdateTrainer}
-                        defaultStartsAt={defaultStartsAtForDay(day.date)}
-                        labels={{
-                          triggerCta: lessonCreateLabels.createStandaloneCta,
-                          title: lessonCreateLabels.standaloneTitle,
-                          description: lessonCreateLabels.standaloneDescription,
-                          trainerLabel: lessonCreateLabels.trainerLabel,
-                          standaloneDuration: lessonCreateLabels.standaloneDuration,
-                          standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
-                          standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
-                          standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-                          lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
-                          lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                          startsAtLabel: labels.startsAtLabel,
-                          submitCta: lessonCreateLabels.createStandaloneCta,
-                          processing: labels.processing,
-                          closeCta: labels.closeCta,
-                        }}
-                        trigger={
-                          <button
-                            type="button"
-                            className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-transparent p-0 text-zinc-900 hover:bg-black/10 dark:text-zinc-100 dark:hover:bg-white/10"
-                            aria-label={`${lessonCreateLabels.createStandaloneCta} - ${formatDayLabel(day.date, locale)}`}
-                            title={lessonCreateLabels.createStandaloneCta}
-                          >
-                            <Plus className="h-5 w-5 shrink-0 stroke-[2.5]" />
-                          </button>
-                        }
-                      />
-                    ) : null}
-                  </div>
-                  <div className="space-y-1">
-                    {day.items.map((lesson) => {
-                      const durationMinutes = Math.max(
-                        1,
-                        Math.round((new Date(lesson.endsAt).getTime() - new Date(lesson.startsAt).getTime()) / 60000)
-                      );
-                      const isPastOrNow = new Date(lesson.startsAt) <= new Date();
-                      const timeTooltip = `${labels.startsAtLabel}: ${formatTime(lesson.startsAt, locale)} · ${labels.endsAtLabel}: ${formatTime(lesson.endsAt, locale)}`;
-                      const bookedTooltip = isAdmin
-                        ? `${labels.bookedLabel}: ${lesson.occupancy} · ${labels.queuedLabel}: ${lesson.queueLength} · ${lessonCreateLabels.pendingApprovalsLabel}: ${lesson.pendingApprovalsCount}`
-                        : undefined;
-
-                      return (
-                        <LessonDetailsDialogTrigger
-                          key={`mobile-${lesson.id}`}
-                          locale={locale}
-                          lesson={{
-                            id: lesson.id,
-                            title: lesson.title ?? lesson.courseName,
-                            description: lesson.description,
-                            startsAt: lesson.startsAt,
-                            endsAt: lesson.endsAt,
-                            trainerName: lesson.trainerName,
-                            occupancy: lesson.occupancy,
-                            queueLength: lesson.queueLength,
-                            canViewWaitlist: lesson.canViewWaitlist,
-                            isCourseLesson: lesson.isCourseLesson,
-                            lessonTypeName: lesson.lessonTypeName,
-                            lessonTypeIcon: lesson.lessonTypeIcon,
-                            lessonTypeColor: lesson.lessonTypeColor,
-                            canBroadcast: lesson.canManageLesson,
-                          }}
-                          labels={{
-                            detailsTitle: labels.detailsTitle,
-                            detailsDescription: labels.detailsDescription,
-                            startsAtLabel: labels.startsAtLabel,
-                            endsAtLabel: labels.endsAtLabel,
-                            trainerLabel: labels.trainerLabel,
-                            bookedLabel: labels.bookedLabel,
-                            queuedLabel: labels.queuedLabel,
-                            closeCta: labels.closeCta,
-                            courseTag: labels.courseTag,
-                            lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                            notifySectionTitle: lessonCreateLabels.notifySectionTitle,
-                            notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
-                            notifySendCta: lessonCreateLabels.notifySendCta,
-                          }}
-                          manage={lesson.canManageLesson ? {
-                            lesson: {
-                              id: lesson.id,
-                              canEditMain: !lesson.isCourseLesson && !isPastOrNow,
-                              title: lesson.title ?? "",
-                              description: lesson.description ?? "",
-                              startsAt: toDateTimeLocalValue(new Date(lesson.startsAt)),
-                              durationMinutes,
-                              maxAttendees: lesson.maxAttendees,
-                              cancellationWindowHours: lesson.cancellationWindowHours,
-                              trainerId: lesson.trainerId,
-                              lessonTypeId: lesson.lessonTypeId,
-                              canManageTrainer: canUpdateTrainer && !isPastOrNow,
-                              attendees: lesson.attendees,
-                              attendeeAttendance: lesson.attendeeAttendance,
-                              canManageAttendance: lesson.canManageAttendance,
-                              pendingApprovals: lesson.pendingApprovals,
-                              waitlist: lesson.waitlist,
-                            },
-                            trainerCandidates,
-                            lessonTypeCandidates,
-                            attendeeCandidates,
-                            canBroadcastToAttendees: lesson.canManageLesson,
-                            canGrantOpenAccess: isAdmin && lesson.canManageLesson,
-                            labels: {
-                              title: lessonCreateLabels.manageTitle,
-                              description: lessonCreateLabels.manageDescription,
-                              tabMain: lessonCreateLabels.manageTabMain,
-                              tabPeople: lessonCreateLabels.manageTabPeople,
-                              startsAtLabel: lessonCreateLabels.startsAtLabel,
-                              trainerLabel: lessonCreateLabels.trainerLabel,
-                              standaloneDuration: lessonCreateLabels.standaloneDuration,
-                              standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
-                              standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
-                              standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-                              lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
-                              lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                              updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
-                              updateTrainerCta: lessonCreateLabels.updateTrainerCta,
-                              attendeesLabel: lessonCreateLabels.attendeesLabel,
-                              noAttendees: lessonCreateLabels.noAttendees,
-                              attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
-                              addAttendeeCta: lessonCreateLabels.addAttendeeCta,
-                              removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
-                              markAttendancePresentCta: lessonCreateLabels.markAttendancePresentCta,
-                              markAttendanceNoShowCta: lessonCreateLabels.markAttendanceNoShowCta,
-                              attendanceStatusLabel: lessonCreateLabels.attendanceStatusLabel,
-                              attendanceStatusPresent: lessonCreateLabels.attendanceStatusPresent,
-                              attendanceStatusNoShow: lessonCreateLabels.attendanceStatusNoShow,
-                              attendanceStatusUnmarked: lessonCreateLabels.attendanceStatusUnmarked,
-                              pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
-                              noPendingApprovals: lessonCreateLabels.noPendingApprovals,
-                              confirmPendingCta: lessonCreateLabels.confirmPendingCta,
-                              confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
-                              rejectPendingCta: lessonCreateLabels.rejectPendingCta,
-                              waitlistLabel: lessonCreateLabels.waitlistLabel,
-                              noWaitlist: lessonCreateLabels.noWaitlist,
-                              confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,
-                              removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
-                              processing: lessonCreateLabels.processing,
-                              closeCta: lessonCreateLabels.closeCta,
-                              manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
-                              notifySectionTitle: lessonCreateLabels.notifySectionTitle,
-                              notifyMessageLabel: lessonCreateLabels.notifyMessageLabel,
-                              notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
-                              notifySendCta: lessonCreateLabels.notifySendCta,
-                            },
-                          } : undefined}
-                          footerSlot={
-                            lesson.isAccessDenied ? (
-                              <Badge variant="neutral" className="inline-flex items-center gap-1 px-3 py-2 text-xs">{labels.accessDenied}</Badge>
-                            ) : lesson.isQueuedByCurrentUser ? (
-                              <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
-                                <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
-                                {labels.youAreQueued}
-                              </Badge>
-                            ) : (
-                              <BookingBadgeToggle
-                                locale={locale}
-                                lessonId={lesson.id}
-                                isBooked={lesson.isBookedByCurrentUser}
-                                isPendingApproval={lesson.isPendingByCurrentUser}
-                                canBook={lesson.canBook}
-                                canUnbook={lesson.canUnbook}
-                                labels={{
-                                  bookCta: labels.bookCta,
-                                  bookedCta: labels.youAreBooked,
-                                  pendingCta: labels.awaitingConfirmation,
-                                  processing: labels.processing,
-                                  confirmUnbookTitle: labels.confirmUnbookTitle,
-                                  confirmUnbookDescription: labels.confirmUnbookDescription,
-                                  confirmUnbookCta: labels.confirmUnbookCta,
-                                  confirmKeepBookingCta: labels.confirmKeepBookingCta,
-                                }}
-                              />
-                            )
-                          }
-                          trigger={
-                            <div
-                              className={[
-                                "w-full rounded border border-[var(--surface-border)] px-2 py-1 text-left text-xs transition hover:brightness-95",
-                                lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
-                                !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
-                              ].join(" ")}
-                              style={lessonCardStyle(lesson, false)}
-                            >
-                              <div className="flex items-start gap-2">
-                                {lesson.lessonTypeIcon ? (
-                                  <LessonTypeIcon
-                                    iconPath={lesson.lessonTypeIcon}
-                                    colorHex={lesson.lessonTypeColor}
-                                    size={22}
-                                    title={lesson.lessonTypeName ?? undefined}
-                                  />
-                                ) : null}
-                                <div className="min-w-0">
-                                  <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
-                                </div>
-                              </div>
-                              <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
-                                <span className="inline-flex items-center gap-1" title={timeTooltip}>
-                                  <Clock3 className="h-3.5 w-3.5" />
-                                  {formatTime(lesson.startsAt, locale)}
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Hourglass className="h-3.5 w-3.5" />
-                                  {durationMinutes} min
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
-                                <span className="inline-flex items-center gap-1">
-                                  <UserRound className="h-3.5 w-3.5" />
-                                  {lesson.trainerName ?? "-"}
-                                </span>
-                                <span title={bookedTooltip} className="inline-flex items-center gap-1">
-                                  {isAdmin && lesson.pendingApprovalsCount > 0 ? (
-                                    <AlertTriangle className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400" />
-                                  ) : (
-                                    <Users className="h-3.5 w-3.5" />
-                                  )}
-                                  {labels.bookedLabel}: {lesson.occupancy}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-end">
-                                {lesson.isAccessDenied ? (
-                                  <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
-                                ) : lesson.isQueuedByCurrentUser ? (
-                                  <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
-                                ) : (
-                                  <span className="text-[10px] text-[var(--muted-foreground)]">{labels.detailsCta}</span>
-                                )}
-                              </div>
-                            </div>
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="hidden md:block">
-              <div className="mb-2 grid grid-cols-7 gap-2 text-center text-xs font-medium text-[var(--muted-foreground)]">
-                {(locale === "it"
-                  ? ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"]
-                  : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-                ).map((day) => (
-                  <div key={day}>{day}</div>
-                ))}
-              </div>
-              <div className="grid grid-cols-7 gap-2">
-              {calendarDays.map((day) => (
-                <div
-                  key={day.key}
-                  className={[
-                    "min-h-28 rounded-md border p-2",
-                    day.isCurrentMonth ? "border-[var(--surface-border)] bg-[var(--surface)]" : "border-[var(--surface-border)] bg-[var(--surface)] opacity-70",
-                    day.key === todayKey ? "ring-2 ring-[var(--primary)]" : "",
-                  ].join(" ")}
-                >
-                  <div className="mb-2 flex items-center justify-between gap-1">
-                    <p className="text-xs font-semibold">{day.date.getDate()}</p>
-                    {canCreateStandaloneLesson && day.isCurrentMonth && !isClosedDay(day.date) ? (
-                      <StandaloneLessonCreateDialog
-                        locale={locale}
-                        trainerCandidates={trainerCandidates}
-                        lessonTypeCandidates={lessonTypeCandidates}
-                        openWeekdays={openWeekdays}
-                        closedDates={closedDates}
-                        defaultTrainerId={defaultTrainerId}
-                        disableTrainerSelection={!canUpdateTrainer}
-                        defaultStartsAt={defaultStartsAtForDay(day.date)}
-                        labels={{
-                          triggerCta: lessonCreateLabels.createStandaloneCta,
-                          title: lessonCreateLabels.standaloneTitle,
-                          description: lessonCreateLabels.standaloneDescription,
-                          trainerLabel: lessonCreateLabels.trainerLabel,
-                          standaloneDuration: lessonCreateLabels.standaloneDuration,
-                          standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
-                          standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
-                          standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-                          lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
-                          lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                          startsAtLabel: labels.startsAtLabel,
-                          submitCta: lessonCreateLabels.createStandaloneCta,
-                          processing: labels.processing,
-                          closeCta: labels.closeCta,
-                        }}
-                        trigger={
-                          <button
-                            type="button"
-                            className="inline-flex h-6 w-6 items-center justify-center rounded-md bg-transparent p-0 text-zinc-900 hover:bg-black/10 dark:text-zinc-100 dark:hover:bg-white/10"
-                            aria-label={`${lessonCreateLabels.createStandaloneCta} - ${formatDayLabel(day.date, locale)}`}
-                            title={lessonCreateLabels.createStandaloneCta}
-                          >
-                            <Plus className="h-4 w-4 shrink-0 stroke-[2.5]" />
-                          </button>
-                        }
-                      />
-                    ) : null}
-                  </div>
-                  <div className="space-y-1">
-                    {day.items.map((lesson) => {
-                      const durationMinutes = Math.max(
-                        1,
-                        Math.round((new Date(lesson.endsAt).getTime() - new Date(lesson.startsAt).getTime()) / 60000)
-                      );
-                      const isPastOrNow = new Date(lesson.startsAt) <= new Date();
-                      const timeTooltip = `${labels.startsAtLabel}: ${formatTime(lesson.startsAt, locale)} · ${labels.endsAtLabel}: ${formatTime(lesson.endsAt, locale)}`;
-                      const bookedTooltip = isAdmin
-                        ? `${labels.bookedLabel}: ${lesson.occupancy} · ${labels.queuedLabel}: ${lesson.queueLength} · ${lessonCreateLabels.pendingApprovalsLabel}: ${lesson.pendingApprovalsCount}`
-                        : undefined;
-
-                      return (
-                        <LessonDetailsDialogTrigger
-                          key={lesson.id}
-                          locale={locale}
-                          lesson={{
-                            id: lesson.id,
-                            title: lesson.title ?? lesson.courseName,
-                            description: lesson.description,
-                            startsAt: lesson.startsAt,
-                            endsAt: lesson.endsAt,
-                            trainerName: lesson.trainerName,
-                            occupancy: lesson.occupancy,
-                            queueLength: lesson.queueLength,
-                            canViewWaitlist: lesson.canViewWaitlist,
-                            isCourseLesson: lesson.isCourseLesson,
-                            lessonTypeName: lesson.lessonTypeName,
-                            lessonTypeIcon: lesson.lessonTypeIcon,
-                            lessonTypeColor: lesson.lessonTypeColor,
-                            canBroadcast: lesson.canManageLesson,
-                          }}
-                          labels={{
-                            detailsTitle: labels.detailsTitle,
-                            detailsDescription: labels.detailsDescription,
-                            startsAtLabel: labels.startsAtLabel,
-                            endsAtLabel: labels.endsAtLabel,
-                            trainerLabel: labels.trainerLabel,
-                            bookedLabel: labels.bookedLabel,
-                            queuedLabel: labels.queuedLabel,
-                            closeCta: labels.closeCta,
-                            courseTag: labels.courseTag,
-                            lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                            notifySectionTitle: lessonCreateLabels.notifySectionTitle,
-                            notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
-                            notifySendCta: lessonCreateLabels.notifySendCta,
-                          }}
-                          manage={lesson.canManageLesson ? {
-                            lesson: {
-                              id: lesson.id,
-                              canEditMain: !lesson.isCourseLesson && !isPastOrNow,
-                              title: lesson.title ?? "",
-                              description: lesson.description ?? "",
-                              startsAt: toDateTimeLocalValue(new Date(lesson.startsAt)),
-                              durationMinutes,
-                              maxAttendees: lesson.maxAttendees,
-                              cancellationWindowHours: lesson.cancellationWindowHours,
-                              trainerId: lesson.trainerId,
-                              lessonTypeId: lesson.lessonTypeId,
-                              canManageTrainer: canUpdateTrainer && !isPastOrNow,
-                              attendees: lesson.attendees,
-                              attendeeAttendance: lesson.attendeeAttendance,
-                              canManageAttendance: lesson.canManageAttendance,
-                              pendingApprovals: lesson.pendingApprovals,
-                              waitlist: lesson.waitlist,
-                            },
-                            trainerCandidates,
-                            lessonTypeCandidates,
-                            attendeeCandidates,
-                            canBroadcastToAttendees: lesson.canManageLesson,
-                            canGrantOpenAccess: isAdmin && lesson.canManageLesson,
-                            labels: {
-                              title: lessonCreateLabels.manageTitle,
-                              description: lessonCreateLabels.manageDescription,
-                              tabMain: lessonCreateLabels.manageTabMain,
-                              tabPeople: lessonCreateLabels.manageTabPeople,
-                              startsAtLabel: lessonCreateLabels.startsAtLabel,
-                              trainerLabel: lessonCreateLabels.trainerLabel,
-                              standaloneDuration: lessonCreateLabels.standaloneDuration,
-                              standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
-                              standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
-                              standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-                              lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
-                              lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-                              updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
-                              updateTrainerCta: lessonCreateLabels.updateTrainerCta,
-                              attendeesLabel: lessonCreateLabels.attendeesLabel,
-                              noAttendees: lessonCreateLabels.noAttendees,
-                              attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
-                              addAttendeeCta: lessonCreateLabels.addAttendeeCta,
-                              removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
-                              markAttendancePresentCta: lessonCreateLabels.markAttendancePresentCta,
-                              markAttendanceNoShowCta: lessonCreateLabels.markAttendanceNoShowCta,
-                              attendanceStatusLabel: lessonCreateLabels.attendanceStatusLabel,
-                              attendanceStatusPresent: lessonCreateLabels.attendanceStatusPresent,
-                              attendanceStatusNoShow: lessonCreateLabels.attendanceStatusNoShow,
-                              attendanceStatusUnmarked: lessonCreateLabels.attendanceStatusUnmarked,
-                              pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
-                              noPendingApprovals: lessonCreateLabels.noPendingApprovals,
-                              confirmPendingCta: lessonCreateLabels.confirmPendingCta,
-                              confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
-                              rejectPendingCta: lessonCreateLabels.rejectPendingCta,
-                              waitlistLabel: lessonCreateLabels.waitlistLabel,
-                              noWaitlist: lessonCreateLabels.noWaitlist,
-                              confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,
-                              removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
-                              processing: lessonCreateLabels.processing,
-                              closeCta: lessonCreateLabels.closeCta,
-                              manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
-                              notifySectionTitle: lessonCreateLabels.notifySectionTitle,
-                              notifyMessageLabel: lessonCreateLabels.notifyMessageLabel,
-                              notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
-                              notifySendCta: lessonCreateLabels.notifySendCta,
-                            },
-                          } : undefined}
-                          footerSlot={
-                            lesson.isAccessDenied ? (
-                              <Badge variant="neutral" className="inline-flex items-center gap-1 px-3 py-2 text-xs">{labels.accessDenied}</Badge>
-                            ) : lesson.isQueuedByCurrentUser ? (
-                              <Badge variant="warning" className="inline-flex items-center gap-1 px-3 py-2 text-xs">
-                                <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />
-                                {labels.youAreQueued}
-                              </Badge>
-                            ) : (
-                              <BookingBadgeToggle
-                                locale={locale}
-                                lessonId={lesson.id}
-                                isBooked={lesson.isBookedByCurrentUser}
-                                isPendingApproval={lesson.isPendingByCurrentUser}
-                                canBook={lesson.canBook}
-                                canUnbook={lesson.canUnbook}
-                                labels={{
-                                  bookCta: labels.bookCta,
-                                  bookedCta: labels.youAreBooked,
-                                  pendingCta: labels.awaitingConfirmation,
-                                  processing: labels.processing,
-                                  confirmUnbookTitle: labels.confirmUnbookTitle,
-                                  confirmUnbookDescription: labels.confirmUnbookDescription,
-                                  confirmUnbookCta: labels.confirmUnbookCta,
-                                  confirmKeepBookingCta: labels.confirmKeepBookingCta,
-                                }}
-                              />
-                            )
-                          }
-                          trigger={
-                            <div
-                              className={[
-                                "w-full rounded border border-[var(--surface-border)] px-2 py-1 text-left text-[11px] transition hover:brightness-95",
-                                lesson.isAccessDenied ? "opacity-50 saturate-0" : "",
-                                !lesson.lessonTypeColor ? "bg-[var(--muted)]" : "",
-                              ].join(" ")}
-                              style={lessonCardStyle(lesson, false)}
-                            >
-                              <div className="flex items-start gap-2">
-                                {lesson.lessonTypeIcon ? (
-                                  <LessonTypeIcon
-                                    iconPath={lesson.lessonTypeIcon}
-                                    colorHex={lesson.lessonTypeColor}
-                                    size={20}
-                                    title={lesson.lessonTypeName ?? undefined}
-                                  />
-                                ) : null}
-                                <div className="min-w-0">
-                                  <p className="truncate font-semibold leading-5">{lesson.title ?? lesson.courseName}</p>
-                                </div>
-                              </div>
-                              <div className="mt-1 flex items-center gap-3 text-[11px] text-[var(--muted-foreground)]">
-                                <span className="inline-flex items-center gap-1" title={timeTooltip}>
-                                  <Clock3 className="h-3.5 w-3.5" />
-                                  {formatTime(lesson.startsAt, locale)}
-                                </span>
-                                <span className="inline-flex items-center gap-1">
-                                  <Hourglass className="h-3.5 w-3.5" />
-                                  {durationMinutes} min
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-[var(--muted-foreground)]">
-                                <span className="inline-flex items-center gap-1">
-                                  <UserRound className="h-3.5 w-3.5" />
-                                  {lesson.trainerName ?? "-"}
-                                </span>
-                                <span title={bookedTooltip} className="inline-flex items-center gap-1">
-                                  {isAdmin && lesson.pendingApprovalsCount > 0 ? (
-                                    <AlertTriangle className="h-3.5 w-3.5 text-[var(--danger-fg)] dark:text-red-400" />
-                                  ) : (
-                                    <Users className="h-3.5 w-3.5" />
-                                  )}
-                                  {labels.bookedLabel}: {lesson.occupancy}
-                                </span>
-                              </div>
-                              <div className="mt-1 flex items-center justify-end">
-                                {lesson.isAccessDenied ? (
-                                  <Badge variant="neutral" className="text-[10px]">{labels.accessDenied}</Badge>
-                                ) : lesson.isQueuedByCurrentUser ? (
-                                  <Badge variant="warning" className="text-[10px]">{labels.youAreQueued}</Badge>
-                                ) : (
-                                  <span className="text-[10px] text-[var(--muted-foreground)]">{labels.detailsCta}</span>
-                                )}
-                              </div>
-                            </div>
-                          }
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-              </div>
-            </div>
-
-          </>
-        )}
       </div>
-    </section>
+
+      {/* Rows lie directly on the section paper; the pass is the page's only card. */}
+      <div className={cn("grid lg:gap-8", columns)}>
+        <section aria-labelledby="day-heading" className="-mx-4 min-w-0 sm:-mx-6 lg:mx-0">
+            <div className="flex min-h-14 items-center justify-between gap-2 px-4 pt-3 sm:px-6 lg:px-5">
+              <h2 id="day-heading" className="text-[17px] font-semibold first-letter:uppercase">
+                {selectedDay.longLabel}
+              </h2>
+              <div className="flex items-center gap-1">
+                {!weekHasToday ? (
+                  <Link
+                    href={bookingsHref(locale, todayKey)}
+                    className="inline-flex h-11 items-center rounded-xl px-3 text-[15px] font-semibold underline-offset-4 hover:underline"
+                  >
+                    {labels.today}
+                  </Link>
+                ) : null}
+                {createLessonButton}
+              </div>
+            </div>
+
+            {dayLessons.length > 0 ? (
+              <ul aria-label={fill(labels.dayLessons, { day: selectedDay.longLabel })}>
+                {dayLessons.map((lesson) => (
+                  <LessonRow
+                    key={lesson.id}
+                    lesson={lesson}
+                    locale={locale}
+                    labels={labels}
+                    lessonCreateLabels={lessonCreateLabels}
+                    expanded={expandedId === lesson.id}
+                    onToggle={() => setExpandedId((current) => (current === lesson.id ? null : lesson.id))}
+                    justStamped={justStampedId === lesson.id}
+                    onBooked={setJustStampedId}
+                    showPlanCost={showPlanCost ?? null}
+                    manage={renderManage(lesson)}
+                    dimmed={expandedId !== null && expandedId !== lesson.id}
+                  />
+                ))}
+              </ul>
+            ) : (
+              <p className="px-4 pb-8 pt-4 text-[15px] text-[var(--muted-foreground)] sm:px-6 lg:px-5">
+                {selectedDay.isClosed ? labels.closedDay : labels.noLessonsDay}
+              </p>
+            )}
+        </section>
+      </div>
+
+      {showUpcoming ? renderUpcoming("upcoming-heading", "mt-6 border-t border-[var(--rule)] pt-5 lg:hidden") : null}
+    </div>
   );
 }

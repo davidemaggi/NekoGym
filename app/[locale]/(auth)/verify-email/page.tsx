@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 
-import { isLocale } from "@/lib/i18n";
+import { MailCheck } from "lucide-react";
+
+import { AuthHeader } from "@/components/auth/auth-header";
+import { authSubmitClass } from "@/components/auth/auth-ui";
+import { getDictionary, isLocale } from "@/lib/i18n";
 
 import { verifyEmailAction } from "../actions";
 
@@ -15,16 +19,15 @@ export default async function VerifyEmailPage({
   if (!isLocale(locale)) notFound();
 
   return (
-    <form action={verifyEmailAction} className="space-y-3">
+    <form action={verifyEmailAction} className="space-y-6 text-center">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="token" value={token ?? ""} />
-      <p className="text-sm text-[var(--muted-foreground)]">
-        {locale === "it" ? "Verifica in corso..." : "Verifying email..."}
-      </p>
-      <button
-        type="submit"
-        className="rounded-md bg-[var(--primary)] px-3 py-2 text-sm font-medium text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]"
-      >
+      <AuthHeader fallbackName={getDictionary(locale).appName} />
+      <h1 className="inline-flex items-center gap-2 text-[17px] font-semibold leading-snug">
+        <MailCheck size={20} aria-hidden="true" />
+        {locale === "it" ? "Conferma la tua email" : "Confirm your email"}
+      </h1>
+      <button type="submit" className={authSubmitClass}>
         {locale === "it" ? "Continua" : "Continue"}
       </button>
     </form>

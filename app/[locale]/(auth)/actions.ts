@@ -1,6 +1,6 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { headers } from "next/headers";
 
 import {
@@ -57,6 +57,7 @@ export async function registerAction(formData: FormData) {
     const user = await registerUser({ name, email, password });
     await sendEmailVerification({ userId: user.id, locale });
   } catch (error) {
+    unstable_rethrow(error);
     redirect(`/${locale}/register?error=${encodeURIComponent(toErrorMessage(error))}`);
   }
 
@@ -80,6 +81,7 @@ export async function loginWithPasswordAction(formData: FormData) {
       challengeToken = result.challengeToken;
     }
   } catch (error) {
+    unstable_rethrow(error);
     redirect(`/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}&method=password`);
   }
 
@@ -109,6 +111,7 @@ export async function completePassword2faAction(formData: FormData) {
       code,
     });
   } catch (error) {
+    unstable_rethrow(error);
     redirect(
       `/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}&method=password&step=2fa&email=${encodeURIComponent(email)}&challenge=${encodeURIComponent(challenge)}`
     );
@@ -133,6 +136,7 @@ export async function requestLoginOtpAction(formData: FormData) {
       challengeToken = challenge;
     }
   } catch (error) {
+    unstable_rethrow(error);
     redirect(`/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}&method=otp`);
   }
 
@@ -162,6 +166,7 @@ export async function verifyLoginOtpAction(formData: FormData) {
   try {
     await verifyLoginOtp({ locale, challengeToken: challenge, code, clientIp: clientIp ?? undefined });
   } catch (error) {
+    unstable_rethrow(error);
     redirect(
       `/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}&method=otp&step=verify&email=${encodeURIComponent(email)}&challenge=${encodeURIComponent(challenge)}`
     );
@@ -200,6 +205,7 @@ export async function magicLinkConsumeAction(formData: FormData) {
   try {
     await loginWithMagicLinkToken({ locale, token });
   } catch (error) {
+    unstable_rethrow(error);
     redirect(`/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}&method=magic`);
   }
 
@@ -234,6 +240,7 @@ export async function verifyEmailAction(formData: FormData) {
   try {
     await verifyEmailFromToken({ token, locale });
   } catch (error) {
+    unstable_rethrow(error);
     redirect(`/${locale}/login?error=${encodeURIComponent(toErrorMessage(error))}`);
   }
 
@@ -269,6 +276,7 @@ export async function resetPasswordAction(formData: FormData) {
   try {
     await resetPasswordFromToken({ token, locale, newPassword: password });
   } catch (error) {
+    unstable_rethrow(error);
     redirect(`/${locale}/reset-password?token=${encodeURIComponent(token)}&error=${encodeURIComponent(toErrorMessage(error))}`);
   }
 

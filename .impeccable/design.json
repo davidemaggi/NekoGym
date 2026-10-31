@@ -1,0 +1,1080 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T18:44:25.854958+00:00",
+  "title": "Design System: NekoGym",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Night-Blue Ink",
+        "canonical": "#1f2340",
+        "tonalRamp": [
+          "#090b13",
+          "#212434",
+          "#3c4058",
+          "#595f7e",
+          "#7a80a1",
+          "#9ea3bf",
+          "#c3c8dd",
+          "#ebeefb"
+        ]
+      },
+      "ink-hover": {
+        "role": "primary",
+        "displayName": "Ink Hover",
+        "canonical": "#2e3360",
+        "tonalRamp": [
+          "#080a16",
+          "#20233a",
+          "#3a3f61",
+          "#565d8a",
+          "#777fae",
+          "#9ba2ca",
+          "#c1c7e6",
+          "#eaedff"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "#f5f6f8",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a6",
+          "#c8c9ca",
+          "#eeeeef"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "surface-sunken": {
+        "role": "neutral",
+        "displayName": "Surface Sunken",
+        "canonical": "#eef0f4",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#414244",
+          "#606164",
+          "#818286",
+          "#a4a5a8",
+          "#c8c9cb",
+          "#eeeef0"
+        ]
+      },
+      "surface-border": {
+        "role": "neutral",
+        "displayName": "Surface Border",
+        "canonical": "#dde1e9",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232528",
+          "#404247",
+          "#5e6168",
+          "#7f8289",
+          "#a2a5ab",
+          "#c7c9cd",
+          "#edeef1"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#e6e9ef",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#404246",
+          "#5f6166",
+          "#808287",
+          "#a3a5a9",
+          "#c7c9cc",
+          "#edeef0"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#eceef3",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#414245",
+          "#606165",
+          "#818286",
+          "#a3a5a8",
+          "#c8c9cc",
+          "#eeeef0"
+        ]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#555a78",
+        "tonalRamp": [
+          "#090b12",
+          "#222432",
+          "#3d4056",
+          "#5a5f7b",
+          "#7b809e",
+          "#9fa3bc",
+          "#c4c8db",
+          "#ebeef9"
+        ]
+      },
+      "sidebar-link": {
+        "role": "neutral",
+        "displayName": "Rail Link Ink",
+        "canonical": "#3c4163",
+        "tonalRamp": [
+          "#090a13",
+          "#212435",
+          "#3c4059",
+          "#595f80",
+          "#7a80a3",
+          "#9ea3c1",
+          "#c3c8df",
+          "#ebeefc"
+        ]
+      },
+      "stock-mint": {
+        "role": "tertiary",
+        "displayName": "Mint Stock",
+        "canonical": "#dcefe3",
+        "tonalRamp": [
+          "#080c0a",
+          "#1f2722",
+          "#3a453e",
+          "#56665c",
+          "#77877d",
+          "#9ca9a0",
+          "#c2ccc6",
+          "#eaf0ec"
+        ]
+      },
+      "stock-azzurro": {
+        "role": "tertiary",
+        "displayName": "Azzurro Stock",
+        "canonical": "#dceaf6",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3b434a",
+          "#58636c",
+          "#78848e",
+          "#9da6af",
+          "#c3cad1",
+          "#ebeff3"
+        ]
+      },
+      "stock-giallino": {
+        "role": "tertiary",
+        "displayName": "Giallino Stock",
+        "canonical": "#f4ecc6",
+        "tonalRamp": [
+          "#0d0b04",
+          "#292515",
+          "#47422b",
+          "#686243",
+          "#8a8363",
+          "#aba68b",
+          "#cecab5",
+          "#f1efe3"
+        ]
+      },
+      "stock-rosa": {
+        "role": "tertiary",
+        "displayName": "Rosa Stock",
+        "canonical": "#f6dfe3",
+        "tonalRamp": [
+          "#0e0a0b",
+          "#2b2224",
+          "#4b3e40",
+          "#6e5c5f",
+          "#907d80",
+          "#b0a0a3",
+          "#d2c5c8",
+          "#f4eced"
+        ]
+      },
+      "stock-lilla": {
+        "role": "tertiary",
+        "displayName": "Lilla Stock",
+        "canonical": "#e5dff3",
+        "tonalRamp": [
+          "#0c0a0e",
+          "#26232c",
+          "#43404c",
+          "#635e6e",
+          "#847f90",
+          "#a7a2b0",
+          "#cac7d2",
+          "#efedf4"
+        ]
+      },
+      "stock-carta": {
+        "role": "tertiary",
+        "displayName": "Carta Stock",
+        "canonical": "#e9ecf2",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#404246",
+          "#5f6166",
+          "#808287",
+          "#a3a5a9",
+          "#c7c9cc",
+          "#edeef0"
+        ]
+      },
+      "stamp": {
+        "role": "secondary",
+        "displayName": "Validator Violet",
+        "canonical": "#5b3fa0",
+        "tonalRamp": [
+          "#0c061d",
+          "#271a49",
+          "#453377",
+          "#654ea7",
+          "#8670cd",
+          "#a798e5",
+          "#cac0fb",
+          "#efe9ff"
+        ]
+      },
+      "stamp-soft": {
+        "role": "secondary",
+        "displayName": "Stamp Wash",
+        "canonical": "#ece6f8",
+        "tonalRamp": [
+          "#0c0a0e",
+          "#26242b",
+          "#43404b",
+          "#635e6c",
+          "#847f8e",
+          "#a7a3af",
+          "#cac7d1",
+          "#efedf3"
+        ]
+      },
+      "info-bg": {
+        "role": "neutral",
+        "displayName": "Info Ground",
+        "canonical": "#dceaf6",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3b434a",
+          "#58636c",
+          "#78848e",
+          "#9da6af",
+          "#c3cad1",
+          "#ebeff3"
+        ]
+      },
+      "info-fg": {
+        "role": "neutral",
+        "displayName": "Info Ink",
+        "canonical": "#1d4a72",
+        "tonalRamp": [
+          "#030c16",
+          "#11273a",
+          "#254462",
+          "#3c658b",
+          "#5d86af",
+          "#87a9cb",
+          "#b2cce7",
+          "#e1f1ff"
+        ]
+      },
+      "success-bg": {
+        "role": "neutral",
+        "displayName": "Success Ground",
+        "canonical": "#dcefe3",
+        "tonalRamp": [
+          "#080c0a",
+          "#1f2722",
+          "#3a453e",
+          "#56665c",
+          "#77877d",
+          "#9ca9a0",
+          "#c2ccc6",
+          "#eaf0ec"
+        ]
+      },
+      "success-fg": {
+        "role": "neutral",
+        "displayName": "Success Ink",
+        "canonical": "#1f5a3c",
+        "tonalRamp": [
+          "#030e07",
+          "#102b1d",
+          "#244c36",
+          "#3a6e51",
+          "#5c9072",
+          "#86b197",
+          "#b2d2be",
+          "#e1f4e8"
+        ]
+      },
+      "warning-bg": {
+        "role": "neutral",
+        "displayName": "Warning Ground",
+        "canonical": "#f7edc8",
+        "tonalRamp": [
+          "#0d0b04",
+          "#292515",
+          "#48422b",
+          "#696143",
+          "#8b8264",
+          "#aca58b",
+          "#cfc9b6",
+          "#f2efe3"
+        ]
+      },
+      "warning-fg": {
+        "role": "neutral",
+        "displayName": "Warning Ink",
+        "canonical": "#6b4a00",
+        "tonalRamp": [
+          "#120900",
+          "#322204",
+          "#553d12",
+          "#7a5b23",
+          "#9d7d46",
+          "#bca175",
+          "#dbc6a5",
+          "#f9edd9"
+        ]
+      },
+      "danger-bg": {
+        "role": "neutral",
+        "displayName": "Danger Ground",
+        "canonical": "#f8e1e4",
+        "tonalRamp": [
+          "#0e0a0a",
+          "#2b2224",
+          "#4b3e40",
+          "#6e5c5e",
+          "#907d7f",
+          "#b0a0a2",
+          "#d2c6c7",
+          "#f4eced"
+        ]
+      },
+      "danger-fg": {
+        "role": "neutral",
+        "displayName": "Danger Ink",
+        "canonical": "#8c2236",
+        "tonalRamp": [
+          "#1a0306",
+          "#431019",
+          "#6f2530",
+          "#9d3c49",
+          "#c35e69",
+          "#df8990",
+          "#f8b5b9",
+          "#ffe3e5"
+        ]
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Destructive Red",
+        "canonical": "#a3293f",
+        "tonalRamp": [
+          "#1c0205",
+          "#460c16",
+          "#731f2d",
+          "#a33545",
+          "#ca5865",
+          "#e5858d",
+          "#fdb2b6",
+          "#ffe1e3"
+        ]
+      },
+      "on-ink": {
+        "role": "primary",
+        "displayName": "On Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ink-dark": {
+        "role": "primary",
+        "displayName": "Night-Blue Ink (dark)",
+        "canonical": "#eceef8",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#242529",
+          "#404247",
+          "#5f6168",
+          "#80828a",
+          "#a3a5ab",
+          "#c8c9ce",
+          "#edeef1"
+        ]
+      },
+      "ground-dark": {
+        "role": "neutral",
+        "displayName": "Ground (dark)",
+        "canonical": "#12142a",
+        "tonalRamp": [
+          "#0a0b11",
+          "#222431",
+          "#3e4153",
+          "#5b5f78",
+          "#7c809b",
+          "#a0a4ba",
+          "#c5c8d9",
+          "#eceef8"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface (dark)",
+        "canonical": "#1b1e37",
+        "tonalRamp": [
+          "#090b12",
+          "#222432",
+          "#3d4055",
+          "#5b5f7a",
+          "#7b809d",
+          "#9fa3bc",
+          "#c4c8db",
+          "#eceef9"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Rule (dark)",
+        "canonical": "#272b4b",
+        "tonalRamp": [
+          "#090a13",
+          "#212435",
+          "#3c4059",
+          "#595f80",
+          "#7a80a3",
+          "#9ea3c1",
+          "#c3c8df",
+          "#ebeefb"
+        ]
+      },
+      "muted-ink-dark": {
+        "role": "neutral",
+        "displayName": "Muted Ink (dark)",
+        "canonical": "#aeb3d0",
+        "tonalRamp": [
+          "#0a0b11",
+          "#222430",
+          "#3e4153",
+          "#5c5f77",
+          "#7c819a",
+          "#a0a4b9",
+          "#c5c8d8",
+          "#eceef8"
+        ]
+      },
+      "stock-mint-dark": {
+        "role": "tertiary",
+        "displayName": "Mint Stock (dark)",
+        "canonical": "#1d3a30",
+        "tonalRamp": [
+          "#060d0a",
+          "#1a2923",
+          "#32473f",
+          "#4d685e",
+          "#6d8a7f",
+          "#94aba2",
+          "#bccec7",
+          "#e7f1ed"
+        ]
+      },
+      "stock-azzurro-dark": {
+        "role": "tertiary",
+        "displayName": "Azzurro Stock (dark)",
+        "canonical": "#1d3048",
+        "tonalRamp": [
+          "#070b12",
+          "#1c2632",
+          "#344356",
+          "#50637b",
+          "#70849e",
+          "#96a7bd",
+          "#bdcadb",
+          "#e7effa"
+        ]
+      },
+      "stock-giallino-dark": {
+        "role": "tertiary",
+        "displayName": "Giallino Stock (dark)",
+        "canonical": "#3a3320",
+        "tonalRamp": [
+          "#0d0b06",
+          "#28251b",
+          "#474233",
+          "#68614e",
+          "#89826e",
+          "#aba594",
+          "#cec9bc",
+          "#f1eee7"
+        ]
+      },
+      "stock-rosa-dark": {
+        "role": "tertiary",
+        "displayName": "Rosa Stock (dark)",
+        "canonical": "#3e2632",
+        "tonalRamp": [
+          "#0f090c",
+          "#2e2127",
+          "#4f3c45",
+          "#725965",
+          "#947a86",
+          "#b59ea8",
+          "#d5c4cc",
+          "#f6ebf0"
+        ]
+      },
+      "stock-lilla-dark": {
+        "role": "tertiary",
+        "displayName": "Lilla Stock (dark)",
+        "canonical": "#2d2749",
+        "tonalRamp": [
+          "#0b0a13",
+          "#252234",
+          "#423e59",
+          "#615c7f",
+          "#827da2",
+          "#a4a1c0",
+          "#c8c6de",
+          "#eeedfb"
+        ]
+      },
+      "stock-carta-dark": {
+        "role": "tertiary",
+        "displayName": "Carta Stock (dark)",
+        "canonical": "#22264a",
+        "tonalRamp": [
+          "#090a14",
+          "#202337",
+          "#3b405c",
+          "#585e84",
+          "#787fa7",
+          "#9da3c4",
+          "#c2c8e1",
+          "#eaeefd"
+        ]
+      },
+      "stamp-dark": {
+        "role": "secondary",
+        "displayName": "Validator Violet (dark)",
+        "canonical": "#bba8f2",
+        "tonalRamp": [
+          "#0c0818",
+          "#281e3e",
+          "#463867",
+          "#665592",
+          "#8776b6",
+          "#a99bd1",
+          "#ccc2ec",
+          "#f0eaff"
+        ]
+      },
+      "destructive-dark": {
+        "role": "neutral",
+        "displayName": "Destructive Red (dark)",
+        "canonical": "#e07a8c",
+        "tonalRamp": [
+          "#190407",
+          "#40131d",
+          "#6a2937",
+          "#974152",
+          "#bd6273",
+          "#d98c98",
+          "#f3b7bf",
+          "#ffe4e8"
+        ]
+      },
+      "chart-1": {
+        "role": "secondary",
+        "displayName": "Chart Blue",
+        "canonical": "oklch(51.6% 0.163 266)",
+        "tonalRamp": [
+          "#050a19",
+          "#152347",
+          "#273e7a",
+          "#3a5ab2",
+          "#597dd8",
+          "#85a3e9",
+          "#b4c9f8",
+          "#e4efff"
+        ]
+      },
+      "chart-1-dark": {
+        "role": "secondary",
+        "displayName": "Chart Blue (dark)",
+        "canonical": "oklch(63.7% 0.145 267)",
+        "tonalRamp": [
+          "#060b17",
+          "#172343",
+          "#2b3e74",
+          "#405caa",
+          "#5f7ecf",
+          "#8aa3e2",
+          "#b7c9f3",
+          "#e6efff"
+        ]
+      },
+      "overlay": {
+        "role": "neutral",
+        "displayName": "Overlay Scrim",
+        "canonical": "rgb(18 20 42 / 0.45)",
+        "tonalRamp": [
+          "#0a0b0f",
+          "#23242e",
+          "#3e4151",
+          "#5c5f77",
+          "#7c819a",
+          "#a0a4b7",
+          "#c6c8d6",
+          "#edeef4"
+        ]
+      },
+      "overlay-dark": {
+        "role": "neutral",
+        "displayName": "Overlay Scrim (dark)",
+        "canonical": "rgb(4 5 14 / 0.62)",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#24252a",
+          "#3f414a",
+          "#5e616d",
+          "#7f828f",
+          "#a2a4af",
+          "#c7c9d0",
+          "#edeef2"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page title in the header band; 1.375rem on phones, 2rem from lg."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Remaining-entries count on the season pass; condensed tabular. Smaller ticket figures: to-do count tile (20px), booked seats over a seat strip (17px)."
+      },
+      "time": {
+        "displayName": "Time",
+        "purpose": "Lesson start times in the fixed time column (1.375rem phones, 1.625rem from sm); day numbers in the strip at 1.25rem; 2rem on the member's next-lesson card."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Dialog and sheet titles, balanced wrapping."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, pass title, lesson names, day heading, brand name, home section headings; to-do titles step down to 15px."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Meta lines, descriptions, toasts; long text capped at 65ch."
+      },
+      "input": {
+        "displayName": "Input",
+        "purpose": "Form field text; 16px avoids iOS zoom on focus."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Form labels (14px), nav section captions and avatar sublines (13px)."
+      },
+      "stamp-lettering": {
+        "displayName": "Stamp Lettering",
+        "purpose": "Uppercase lettering inside a stamp face (11px, 0.08em) above a 15px condensed date or date-time; the stamp chip uses 12px at 0.06em."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Geist Mono for TOTP secrets and chat ids only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)",
+        "purpose": "The pass card, the opened lesson row, the in-progress row on the staff home, the member's next-lesson card, the active tab trigger and active segment. Dark: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 22px -10px rgb(0 0 0 / 0.55)."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3)",
+        "purpose": "Dialogs, bottom sheets, toasts, chart tooltips, the Web Push banner. Dark: 0 -4px 24px -8px rgb(0 0 0 / 0.5), 0 20px 50px -16px rgb(0 0 0 / 0.7)."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default easing for in-place state changes (120-180ms)."
+      },
+      {
+        "name": "state-change",
+        "value": "150ms",
+        "purpose": "Colour transitions on buttons, rows quieting, chevron rotation, segmented control, to-do links. The home uses colour transitions only."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.98)",
+        "purpose": "Button active state; disabled buttons do not press."
+      },
+      {
+        "name": "stamp-land",
+        "value": "180ms cubic-bezier(0.22, 1, 0.36, 1); scale 1.12 -> 0.98 -> 1, opacity 0 -> 1",
+        "purpose": "The validator stamp landing on a freshly booked row. No bounce; instant under prefers-reduced-motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition durations 0.01ms",
+        "purpose": "Global prefers-reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Night-blue ink fill for the main action of a screen or sheet.",
+      "html": "<button class=\"ds-btn-primary\">Salva</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--primary, #1f2340); color: var(--primary-foreground, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-primary:hover { background: var(--primary-hover, #2e3360); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }"
+    },
+    {
+      "name": "Prenota (Outline Button)",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Surface fill with a 1.5px ink stroke; the row action for booking.",
+      "html": "<button class=\"ds-btn-outline\">Prenota</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; min-width: 108px; height: 44px; padding: 0 16px; border: 1.5px solid var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-outline:hover { background: var(--muted, #eceef3); } .ds-btn-outline:active { transform: scale(0.98); } .ds-btn-outline:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Waitlist Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Same weight as Prenota, marked provisional by the dashed perforation.",
+      "html": "<button class=\"ds-btn-queue\">Metti in coda</button>",
+      "css": ".ds-btn-queue { display: inline-flex; align-items: center; justify-content: center; min-width: 108px; min-height: 44px; padding: 6px 16px; border: 1.5px dashed var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; line-height: 1.25; cursor: pointer; transition: background-color 150ms; } .ds-btn-queue:hover { background: var(--muted, #eceef3); } .ds-btn-queue:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Solid red for confirmed destructive actions, e.g. cancelling a booking.",
+      "html": "<button class=\"ds-btn-destructive\">Annulla prenotazione</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--destructive-bg, #a3293f); color: var(--destructive-fg, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-destructive:hover { background: var(--destructive-hover, #8c2236); } .ds-btn-destructive:active { transform: scale(0.98); } .ds-btn-destructive:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text-Link Action",
+      "kind": "button",
+      "refersTo": "text-link-action",
+      "description": "The one action language of the to-do list and the tertiary action in sheets.",
+      "html": "<a href=\"#\" class=\"ds-link-action\">Apri conferme<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></a>",
+      "css": ".ds-link-action { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; } .ds-link-action:hover { text-decoration-thickness: 2px; } .ds-link-action:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; border-radius: 4px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "44px field, 16px text, violet focus ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Nome e cognome\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--surface-border, #dde1e9); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 16px; outline: none; caret-color: var(--stamp, #5b3fa0); transition: border-color 150ms; } .ds-input::placeholder { color: var(--muted-foreground, #555a78); } .ds-input:hover { border-color: var(--muted-foreground, #555a78); } .ds-input:focus-visible { border-color: var(--ring, #5b3fa0); outline: 2px solid var(--ring, #5b3fa0); outline-offset: 0; }"
+    },
+    {
+      "name": "Native Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Every <select> in the field style: 44px, 16px text, drawn muted chevron.",
+      "html": "<select class=\"ds-select\" aria-label=\"Trainer\"><option>Sara Villa</option><option>Marco Testa</option></select>",
+      "css": ".ds-select { height: 44px; padding: 0 40px 0 14px; border: 1px solid var(--surface-border, #dde1e9); border-radius: 12px; background-color: var(--surface, #ffffff); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555a78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 0.85rem center; color: var(--foreground, #1f2340); font: 400 16px Archivo, ui-sans-serif, system-ui, sans-serif; appearance: none; -webkit-appearance: none; transition: border-color 150ms; } .ds-select:hover { border-color: var(--muted-foreground, #555a78); } .ds-select:focus-visible { border-color: var(--ring, #5b3fa0); outline: 2px solid var(--ring, #5b3fa0); outline-offset: 0; }"
+    },
+    {
+      "name": "Badges",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Status tags: 13px semibold on pale semantic grounds with deep ink; 'Modificata' names its reasons. Badges have no stamp variant.",
+      "html": "<span class=\"ds-badge\">Bozza</span> <span class=\"ds-badge ds-badge-success\">Attivo</span> <span class=\"ds-badge ds-badge-warning\">Modificata: orario</span> <span class=\"ds-badge ds-badge-danger\">Annullata</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; } .ds-badge-success { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-badge-warning { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); } .ds-badge-danger { background: var(--danger-bg, #f8e1e4); color: var(--danger-fg, #8c2236); }"
+    },
+    {
+      "name": "Plan Usage Tag",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Plan spent, never left: '3/12 usate · mese' on the neutral ground with a tabular figure; at the limit the warning ground and '· esaurito' in words. The period is dropped when the plan name is printed beside it.",
+      "html": "<span class=\"ds-usage\"><span class=\"ds-usage-fig\">3/12</span> usate · mese</span> <span class=\"ds-usage ds-usage-full\"><span class=\"ds-usage-fig\">2/2</span> usate · sett. · esaurito</span>",
+      "css": ".ds-usage { display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; } .ds-usage-fig { font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-usage-full { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); }"
+    },
+    {
+      "name": "Validator Stamp",
+      "kind": "custom",
+      "refersTo": "stamp-face",
+      "description": "Booked row action: violet stamp with date and time; dashed when pending approval; muted dashed when queued.",
+      "html": "<span class=\"ds-stamp\"><span class=\"ds-stamp-label\">Prenotato</span><span class=\"ds-stamp-detail\">03/11 · 07:30</span></span> <span class=\"ds-stamp ds-stamp-pending\"><span class=\"ds-stamp-label\">In attesa</span><span class=\"ds-stamp-detail\">05/11 · 12:30</span></span> <span class=\"ds-stamp ds-stamp-queued\"><span class=\"ds-stamp-label\">In coda</span></span>",
+      "css": ".ds-stamp { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 108px; padding: 6px 10px; border: 2px solid var(--stamp, #5b3fa0); border-radius: 8px; color: var(--stamp, #5b3fa0); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; line-height: 1.25; text-align: center; animation: ds-stamp-land 180ms cubic-bezier(0.22, 1, 0.36, 1) both; } .ds-stamp-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; } .ds-stamp-detail { font-size: 15px; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-stamp-pending { border-style: dashed; } .ds-stamp-queued { border-style: dashed; border-color: var(--muted-foreground, #555a78); color: var(--muted-foreground, #555a78); } @keyframes ds-stamp-land { 0% { transform: scale(1.12); opacity: 0; } 60% { transform: scale(0.98); opacity: 1; } 100% { transform: scale(1); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-stamp { animation: none; } }"
+    },
+    {
+      "name": "Stamp Chip",
+      "kind": "chip",
+      "refersTo": "stamp-chip",
+      "description": "Own bookings in compact lists: the stamp face reduced to its lettering; dashed when pending.",
+      "html": "<span class=\"ds-stamp-chip\">Prenotato</span> <span class=\"ds-stamp-chip ds-stamp-chip-pending\">In attesa</span>",
+      "css": ".ds-stamp-chip { display: inline-flex; align-items: center; padding: 4px 8px; border: 2px solid var(--stamp, #5b3fa0); border-radius: 8px; color: var(--stamp, #5b3fa0); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.25; } .ds-stamp-chip-pending { border-style: dashed; }"
+    },
+    {
+      "name": "Season Pass Card",
+      "kind": "card",
+      "refersTo": "pass-card",
+      "description": "The member's plan: title, remaining figure, perforation, one round entry slot per entry, validity footer.",
+      "html": "<section class=\"ds-pass\"><div class=\"ds-pass-head\"><h2 class=\"ds-pass-title\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\"/><path d=\"M13 5v2\"/><path d=\"M13 17v2\"/><path d=\"M13 11v2\"/></svg>Abbonamento 10 ingressi</h2><p class=\"ds-pass-figure\"><span>6</span><small>rimasti</small></p></div><div class=\"ds-pass-body\"><ol class=\"ds-pass-slots\"><li class=\"used\"></li><li class=\"used\"></li><li class=\"used\"></li><li class=\"used\"></li><li></li><li></li><li></li><li></li><li></li><li></li></ol><p class=\"ds-pass-foot\">Valido fino al <span class=\"ds-tab\">31/12/2026</span> · 2 prenotazioni in corso</p></div></section>",
+      "css": ".ds-pass { max-width: 560px; border-radius: 16px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; overflow: hidden; } .ds-pass-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 20px 16px; } .ds-pass-title { display: flex; gap: 10px; margin: 0; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-pass-title svg { flex-shrink: 0; margin-top: 2px; color: var(--muted-foreground, #555a78); } .ds-pass-figure { margin: 0; text-align: right; line-height: 1; } .ds-pass-figure span { font-size: 2.5rem; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-pass-figure small { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted-foreground, #555a78); } .ds-pass-body { border-top: 2px dashed var(--rule, #e6e9ef); padding: 16px 20px 20px; } .ds-pass-slots { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; max-width: 26rem; margin: 0; padding: 0; list-style: none; } .ds-pass-slots li { aspect-ratio: 1; max-height: 28px; border-radius: 9999px; border: 1.5px solid var(--surface-border, #dde1e9); } .ds-pass-slots li.used { border-color: var(--stamp, #5b3fa0); background: radial-gradient(circle, var(--stamp, #5b3fa0) 0 38%, transparent 40%); } .ds-pass-foot { margin: 12px 0 0; font-size: 14px; color: var(--muted-foreground, #555a78); } .ds-tab { font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; }"
+    },
+    {
+      "name": "Fixed-Time Lesson Row",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Three-column row on section paper: condensed time, lesson and meta, right action column.",
+      "html": "<ul class=\"ds-rows\"><li class=\"ds-row\"><span class=\"ds-row-time\"><b>07:30</b><small>55 min</small></span><span class=\"ds-row-main\"><b>Pilates Matwork</b><small>Giulia Neri · 3 posti liberi</small></span><span class=\"ds-stamp-mini\">Prenotato<br><b>03/11 · 07:30</b></span></li><li class=\"ds-row\"><span class=\"ds-row-time\"><b>12:30</b><small>45 min</small></span><span class=\"ds-row-main\"><b>Funzionale</b><small>Marco Testa · 2 posti liberi</small></span><button class=\"ds-row-btn\">Prenota</button></li></ul>",
+      "css": ".ds-rows { margin: 0; padding: 0; list-style: none; background: color-mix(in oklab, var(--stock-mint, #dcefe3) 34%, var(--surface, #ffffff)); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-row { display: grid; grid-template-columns: 4.25rem minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--rule, #e6e9ef); transition: background-color 150ms; } .ds-row:last-child { border-bottom: 0; } .ds-row:hover { background: var(--surface, #ffffff); } .ds-row-time b { display: block; font-size: 1.625rem; line-height: 1; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-row-time small { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--muted-foreground, #555a78); font-variation-settings: 'wdth' 74; } .ds-row-main b { display: block; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-row-main small { display: block; margin-top: 2px; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-row-btn { min-width: 108px; height: 44px; padding: 0 16px; border: 1.5px solid var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font: 600 15px Archivo, ui-sans-serif, sans-serif; cursor: pointer; } .ds-row-btn:hover { background: var(--muted, #eceef3); } .ds-row-btn:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; } .ds-stamp-mini { min-width: 108px; padding: 6px 10px; border: 2px solid var(--stamp, #5b3fa0); border-radius: 8px; color: var(--stamp, #5b3fa0); text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; line-height: 1.25; } .ds-stamp-mini b { font-size: 15px; letter-spacing: 0; text-transform: none; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; }"
+    },
+    {
+      "name": "Staff Today Row with Seat Strip",
+      "kind": "custom",
+      "refersTo": "row-in-progress",
+      "description": "Home row: time, lesson and meta, seat strip (solid booked, dashed pending, free), manage trigger; the in-progress row is lifted.",
+      "html": "<ul class=\"ds-today\"><li class=\"ds-today-row\"><span class=\"ds-today-time\"><b>08:00</b><small>55 min</small></span><span class=\"ds-today-main\"><b>Pilates Matwork</b><small>Giulia Neri · conclusa</small></span><span class=\"ds-seats\"><span class=\"ds-seats-n\"><b>6</b>/9</span><span class=\"ds-seats-strip\"><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i></i><i></i><i></i></span></span><button class=\"ds-today-btn\">Presenze</button></li><li class=\"ds-today-row is-live\"><span class=\"ds-today-time\"><b>11:45</b><small>45 min</small></span><span class=\"ds-today-main\"><b>Funzionale</b><small>Marco Testa · <em>in corso</em></small></span><span class=\"ds-seats\"><span class=\"ds-seats-n\"><b>5</b>/8 +1</span><span class=\"ds-seats-strip\"><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"on\"></i><i class=\"held\"></i><i></i><i></i></span></span><button class=\"ds-today-btn\">Gestisci</button></li></ul>",
+      "css": ".ds-today { margin: 0; padding: 0 16px; list-style: none; background: color-mix(in oklab, var(--stock-carta, #e9ecf2) 34%, var(--surface, #ffffff)); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-today-row { display: grid; grid-template-columns: 4.25rem minmax(0, 1fr) 8.5rem auto; align-items: center; column-gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-today-row:last-child { border-bottom: 0; } .ds-today-row.is-live { margin: 4px -16px; padding: 14px 16px; border-bottom: 0; border-radius: 16px; background: var(--surface, #ffffff); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-today-time b { display: block; font-size: 1.625rem; line-height: 1; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-today-time small { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--muted-foreground, #555a78); font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-today-main b { display: block; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-today-main small { display: block; margin-top: 2px; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-today-main em { font-style: normal; font-weight: 600; color: var(--success-fg, #1f5a3c); } .ds-seats-n { display: block; font-size: 14px; color: var(--muted-foreground, #555a78); font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-seats-n b { font-size: 17px; color: var(--foreground, #1f2340); } .ds-seats-strip { display: flex; gap: 2px; margin-top: 6px; } .ds-seats-strip i { flex: 1; height: 7px; border-radius: 2px; background: var(--surface-border, #dde1e9); } .ds-seats-strip i.on { background: var(--foreground, #1f2340); } .ds-seats-strip i.held { background: transparent; border: 1px dashed var(--foreground, #1f2340); } .ds-today-btn { height: 44px; padding: 0 16px; border: 1.5px solid var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-today-btn:hover { background: var(--muted, #eceef3); } .ds-today-btn:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "To-do Item",
+      "kind": "custom",
+      "refersTo": "todo-tile-warning",
+      "description": "Tinted count or icon tile, title, sentence with tabular figures, one text-link action.",
+      "html": "<ul class=\"ds-todo\"><li><span class=\"ds-todo-tile ds-todo-warning\">3</span><div><h3>Richieste da confermare</h3><p>Nina Costa · Yoga Hatha · <span class=\"ds-tab\">sab 31 ott, 17:00</span></p><a href=\"#\" class=\"ds-todo-link\">Apri conferme<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></a></div></li><li><span class=\"ds-todo-tile ds-todo-info\">6</span><div><h3>Presenze da segnare</h3><p>Pilates Matwork · <span class=\"ds-tab\">08:00</span> · <span class=\"ds-tab\">6</span> iscritti</p><a href=\"#\" class=\"ds-todo-link\">Segna presenze<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m9 18 6-6-6-6\"/></svg></a></div></li></ul>",
+      "css": ".ds-todo { max-width: 22rem; margin: 0; padding: 0; list-style: none; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-todo li { display: flex; gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-todo li:last-child { border-bottom: 0; } .ds-todo-tile { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px; font-size: 20px; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-todo-warning { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); } .ds-todo-info { background: var(--info-bg, #dceaf6); color: var(--info-fg, #1d4a72); } .ds-todo h3 { margin: 0; font-size: 15px; font-weight: 600; } .ds-todo p { margin: 2px 0 0; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-tab { font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-todo-link { display: inline-flex; align-items: center; gap: 4px; min-height: 44px; margin-top: 4px; color: var(--foreground, #1f2340); font-size: 15px; font-weight: 600; text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 4px; } .ds-todo-link:hover { text-decoration-thickness: 2px; } .ds-todo-link:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "refersTo": "segmented-control",
+      "description": "Exclusive views or filters on a muted rail (chart range, trainer and role filters, course form, user edit and settings panels); 44px options, the pressed one on surface with Lift. Four or more options become a 2x2 grid on phones; URL-changing choices are links with aria-current.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Trainer\"><button aria-pressed=\"true\">Tutti</button><button aria-pressed=\"false\">Con trainer</button><button aria-pressed=\"false\">Senza trainer</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--muted, #eceef3); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-seg button { height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted-foreground, #555a78); font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: color 150ms, background-color 150ms; } .ds-seg button:hover { color: var(--foreground, #1f2340); } .ds-seg button[aria-pressed='true'] { background: var(--surface, #ffffff); color: var(--foreground, #1f2340); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-seg button:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Filter Toggle",
+      "kind": "chip",
+      "refersTo": "filter-toggle-active",
+      "description": "Independent on/off filter in a page band; on = surface fill, 1.5px ink stroke and a check.",
+      "html": "<div class=\"ds-band\"><a class=\"ds-ftoggle\" role=\"button\" aria-pressed=\"true\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Mostra passate</a> <a class=\"ds-ftoggle\" role=\"button\" aria-pressed=\"false\" href=\"#\">Mostra annullate</a></div>",
+      "css": ".ds-band { display: flex; gap: 8px; padding: 16px; background: var(--stock-azzurro, #dceaf6); } .ds-ftoggle { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--stock-edge, rgb(31 35 64 / 0.1)); color: var(--stock-ink, #1f2340); opacity: 1; font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; text-decoration: none; transition: background-color 150ms; } .ds-ftoggle[aria-pressed='false'] { color: rgb(31 35 64 / 0.8); } .ds-ftoggle[aria-pressed='false']:hover { background: rgb(255 255 255 / 0.6); } .ds-ftoggle[aria-pressed='true'] { background: var(--surface, #ffffff); border-color: var(--foreground, #1f2340); color: var(--foreground, #1f2340); } .ds-ftoggle:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Chart Tooltip and Legend",
+      "kind": "custom",
+      "refersTo": "chart-tooltip",
+      "description": "Surface tooltip with Sheet shadow and tabular values; legend of type colours plus the hatch key for scheduled lessons.",
+      "html": "<div class=\"ds-tip\"><p>26 ott–31 ott</p><div><span><i style=\"background:#059669\"></i>Pilates</span><b>1</b></div><div><span><i class=\"hatch\" style=\"--c:#4f46e5\"></i>Yoga · programmate</span><b>1</b></div></div><ul class=\"ds-legend\"><li><i style=\"background:#059669\"></i>Pilates</li><li><i style=\"background:#4f46e5\"></i>Yoga</li><li class=\"note\"><i class=\"hatch\" style=\"--c:currentColor\"></i>Tratteggiato: lezioni programmate</li></ul>",
+      "css": ".ds-tip { min-width: 11rem; padding: 10px 12px; border: 1px solid var(--rule, #e6e9ef); border-radius: 12px; background: var(--surface, #ffffff); color: var(--muted-foreground, #555a78); box-shadow: var(--shadow-sheet, 0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3)); font: 14px Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-tip p { margin: 0 0 6px; font-weight: 600; color: var(--foreground, #1f2340); } .ds-tip div { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; } .ds-tip span { display: inline-flex; align-items: center; gap: 4px; } .ds-tip i { width: 10px; height: 10px; border-radius: 3px; } .ds-tip b { color: var(--foreground, #1f2340); font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0 0; padding: 0; list-style: none; font: 14px Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-legend li { display: inline-flex; align-items: center; gap: 8px; } .ds-legend li.note { color: var(--muted-foreground, #555a78); } .ds-legend i { width: 12px; height: 12px; border-radius: 3px; } i.hatch { box-sizing: border-box; border: 1.5px solid var(--c); background: repeating-linear-gradient(45deg, var(--c) 0 1.5px, transparent 1.5px 4px); }"
+    },
+    {
+      "name": "Bottom Tab Bar",
+      "kind": "nav",
+      "refersTo": "bottom-tab-active-pill",
+      "description": "Phones: four role destinations plus Menu; the active icon sits in a pill of its section stock.",
+      "html": "<nav class=\"ds-tabbar\"><a href=\"#\" class=\"ds-tab-item\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg></span>Home</a><a href=\"#\" class=\"ds-tab-item is-active\" aria-current=\"page\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4\"/><path d=\"M8 2v4\"/><path d=\"M3 10h18\"/><path d=\"m9 16 2 2 4-4\"/></svg></span>Prenotazioni</a><a href=\"#\" class=\"ds-tab-item\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 6h16\"/><path d=\"M4 12h16\"/><path d=\"M4 18h16\"/></svg></span>Menu</a></nav>",
+      "css": ".ds-tabbar { display: flex; max-width: 36rem; border-top: 1px solid var(--rule, #e6e9ef); background: var(--surface, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 12px; font-weight: 600; color: var(--muted-foreground, #555a78); text-decoration: none; } .ds-tab-item:hover { color: var(--foreground, #1f2340); } .ds-tab-item:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: -2px; } .ds-tab-pill { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 32px; border-radius: 9999px; transition: background-color 150ms; } .ds-tab-item.is-active { color: var(--foreground, #1f2340); } .ds-tab-item.is-active .ds-tab-pill { background: var(--stock-mint, #dcefe3); color: var(--stock-ink, #1f2340); }"
+    },
+    {
+      "name": "Course Week Timetable",
+      "kind": "custom",
+      "refersTo": "timetable-chip",
+      "description": "A course's week as a printed timetable: one column per open weekday, giallino tabular time chips, an empty cell keeps the column.",
+      "html": "<div class=\"ds-tt\" role=\"group\" aria-label=\"Schedulazione\"><div><p>Lun</p><span class=\"ds-tt-chip\">07:30</span></div><div><p>Mar</p><span class=\"ds-tt-chip\">07:30</span><span class=\"ds-tt-chip\">18:00</span></div><div><p>Mer</p><span class=\"ds-tt-empty\" aria-hidden=\"true\"></span></div><div><p>Gio</p><span class=\"ds-tt-chip\">07:30</span></div><div><p>Ven</p><span class=\"ds-tt-empty\" aria-hidden=\"true\"></span></div><div><p>Sab</p><span class=\"ds-tt-chip\">10:00</span></div></div>",
+      "css": ".ds-tt { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-width: 480px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; text-align: center; } .ds-tt div { display: grid; gap: 4px; align-content: start; } .ds-tt p { margin: 0 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted-foreground, #555a78); } .ds-tt-chip { display: block; padding: 4px 0; border-radius: 6px; background: var(--stock-giallino, #f4ecc6); color: var(--stock-ink, #1f2340); font-size: 13px; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-tt-empty { display: block; height: 28px; border-radius: 6px; border: 1px solid var(--rule, #e6e9ef); }"
+    },
+    {
+      "name": "Person Row",
+      "kind": "custom",
+      "refersTo": "person-avatar",
+      "description": "A person in the users list: role-tinted 44px initials avatar, name and email, role/membership tags and plan with a tabular unit figure, outline Modifica and an overflow menu.",
+      "html": "<div class=\"ds-person\"><span class=\"ds-person-av\">GR</span><div class=\"ds-person-id\"><p class=\"ds-person-name\">Giulia Rossi</p><p class=\"ds-person-mail\">giulia@example.it</p><p class=\"ds-person-tags\"><span class=\"ds-tag\">Trainee</span><span class=\"ds-tag ds-tag-ok\">Attiva</span><span class=\"ds-person-plan\">Pacchetto · <b>4/10</b> rimaste</span></p></div><button class=\"ds-person-edit\">Modifica</button></div>",
+      "css": ".ds-person { display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 8px 12px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--rule, #e6e9ef); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-person-av { width: 44px; height: 44px; border-radius: 9999px; display: inline-flex; align-items: center; justify-content: center; background: var(--stock-mint, #dcefe3); color: var(--stock-ink, #1f2340); font-weight: 700; font-size: 14px; } .ds-person-name { margin: 0; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-person-mail { margin: 0; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-person-tags { margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; } .ds-tag { border-radius: 8px; padding: 2px 8px; font-size: 13px; font-weight: 600; background: var(--muted, #eceef3); } .ds-tag-ok { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-person-plan { font-size: 14px; color: var(--muted-foreground, #555a78); } .ds-person-plan b { color: var(--foreground, #1f2340); font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-person-edit { height: 44px; padding: 0 16px; border-radius: 12px; border: 1.5px solid var(--foreground, #1f2340); background: var(--surface, #fff); color: inherit; font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: background-color 150ms; } .ds-person-edit:hover { background: var(--muted, #eceef3); } .ds-person-edit:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Unread Notification Row",
+      "kind": "custom",
+      "refersTo": "notification-row-unread",
+      "description": "Inbox message; unread ones are lifted off the paper on surface with an ink dot, read ones sit flat on hairlines.",
+      "html": "<ul class=\"ds-inbox\"><li class=\"ds-inbox-row is-new\"><div><p class=\"ds-inbox-subj\"><span class=\"ds-dot\"></span>Lezione annullata</p><p class=\"ds-inbox-date\">sab 31 ott, 08:00</p><p class=\"ds-inbox-body\">Pilates delle 18:00 è stata annullata.</p></div><button aria-label=\"Elimina\" class=\"ds-x\">&#x2715;</button></li><li class=\"ds-inbox-row\"><div><p class=\"ds-inbox-subj\">Prenotazione confermata</p><p class=\"ds-inbox-date\">ven 30 ott, 12:10</p></div><button aria-label=\"Elimina\" class=\"ds-x\">&#x2715;</button></li></ul>",
+      "css": ".ds-inbox { list-style: none; margin: 0; padding: 0; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-inbox-row { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 0 12px; padding: 16px 0; border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-inbox-row.is-new { margin: 4px 0; padding: 16px; border: 0; border-radius: 16px; background: var(--surface, #fff); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-inbox-subj { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 17px; font-weight: 600; } .ds-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--foreground, #1f2340); } .ds-inbox-date { margin: 2px 0 0; font-size: 14px; color: var(--muted-foreground, #555a78); font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-inbox-body { margin: 8px 0 0; font-size: 15px; max-width: 65ch; } .ds-x { width: 44px; height: 44px; border: 0; border-radius: 12px; background: transparent; color: var(--muted-foreground, #555a78); cursor: pointer; transition: background-color 150ms, color 150ms; } .ds-x:hover { background: var(--muted, #eceef3); color: var(--foreground, #1f2340); } .ds-x:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Settings Section with Status Note and Check Row",
+      "kind": "custom",
+      "refersTo": "status-note-ok",
+      "description": "A settings group separated by a rule, never boxed: 17px title, muted description, status note pill (icon + words) and 44px check rows.",
+      "html": "<section class=\"ds-set\"><div class=\"ds-set-head\"><div><h2>Notifiche</h2><p>Scegli come ricevere gli avvisi.</p></div><span class=\"ds-note\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><path d=\"m9 12 2 2 4-4\"/></svg>Attiva</span></div><label class=\"ds-check\"><input type=\"checkbox\" checked><span>Email</span></label><label class=\"ds-check\"><input type=\"checkbox\"><span>Telegram<small>Collega prima il tuo account.</small></span></label></section>",
+      "css": ".ds-set { border-top: 1px solid var(--rule, #e6e9ef); padding: 24px 0; max-width: 42rem; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-set-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; gap: 8px 16px; margin-bottom: 16px; } .ds-set h2 { margin: 0; font-size: 17px; font-weight: 600; } .ds-set-head p { margin: 4px 0 0; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-note { display: inline-flex; align-items: center; gap: 6px; border-radius: 9999px; padding: 4px 10px; font-size: 14px; font-weight: 600; background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-check { display: flex; align-items: flex-start; gap: 12px; min-height: 44px; padding: 10px 0; font-size: 16px; cursor: pointer; } .ds-check input { width: 20px; height: 20px; margin: 2px 0 0; accent-color: var(--ring, #5b3fa0); } .ds-check input:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; } .ds-check small { display: block; margin-top: 2px; font-size: 14px; color: var(--muted-foreground, #555a78); }"
+    },
+    {
+      "name": "Report Table",
+      "kind": "custom",
+      "description": "Ruled report table from sm: numeric columns right-aligned tabular, first column as semibold row header, over-threshold cells in semibold danger ink.",
+      "html": "<table class=\"ds-rt\"><thead><tr><th>Corso</th><th class=\"n\">Lezioni</th><th class=\"n\">No-show</th></tr></thead><tbody><tr><th scope=\"row\">Pilates</th><td class=\"n\">24</td><td class=\"n\">12%</td></tr><tr><th scope=\"row\">Yoga</th><td class=\"n\">18</td><td class=\"n hi\">34%</td></tr></tbody></table>",
+      "css": ".ds-rt { width: 100%; border-collapse: collapse; font-size: 15px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-rt thead tr { border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-rt thead th { padding: 8px 16px 8px 0; font-size: 14px; font-weight: 600; text-align: left; color: var(--muted-foreground, #555a78); } .ds-rt tbody tr { border-bottom: 1px solid var(--rule, #e6e9ef); } .ds-rt tbody tr:last-child { border-bottom: 0; } .ds-rt tbody th, .ds-rt td { padding: 12px 16px 12px 0; text-align: left; } .ds-rt tbody th { font-weight: 600; } .ds-rt .n { text-align: right; font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-rt th:last-child, .ds-rt td:last-child { padding-right: 0; } .ds-rt .hi { font-weight: 600; color: var(--danger-fg, #8c2236); }"
+    },
+    {
+      "name": "Course Health Meters",
+      "kind": "custom",
+      "refersTo": "meter-fill",
+      "description": "Fill rate and no-show per course as paired 0-100% pill meters (Chart Blue, muted ink) with values always printed.",
+      "html": "<div class=\"ds-hm\"><p>Pilates</p><div><div class=\"ds-m\"><div class=\"ds-mt\" role=\"meter\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"78\" aria-label=\"Pilates · Riempimento\"><span style=\"width:78%\"></span></div><b>78%</b></div><div class=\"ds-m\"><div class=\"ds-mt ns\" role=\"meter\" aria-valuemin=\"0\" aria-valuemax=\"100\" aria-valuenow=\"9\" aria-label=\"Pilates · No-show\"><span style=\"width:9%\"></span></div><b>9%</b></div></div></div>",
+      "css": ".ds-hm { display: grid; grid-template-columns: 12rem minmax(0,1fr); gap: 24px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-hm > p { margin: 0; font-size: 15px; font-weight: 600; } .ds-m { display: grid; grid-template-columns: minmax(0,1fr) 3.5rem; gap: 12px; align-items: center; margin-bottom: 6px; } .ds-mt { height: 8px; border-radius: 9999px; overflow: hidden; background: var(--muted, #eceef3); } .ds-mt span { display: block; height: 100%; border-radius: 9999px; background: var(--chart-1, #3b5fc4); } .ds-mt.ns span { background: var(--muted-foreground, #555a78); } .ds-m b { font-weight: 400; font-size: 15px; text-align: right; font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Abbonamento",
+    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: the signed-in app is the world: Bookings, the per-role Home (staff and member), Lessons, Courses, Users, the notifications inbox, the settings pages (profile, site, registries, notifications, danger zone), Reports and the sign-in pages (login, register, forgot and reset password, verify email), together with the shared lesson dialog, the lesson manage dialog, the single lesson form and its repeat controls, the quick-profile popover, the status screens (404, error), the shared page band, the settings building blocks, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui` (including the native select), the home charts, the toaster, the Web Push banner and the PWA install banner.",
+    "keyCharacteristics": [
+      "One paper stock per section; the current stock tints the shell and the page header band.",
+      "Night-blue ink for text and primary actions; never a neutral admin grey ground.",
+      "One reserved violet stamp for the user's own bookings.",
+      "Condensed tabular figures for every time, count and date.",
+      "Dashed perforation as the only ornament, also meaning \"provisional\".",
+      "Flat paper; lift only on things picked up: the pass card, the sign-in ticket, the opened or in-progress row, the member's next lesson, an unread notification, the active tab or segment, and overlays.",
+      "Seats are counted, not charted: one ink segment per seat, dashed while held by a pending request.",
+      "44px touch targets, 16px input text, bottom sheets on phones."
+    ],
+    "rules": [
+      {
+        "name": "The Reserved Stamp Rule",
+        "body": "Violet as a mark belongs only to the current user's own bookings: booked, pending (dashed) and the pass slots they have used. Never use it for brand accents, links, charts, or other people's bookings. The focus ring, caret and control accent are the only non-booking uses.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Stock Per Section Rule",
+        "body": "A section owns exactly one stock, assigned in the shell. A page never mixes stocks as decoration; a stock appears outside its section only as a nav swatch or as a role tint on a person's initials avatar (admin lilla, trainer azzurro, trainee mint), which always sits beside the role named in a tag.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper, Not Grey Rule",
+        "body": "The content field is always the section paper derived from the stock, never a neutral grey panel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Type Owns Its Colour Rule",
+        "body": "In charts a category's colour is its lesson type's admin colour, keyed to the type and never to its rank or position; a single series uses Chart Blue. Identity is never colour alone: any chart with two or more series carries a legend.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ticket Figures Rule",
+        "body": "Every time, count, date, duration and version number uses the `.tabular` treatment (condensed width, `tnum` + `lnum`, zero tracking), including chart tooltip values. Running text never does: when a figure sits inside a sentence, only the figure is set tabular (fill the sentence template with nodes, not strings).",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is For Codes Rule",
+        "body": "Geist Mono appears only where a machine string must be read character by character: backup file names, the TOTP secret, the Telegram link code, command and chat id. Dates, sizes, counts and percentages beside a code are never mono; they are `.tabular`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Picked-Up Rule",
+        "body": "Only the pass, the sign-in ticket, the status ticket, the one opened or in-progress row, the member's next lesson, an unread notification, the active tab or segment, and overlays carry shadow. Lists, nav, inline banners, settings sections and ordinary cards stay flat with a hairline.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Perforation Rule",
+        "body": "The 2px dashed line is the only ornament: it separates the pass's header from its slots, and as a border it marks anything provisional (pending stamp, pending stamp chip, queued stamp, waitlist button, a seat held by a pending request). Never use dashed borders as decoration.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Hatch Rule",
+        "body": "In charts, a lesson that is scheduled but not yet held is a 45° hatch in its type colour over surface, outlined 1.5px in the same colour; held lessons are solid. The legend always explains the hatch. The hatch is the chart's counterpart of the perforation and appears nowhere else.",
+        "section": "shapes"
+      },
+      {
+        "name": "The Deliberate Delete Rule",
+        "body": "Cancelling a lesson and deleting a course, a person, a lesson type or a backup are never row actions. They live in the footer of the object's own dialog as a ghost-danger button and always pass through a confirmation with the solid destructive button, named by its act. Rows carry only the forward action (manage, edit, open) or the undo (restore). One exception, scoped to a lesson's own manage dialog: taking a person off the lesson or out of the queue sits behind a 44px overflow menu at the end of that person's row (one item in danger ink), and still passes through an alert dialog whose solid destructive confirm names the act (Rimuovi dalla lezione, Rimuovi dalla coda). Page lists never carry it.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "**Do** let the shell assign the stock: add the route to `STOCK_BY_KEY` and let `--stock` and `--paper` follow.",
+      "**Do** set every time, count and date in `.tabular` (condensed `wdth` 74, tabular lining figures).",
+      "**Do** keep row actions in a fixed right column and change state in place, 120–180ms ease-out.",
+      "**Do** state the reason a row is blocked inside the row (full, access denied, started, cancellation closed).",
+      "**Do** use dashed strokes to mean provisional, and only that.",
+      "**Do** keep 44px targets, 16px input text, and bottom sheets for dialogs on phones.",
+      "**Do** design both themes; check muted ink and stamp on every stock in light and dark.",
+      "**Do** give every to-do item exactly one action, as a text-link action with a chevron.",
+      "**Do** show seats as a seat strip (solid booked, dashed pending) rather than a percentage.",
+      "**Do** colour chart categories by their lesson type, use `chart-1` for a single series, hatch scheduled lessons, and keep a legend for two or more series.",
+      "**Do** dim behind overlays with the `overlay` token, never an ad-hoc black.",
+      "**Do** put page filters in the band: independent filters as filter toggles (check icon plus ink stroke when on), exclusive choices as a segmented control.",
+      "**Do** give every native select the `.ui-select` class.",
+      "**Do** set status tags at 13px semibold on a semantic ground, and say why a lesson is modified (\"Modificata: orario\").",
+      "**Do** draw a page's band with `PageBand` and build settings from `SettingsSection`, `SegmentedTabs`, `CheckRow` and `StatusNote`.",
+      "**Do** name a confirm by its act (Elimina, Disattiva), and give deactivation and deletion the solid destructive fill.",
+      "**Do** right-align numeric table columns in `.tabular`, and print every value a meter or bar shows.",
+      "**Do** state plan usage as what is spent (\"3/12 usate · mese\") with \"esaurito\" in words at the limit.",
+      "**Do** make a person's name in staff lists a quick-profile trigger that opens on tap or keyboard, not hover."
+    ],
+    "donts": [
+      "**Don't** use stamp violet for anything but the user's own bookings (beyond focus ring, caret and control accent).",
+      "**Don't** put content on a neutral grey ground; the field is the section paper.",
+      "**Don't** add gradient washes, glass, or blur. The only gradients in the build are hard-stop marks: the punched centre of a used entry slot and the hatch key in the chart legend.",
+      "**Don't** add shadow to lists, nav, inline banners, settings sections or ordinary cards; lift is for the pass, the sign-in ticket, the status ticket, the opened or in-progress row, the next-lesson card, an unread notification, the active tab or segment, and overlays.",
+      "**Don't** use uppercase lettering outside a stamp face, a stamp chip and weekday abbreviations (the day strip, the course timetable heads); tracking belongs to the stamp alone.",
+      "**Don't** use stamp violet or Chart Blue for seats, counts or to-do tiles; seats are ink, tiles are semantic grounds.",
+      "**Don't** reorder rows or animate layout when state changes.",
+      "**Don't** put cancel or delete buttons in list rows; they belong in the object's dialog footer behind a confirmation. The one row menu is removing a person, inside that lesson's own manage dialog.",
+      "**Don't** box settings groups in cards; separate them with rules.",
+      "**Don't** set dates, sizes or counts in mono; mono is for codes only.",
+      "**Don't** use \"standalone\" in copy; a lesson outside any course is a \"Lezione singola\"."
+    ]
+  }
+}
