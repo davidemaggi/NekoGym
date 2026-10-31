@@ -492,12 +492,46 @@ export type Dictionary = {
         title: string;
         description: string;
         contextLabel: string;
+        contextLabelOne: string;
         previousDay: string;
         nextDay: string;
         empty: string;
         avgAttendees: string;
       };
+      home: {
+        greetingMorning: string;
+        greetingAfternoon: string;
+        greetingEvening: string;
+        summaryToday: string;
+        summaryTodayOne: string;
+        summaryNone: string;
+        todayTitle: string;
+        todayEmpty: string;
+        inProgress: string;
+        ended: string;
+        queueShort: string;
+        pendingShort: string;
+        occupancyLabel: string;
+        attendeesCta: string;
+        manageCta: string;
+        todoTitle: string;
+        todoEmpty: string;
+        todoPendingTitle: string;
+        todoAttendanceTitle: string;
+        todoAttendanceBody: string;
+        todoRiskTitle: string;
+        todoRiskBody: string;
+        todoRiskCta: string;
+        todoAttendanceCta: string;
+        nextLessonTitle: string;
+        laterTitle: string;
+        memberEmpty: string;
+        bookCta: string;
+        seeAllCta: string;
+      };
       userInsights: {
+        chartFutureSuffix: string;
+        chartFutureNote: string;
         upcomingTitle: string;
         upcomingDescription: string;
         upcomingEmpty: string;
@@ -1269,7 +1303,7 @@ const dictionaries: Record<Locale, Dictionary> = {
           dialogDescription: "Approva o rifiuta richieste di iscrizione in attesa.",
           empty: "Nessuna richiesta in attesa.",
           approveCta: "Conferma",
-          approveAndUnlockCta: "Conferma e non chiedere piu",
+          approveAndUnlockCta: "Conferma e non chiedere più",
           rejectCta: "Non confermare",
           closeCta: "Chiudi",
         },
@@ -1277,12 +1311,46 @@ const dictionaries: Record<Locale, Dictionary> = {
           title: "Affollamento giornaliero",
           description: "Media presenze per fascia oraria sullo stesso giorno della settimana.",
           contextLabel: "Calcolato sugli ultimi {days} giorni omologhi.",
+          contextLabelOne: "Calcolato su un solo giorno omologo.",
           previousDay: "Giorno precedente",
           nextDay: "Giorno successivo",
           empty: "Nessuna lezione nel giorno selezionato.",
           avgAttendees: "Media presenze",
         },
+        home: {
+          greetingMorning: "Buongiorno, {name}",
+          greetingAfternoon: "Buon pomeriggio, {name}",
+          greetingEvening: "Buonasera, {name}",
+          summaryToday: "{lessons} lezioni oggi · {people} iscritti",
+          summaryTodayOne: "1 lezione oggi · {people} iscritti",
+          summaryNone: "Nessuna lezione oggi",
+          todayTitle: "Oggi",
+          todayEmpty: "Nessuna lezione in programma oggi.",
+          inProgress: "in corso",
+          ended: "conclusa",
+          queueShort: "{n} in coda",
+          pendingShort: "{n} da confermare",
+          occupancyLabel: "{booked} iscritti su {max} posti",
+          attendeesCta: "Presenze",
+          manageCta: "Gestisci",
+          todoTitle: "Da fare",
+          todoEmpty: "Niente da fare: è tutto in ordine.",
+          todoPendingTitle: "Richieste da confermare",
+          todoAttendanceTitle: "Presenze da segnare",
+          todoAttendanceBody: "{lesson} · {time} · {n} iscritti",
+          todoRiskTitle: "Lezione a rischio",
+          todoRiskBody: "{lesson} · {when} · nessun iscritto. Sarà annullata {deadline} se resta vuota.",
+          todoRiskCta: "Apri il giorno",
+          todoAttendanceCta: "Segna presenze",
+          nextLessonTitle: "La tua prossima lezione",
+          laterTitle: "Più avanti",
+          memberEmpty: "Non hai lezioni prenotate.",
+          bookCta: "Prenota una lezione",
+          seeAllCta: "Vedi tutte le prenotazioni",
+        },
         userInsights: {
+          chartFutureSuffix: "programmate",
+          chartFutureNote: "Tratteggiato: lezioni programmate",
           upcomingTitle: "Le mie prossime lezioni",
           upcomingDescription: "Le prossime lezioni in cui sei trainer o partecipante.",
           upcomingEmpty: "Nessuna lezione futura trovata.",
@@ -1298,8 +1366,8 @@ const dictionaries: Record<Locale, Dictionary> = {
           totalTimeDescription: "Somma delle durate delle tue lezioni.",
           totalTimeEmpty: "Nessuna durata disponibile nel filtro corrente.",
           totalTimeHours: "ore",
-          chartTitle: "Lezioni per tipo (grafico)",
-          chartDescription: "Distribuzione lezioni completate per tipologia nel periodo selezionato.",
+          chartTitle: "Lezioni per tipo",
+          chartDescription: "Lezioni per tipologia nel periodo scelto: piene le svolte, tratteggiate le programmate.",
           chartRangeLabel: "Vista",
           chartRangeWeek: "Settimanale",
           chartRangeMonth: "Mensile",
@@ -2061,12 +2129,46 @@ const dictionaries: Record<Locale, Dictionary> = {
           title: "Daily crowding",
           description: "Average attendees by hour for the same weekday pattern.",
           contextLabel: "Computed from the last {days} matching days.",
+          contextLabelOne: "Computed from a single matching day.",
           previousDay: "Previous day",
           nextDay: "Next day",
           empty: "No lessons on the selected day.",
           avgAttendees: "Average attendees",
         },
+        home: {
+          greetingMorning: "Good morning, {name}",
+          greetingAfternoon: "Good afternoon, {name}",
+          greetingEvening: "Good evening, {name}",
+          summaryToday: "{lessons} lessons today · {people} booked",
+          summaryTodayOne: "1 lesson today · {people} booked",
+          summaryNone: "No lessons today",
+          todayTitle: "Today",
+          todayEmpty: "No lessons scheduled today.",
+          inProgress: "in progress",
+          ended: "ended",
+          queueShort: "{n} waiting",
+          pendingShort: "{n} to confirm",
+          occupancyLabel: "{booked} booked of {max} seats",
+          attendeesCta: "Attendance",
+          manageCta: "Manage",
+          todoTitle: "To do",
+          todoEmpty: "Nothing to do: all clear.",
+          todoPendingTitle: "Requests to confirm",
+          todoAttendanceTitle: "Attendance to mark",
+          todoAttendanceBody: "{lesson} · {time} · {n} booked",
+          todoRiskTitle: "Lesson at risk",
+          todoRiskBody: "{lesson} · {when} · nobody booked. It will be cancelled {deadline} if it stays empty.",
+          todoRiskCta: "Open the day",
+          todoAttendanceCta: "Mark attendance",
+          nextLessonTitle: "Your next lesson",
+          laterTitle: "Coming up",
+          memberEmpty: "You have no lessons booked.",
+          bookCta: "Book a lesson",
+          seeAllCta: "See all bookings",
+        },
         userInsights: {
+          chartFutureSuffix: "scheduled",
+          chartFutureNote: "Hatched: scheduled lessons",
           upcomingTitle: "My upcoming lessons",
           upcomingDescription: "Next lessons where you are trainer or attendee.",
           upcomingEmpty: "No upcoming lessons found.",
@@ -2082,8 +2184,8 @@ const dictionaries: Record<Locale, Dictionary> = {
           totalTimeDescription: "Sum of lesson durations for your lessons.",
           totalTimeEmpty: "No duration available for current filter.",
           totalTimeHours: "hours",
-          chartTitle: "Lessons by type (chart)",
-          chartDescription: "Completed lessons split by lesson type in selected period.",
+          chartTitle: "Lessons by type",
+          chartDescription: "Lessons by type in the chosen period: solid for held, hatched for scheduled.",
           chartRangeLabel: "View",
           chartRangeWeek: "Weekly",
           chartRangeMonth: "Monthly",

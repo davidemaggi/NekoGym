@@ -1,14 +1,14 @@
 import { requireAuth } from "@/lib/authorization";
-import { isTrialActive, planWindowForLesson } from "@/lib/booking-rules";
 import { appDateKey, appStartOfDayUtc, getAppDateTimeConfig } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
+import { loadMemberPass } from "@/lib/member-pass";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
-import { BookingsManager, type BookingPass, type BookingsDay, type BookingsLesson } from "@/app/[locale]/(app)/bookings/bookings-manager";
+import { BookingsManager, type BookingsDay, type BookingsLesson } from "@/app/[locale]/(app)/bookings/bookings-manager";
 
 const DAY_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -56,7 +56,7 @@ export default async function BookingsPage({
   const iconOptions = await getLessonTypeIconOptions();
   const siteSettings = await prisma.siteSettings.findUnique({
     where: { id: 1 },
-    select: { openWeekdaysCsv: true, closedDatesCsv: true, weeklyResetWeekday: true },
+    select: { openWeekdaysCsv: true, closedDatesCsv: true },
   });
   const openWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
   const closedDates = parseClosedDatesCsv(siteSettings?.closedDatesCsv);
@@ -85,7 +85,6 @@ export default async function BookingsPage({
   const longDayFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "long", day: "numeric", month: "long" });
   const shortWeekdayFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, weekday: "short" });
   const dayNumberFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, day: "numeric" });
-  const longDateFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, day: "2-digit", month: "2-digit", year: "numeric" });
 
   const lessons = await prisma.lesson.findMany({
     where: {
@@ -236,82 +235,13 @@ export default async function BookingsPage({
     };
   });
 
-  // The member's season pass: what their plan allows right now.
-  const fullUser = await prisma.user.findUnique({
-    where: { id: currentUser.id },
-    select: {
-      membershipStatus: true,
-      trialEndsAt: true,
-      subscriptionType: true,
-      subscriptionLessons: true,
-      subscriptionRemaining: true,
-      subscriptionEndsAt: true,
-    },
+  const { pass, upcoming } = await loadMemberPass({
+    userId: currentUser.id,
+    role: currentUser.role,
+    locale: safeLocale,
+    iconOptions,
+    now,
   });
-  const upcomingBookings = await prisma.lessonBooking.findMany({
-    where: {
-      traineeId: currentUser.id,
-      lesson: { status: "SCHEDULED", deletedAt: null, startsAt: { gt: now } },
-    },
-    include: {
-      lesson: {
-        select: {
-          id: true,
-          title: true,
-          startsAt: true,
-          course: { select: { name: true } },
-          lessonType: { select: { iconSvg: true, colorHex: true } },
-        },
-      },
-    },
-    orderBy: { lesson: { startsAt: "asc" } },
-  });
-
-  let pass: BookingPass | null = null;
-  if (currentUser.role === "TRAINEE" && fullUser) {
-    const trialActive = isTrialActive(fullUser.trialEndsAt, now);
-    const validUntilLabel = fullUser.subscriptionEndsAt ? longDateFormat.format(fullUser.subscriptionEndsAt) : null;
-    const total = fullUser.subscriptionLessons ?? 0;
-
-    if (fullUser.membershipStatus !== "ACTIVE") {
-      pass = trialActive && fullUser.trialEndsAt
-        ? { kind: "trial", untilLabel: longDateFormat.format(fullUser.trialEndsAt), activeBookings: upcomingBookings.length }
-        : { kind: "inactive", activeBookings: upcomingBookings.length };
-    } else if (fullUser.subscriptionType === "FIXED") {
-      const remaining = Math.max(0, fullUser.subscriptionRemaining ?? total);
-      pass = { kind: "fixed", total, used: Math.max(0, total - remaining), remaining, validUntilLabel, activeBookings: upcomingBookings.length };
-    } else if (fullUser.subscriptionType === "WEEKLY" || fullUser.subscriptionType === "MONTHLY") {
-      const window = planWindowForLesson(now, fullUser.subscriptionType, siteSettings?.weeklyResetWeekday ?? "MONDAY");
-      const used = await prisma.lessonBooking.count({
-        where: {
-          traineeId: currentUser.id,
-          lesson: { status: "SCHEDULED", deletedAt: null, startsAt: { gte: window.start, lt: window.end } },
-        },
-      });
-      pass = {
-        kind: fullUser.subscriptionType === "WEEKLY" ? "weekly" : "monthly",
-        total,
-        used: Math.min(used, total),
-        remaining: Math.max(0, total - used),
-        validUntilLabel,
-        activeBookings: upcomingBookings.length,
-      };
-    } else {
-      pass = { kind: "open", validUntilLabel, activeBookings: upcomingBookings.length };
-    }
-  }
-
-  const upcoming = upcomingBookings.slice(0, 5).map((booking) => ({
-    id: booking.lesson.id,
-    dayKey: appDateKey(booking.lesson.startsAt),
-    title: booking.lesson.title ?? booking.lesson.course?.name ?? "-",
-    whenLabel: deadlineFormat.format(booking.lesson.startsAt),
-    isPending: booking.status === "PENDING",
-    lessonTypeIcon: booking.lesson.lessonType
-      ? sanitizeLessonTypeIconPath(booking.lesson.lessonType.iconSvg, iconOptions)
-      : null,
-    lessonTypeColor: booking.lesson.lessonType ? sanitizeLessonTypeColor(booking.lesson.lessonType.colorHex) : null,
-  }));
 
   const canCreateStandaloneLesson = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
   const trainerCandidates = canCreateStandaloneLesson

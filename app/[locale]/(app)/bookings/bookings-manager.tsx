@@ -4,7 +4,6 @@ import { useId, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  AlertCircle,
   CalendarX2,
   ChevronDown,
   ChevronLeft,
@@ -21,7 +20,7 @@ import { toast } from "sonner";
 
 import { bookLessonAction, unbookLessonAction } from "@/app/[locale]/(app)/bookings/actions";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
-import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
+import { LessonManageButton } from "@/components/lessons/lesson-manage-button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -32,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PassCard, fill, type BookingPass } from "@/components/bookings/pass-card";
 import { Button } from "@/components/ui/button";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import type { Dictionary } from "@/lib/i18n";
@@ -97,11 +97,7 @@ export type BookingsDay = {
   hasOwnBooking: boolean;
 };
 
-export type BookingPass =
-  | { kind: "fixed" | "weekly" | "monthly"; total: number; used: number; remaining: number; validUntilLabel: string | null; activeBookings: number }
-  | { kind: "open"; validUntilLabel: string | null; activeBookings: number }
-  | { kind: "trial"; untilLabel: string; activeBookings: number }
-  | { kind: "inactive"; activeBookings: number };
+export type { BookingPass };
 
 type UpcomingBooking = {
   id: string;
@@ -139,130 +135,9 @@ type BookingsManagerProps = {
   isAdmin: boolean;
 };
 
-function fill(template: string, values: Record<string, string | number>) {
-  return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
-}
-
-/** Like fill(), but sets {date} in condensed tabular figures, as printed on a ticket. */
-function fillDate(template: string, date: string): ReactNode {
-  const [before, after = ""] = template.split("{date}");
-  return (
-    <>
-      {before}
-      <span className="tabular">{date}</span>
-      {after}
-    </>
-  );
-}
 
 function bookingsHref(locale: string, dayKey: string) {
   return `/${locale}/bookings?day=${dayKey}`;
-}
-
-/* ------------------------------------------------------------------ */
-/* Season pass                                                         */
-/* ------------------------------------------------------------------ */
-
-function PassCard({ pass, labels }: { pass: BookingPass; labels: BookingsLabels["pass"] }) {
-  const activeLine =
-    pass.activeBookings === 1 ? labels.activeBookingsOne : fill(labels.activeBookings, { n: pass.activeBookings });
-
-  let title: string;
-  let figure: ReactNode = null;
-  let body: ReactNode = null;
-  let footer: ReactNode[] = [];
-  let tone: "default" | "warning" = "default";
-
-  if (pass.kind === "fixed" || pass.kind === "weekly" || pass.kind === "monthly") {
-    title = fill(
-      pass.kind === "fixed" ? labels.fixedTitle : pass.kind === "weekly" ? labels.weeklyTitle : labels.monthlyTitle,
-      { n: pass.total }
-    );
-    const caption = pass.kind === "fixed" ? labels.remaining : pass.kind === "weekly" ? labels.availableWeek : labels.availableMonth;
-    figure = (
-      <p className="text-right leading-none">
-        <span className="tabular text-[2.5rem] font-bold">{pass.remaining}</span>
-        <span className="mt-1 block text-[13px] font-semibold text-[var(--muted-foreground)]">{caption}</span>
-      </p>
-    );
-    // One validator slot per entry; long plans fall back to the counter alone.
-    if (pass.total > 0 && pass.total <= 20) {
-      body = (
-        <div>
-          <ol
-            aria-label={fill(labels.slotsLabel, { used: pass.used, total: pass.total })}
-            className="grid max-w-[26rem] gap-1.5"
-            style={{ gridTemplateColumns: `repeat(${Math.min(pass.total, 10)}, minmax(0, 1fr))` }}
-          >
-            {Array.from({ length: pass.total }, (_, index) => {
-              const used = index < pass.used;
-              return (
-                <li
-                  key={index}
-                  aria-hidden="true"
-                  className={cn(
-                    "aspect-square max-h-7 rounded-full border-[1.5px]",
-                    used ? "border-[var(--stamp)] bg-[radial-gradient(circle,var(--stamp)_0_38%,transparent_40%)]" : "border-[var(--surface-border)]"
-                  )}
-                />
-              );
-            })}
-          </ol>
-        </div>
-      );
-    }
-    footer = [pass.validUntilLabel ? fillDate(labels.validUntil, pass.validUntilLabel) : null, activeLine].filter(Boolean);
-  } else if (pass.kind === "open") {
-    title = labels.openPlanTitle;
-    body = <p className="text-[15px] text-[var(--muted-foreground)]">{labels.openPlanBody}</p>;
-    footer = [pass.validUntilLabel ? fillDate(labels.validUntil, pass.validUntilLabel) : null, activeLine].filter(Boolean);
-  } else if (pass.kind === "trial") {
-    title = labels.trialTitle;
-    body = <p className="text-[15px] text-[var(--muted-foreground)]">{fillDate(labels.trialUntil, pass.untilLabel)}</p>;
-    footer = [activeLine];
-  } else {
-    title = labels.inactiveTitle;
-    tone = "warning";
-    body = <p className="text-[15px]">{labels.inactiveBody}</p>;
-    footer = pass.activeBookings > 0 ? [activeLine] : [];
-  }
-
-  return (
-    <section
-      aria-label={title}
-      className={cn(
-        "relative overflow-hidden rounded-2xl shadow-[var(--shadow-lift)]",
-        tone === "warning" ? "bg-[var(--warning-bg)] text-[var(--warning-fg)]" : "bg-[var(--surface)]"
-      )}
-    >
-      <div className="flex items-start justify-between gap-4 px-5 pb-4 pt-5">
-        <div className="flex min-w-0 items-start gap-2.5">
-          {tone === "warning" ? (
-            <AlertCircle size={20} aria-hidden="true" className="mt-0.5 shrink-0" />
-          ) : (
-            <Ticket size={20} aria-hidden="true" className="mt-0.5 shrink-0 text-[var(--muted-foreground)]" />
-          )}
-          <h2 className="text-[17px] font-semibold leading-snug">{title}</h2>
-        </div>
-        {figure}
-      </div>
-      {body || footer.length > 0 ? (
-        <div className="border-t-2 border-dashed border-[var(--rule)] px-5 pb-5 pt-4">
-          {body}
-          {footer.length > 0 ? (
-            <p className={cn("text-sm", body ? "mt-3" : "", tone === "warning" ? "" : "text-[var(--muted-foreground)]")}>
-              {footer.map((part, index) => (
-                <span key={index}>
-                  {index > 0 ? " · " : null}
-                  {part}
-                </span>
-              ))}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
-    </section>
-  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -607,115 +482,17 @@ export function BookingsManager({
 
   function renderManage(lesson: BookingsLesson) {
     if (!lesson.canManageLesson) return null;
-    const manageLabels = {
-      title: lessonCreateLabels.manageTitle,
-      description: lessonCreateLabels.manageDescription,
-      tabMain: lessonCreateLabels.manageTabMain,
-      tabPeople: lessonCreateLabels.manageTabPeople,
-      startsAtLabel: lessonCreateLabels.startsAtLabel,
-      trainerLabel: lessonCreateLabels.trainerLabel,
-      standaloneDuration: lessonCreateLabels.standaloneDuration,
-      standaloneMaxAttendees: lessonCreateLabels.standaloneMaxAttendees,
-      standaloneCancellationWindow: lessonCreateLabels.standaloneCancellationWindow,
-      standaloneLessonType: lessonCreateLabels.standaloneLessonType,
-      lessonTitleLabel: lessonCreateLabels.lessonTitleLabel,
-      lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-      updateStandaloneCta: lessonCreateLabels.updateStandaloneCta,
-      updateTrainerCta: lessonCreateLabels.updateTrainerCta,
-      attendeesLabel: lessonCreateLabels.attendeesLabel,
-      noAttendees: lessonCreateLabels.noAttendees,
-      attendeeSelectLabel: lessonCreateLabels.attendeeSelectLabel,
-      addAttendeeCta: lessonCreateLabels.addAttendeeCta,
-      removeAttendeeCta: lessonCreateLabels.removeAttendeeCta,
-      markAttendancePresentCta: lessonCreateLabels.markAttendancePresentCta,
-      markAttendanceNoShowCta: lessonCreateLabels.markAttendanceNoShowCta,
-      attendanceStatusLabel: lessonCreateLabels.attendanceStatusLabel,
-      attendanceStatusPresent: lessonCreateLabels.attendanceStatusPresent,
-      attendanceStatusNoShow: lessonCreateLabels.attendanceStatusNoShow,
-      attendanceStatusUnmarked: lessonCreateLabels.attendanceStatusUnmarked,
-      pendingApprovalsLabel: lessonCreateLabels.pendingApprovalsLabel,
-      noPendingApprovals: lessonCreateLabels.noPendingApprovals,
-      confirmPendingCta: lessonCreateLabels.confirmPendingCta,
-      confirmPendingAndGrantAccessCta: lessonCreateLabels.confirmPendingAndGrantAccessCta,
-      rejectPendingCta: lessonCreateLabels.rejectPendingCta,
-      waitlistLabel: lessonCreateLabels.waitlistLabel,
-      noWaitlist: lessonCreateLabels.noWaitlist,
-      confirmWaitlistCta: lessonCreateLabels.confirmWaitlistCta,
-      removeWaitlistCta: lessonCreateLabels.removeWaitlistCta,
-      processing: lessonCreateLabels.processing,
-      closeCta: lessonCreateLabels.closeCta,
-      manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
-      notifySectionTitle: lessonCreateLabels.notifySectionTitle,
-      notifyMessageLabel: lessonCreateLabels.notifyMessageLabel,
-      notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
-      notifySendCta: lessonCreateLabels.notifySendCta,
-    };
-
     return (
-      <LessonDetailsDialogTrigger
+      <LessonManageButton
         locale={locale}
-        lesson={{
-          id: lesson.id,
-          title: lesson.title ?? lesson.courseName,
-          description: lesson.description,
-          startsAt: lesson.startsAt,
-          endsAt: lesson.endsAt,
-          trainerName: lesson.trainerName,
-          occupancy: lesson.occupancy,
-          queueLength: lesson.queueLength,
-          canViewWaitlist: lesson.canViewWaitlist,
-          isCourseLesson: lesson.isCourseLesson,
-          lessonTypeName: lesson.lessonTypeName,
-          lessonTypeIcon: lesson.lessonTypeIcon,
-          lessonTypeColor: lesson.lessonTypeColor,
-          canBroadcast: lesson.canManageLesson,
-        }}
-        labels={{
-          detailsTitle: labels.detailsTitle,
-          detailsDescription: labels.detailsDescription,
-          startsAtLabel: labels.startsAtLabel,
-          endsAtLabel: labels.endsAtLabel,
-          trainerLabel: labels.trainerLabel,
-          bookedLabel: labels.bookedLabel,
-          queuedLabel: labels.queuedLabel,
-          closeCta: labels.closeCta,
-          courseTag: labels.courseTag,
-          lessonDescriptionLabel: lessonCreateLabels.lessonDescriptionLabel,
-          notifySectionTitle: lessonCreateLabels.notifySectionTitle,
-          notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
-          notifySendCta: lessonCreateLabels.notifySendCta,
-        }}
-        manage={{
-          lesson: {
-            id: lesson.id,
-            canEditMain: !lesson.isCourseLesson && !lesson.hasStarted,
-            title: lesson.title ?? "",
-            description: lesson.description ?? "",
-            startsAt: lesson.startsAtLocal,
-            durationMinutes: lesson.durationMinutes,
-            maxAttendees: lesson.maxAttendees,
-            cancellationWindowHours: lesson.cancellationWindowHours,
-            trainerId: lesson.trainerId,
-            lessonTypeId: lesson.lessonTypeId,
-            canManageTrainer: canUpdateTrainer && !lesson.hasStarted,
-            attendees: lesson.attendees,
-            attendeeAttendance: lesson.attendeeAttendance,
-            canManageAttendance: lesson.canManageAttendance,
-            pendingApprovals: lesson.pendingApprovals,
-            waitlist: lesson.waitlist,
-          },
-          trainerCandidates,
-          lessonTypeCandidates,
-          attendeeCandidates,
-          canBroadcastToAttendees: lesson.canManageLesson,
-          canGrantOpenAccess: isAdmin && lesson.canManageLesson,
-          labels: manageLabels,
-        }}
-        trigger={
-          <span className="inline-flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-[var(--foreground)] bg-[var(--surface)] px-4 text-[15px] font-semibold transition-colors hover:bg-[var(--muted)]">
-            {labels.manageCta}
-          </span>
-        }
+        lesson={lesson}
+        labels={labels}
+        lessonCreateLabels={lessonCreateLabels}
+        canUpdateTrainer={canUpdateTrainer}
+        isAdmin={isAdmin}
+        trainerCandidates={trainerCandidates}
+        lessonTypeCandidates={lessonTypeCandidates}
+        attendeeCandidates={attendeeCandidates}
       />
     );
   }

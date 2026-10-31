@@ -29,6 +29,21 @@
         ],
         "createdAt": "2026-10-31T10:47:14.981Z",
         "reason": "Claude: unchosen decision-round sketch, not shipped UI"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "1.375rem",
+        "createdAt": "2026-10-31T11:11:16.829Z",
+        "reason": "Claude: DESIGN.md typography prose documents 1.375rem as the mobile Display/Time step"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/home/board.html"
+        ],
+        "createdAt": "2026-10-31T11:11:37.104Z",
+        "reason": "Claude: unchosen decision-round sketch, not shipped UI"
       }
     ]
   }

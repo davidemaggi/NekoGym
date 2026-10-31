@@ -59,14 +59,16 @@ export function PwaInstallBanner({ labels }: InstallBannerProps) {
   if (!visible || !promptEvent) return null;
 
   return (
-    <div className="mb-4 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-3">
-      <p className="text-sm font-semibold">{labels.title}</p>
-      <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.description}</p>
-      <div className="mt-3 inline-flex gap-2">
-        <Button type="button" size="sm" onClick={handleInstall}>
+    <div className="mt-6 flex flex-col gap-3 rounded-2xl border border-[var(--rule)] bg-[var(--surface)] p-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p className="text-[15px] font-semibold">{labels.title}</p>
+        <p className="mt-0.5 text-sm text-[var(--muted-foreground)]">{labels.description}</p>
+      </div>
+      <div className="flex shrink-0 gap-2">
+        <Button type="button" onClick={handleInstall}>
           {labels.installCta}
         </Button>
-        <Button type="button" size="sm" variant="secondary" onClick={handleDismiss}>
+        <Button type="button" variant="ghost" onClick={handleDismiss}>
           {labels.dismissCta}
         </Button>
       </div>

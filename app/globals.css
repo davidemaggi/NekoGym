@@ -69,6 +69,8 @@
   --shadow-sheet: 0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3);
 
   --overlay: rgb(18 20 42 / 0.45);
+  /* Single-series chart ink (validated: OKLCH band + chroma floor, >=3:1 on surface) */
+  --chart-1: #3b5fc4;
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -127,6 +129,7 @@
   --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 22px -10px rgb(0 0 0 / 0.55);
   --shadow-sheet: 0 -4px 24px -8px rgb(0 0 0 / 0.5), 0 20px 50px -16px rgb(0 0 0 / 0.7);
   --overlay: rgb(4 5 14 / 0.62);
+  --chart-1: #6386e3;
 }
 
 /* Section stocks, set by the app shell from the current route */
