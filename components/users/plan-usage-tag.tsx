@@ -5,6 +5,7 @@ const PERIOD = {
   it: { WEEKLY: "sett.", MONTHLY: "mese", FIXED: "pacchetto" },
   en: { WEEKLY: "week", MONTHLY: "month", FIXED: "pack" },
 } as const;
+const USED = { it: "usate", en: "used" } as const;
 
 const SPOKEN = {
   it: {
@@ -23,7 +24,18 @@ const SPOKEN = {
  * "2/3 sett.": lessons used against the plan in the period. At the limit it turns into a
  * warning chip that also says "esaurito", so it never relies on colour alone.
  */
-export function PlanUsageTag({ usage, locale, className }: { usage: PlanUsage; locale: string; className?: string }) {
+export function PlanUsageTag({
+  usage,
+  locale,
+  className,
+  hidePeriod = false,
+}: {
+  usage: PlanUsage;
+  locale: string;
+  className?: string;
+  /** When the plan name is printed next to it (e.g. "Pacchetto"), skip repeating the period. */
+  hidePeriod?: boolean;
+}) {
   const lang = locale === "it" ? "it" : "en";
   const full = usage.used >= usage.limit;
   return (
@@ -42,8 +54,10 @@ export function PlanUsageTag({ usage, locale, className }: { usage: PlanUsage; l
       <span aria-hidden="true" className="tabular">
         {usage.used}/{usage.limit}
       </span>
+      {/* "3/12 usate · mese": the figure always says it counts what is spent, never what is left. */}
       <span aria-hidden="true">
-        {PERIOD[lang][usage.kind]}
+        {USED[lang]}
+        {hidePeriod ? null : ` · ${PERIOD[lang][usage.kind]}`}
         {full ? (lang === "it" ? " · esaurito" : " · used up") : null}
       </span>
     </span>

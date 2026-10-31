@@ -63,9 +63,10 @@ function loadQuickProfile(userId: string): Promise<QuickProfileResponse> {
 }
 
 function formatDate(value: string | null, locale: string): string {
-  if (!value) return "-";
+  const none = locale === "it" ? "Nessuna" : "None";
+  if (!value) return none;
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "-";
+  if (Number.isNaN(date.getTime())) return none;
   return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
     day: "2-digit",
     month: "short",
@@ -80,14 +81,12 @@ function membershipDurationLabel(createdAt: string, locale: string): string {
 
   const now = new Date();
   const diffDays = Math.max(0, Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)));
-  if (locale === "it") {
-    if (diffDays < 30) return `${diffDays} giorni`;
-    if (diffDays < 365) return `${Math.floor(diffDays / 30)} mesi`;
-    return `${Math.floor(diffDays / 365)} anni`;
-  }
-  if (diffDays < 30) return `${diffDays} days`;
-  if (diffDays < 365) return `${Math.floor(diffDays / 30)} months`;
-  return `${Math.floor(diffDays / 365)} years`;
+  const it = locale === "it";
+  const unit = (n: number, one: [string, string], many: [string, string]) => `${n} ${n === 1 ? one[it ? 0 : 1] : many[it ? 0 : 1]}`;
+  if (diffDays === 0) return it ? "da oggi" : "since today";
+  if (diffDays < 30) return unit(diffDays, ["giorno", "day"], ["giorni", "days"]);
+  if (diffDays < 365) return unit(Math.floor(diffDays / 30), ["mese", "month"], ["mesi", "months"]);
+  return unit(Math.floor(diffDays / 365), ["anno", "year"], ["anni", "years"]);
 }
 
 export function UserQuickProfileTooltip({ userId, locale, className, children }: UserQuickProfileTooltipProps) {
@@ -135,7 +134,7 @@ export function UserQuickProfileTooltip({ userId, locale, className, children }:
         <button
           type="button"
           className={cn(
-            "max-w-full truncate text-left underline decoration-[var(--muted-foreground)] decoration-dotted underline-offset-4 hover:decoration-solid",
+            "inline-flex min-h-11 max-w-full items-center truncate text-left underline decoration-[var(--muted-foreground)] decoration-dotted underline-offset-4 hover:decoration-solid",
             className
           )}
         >

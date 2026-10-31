@@ -192,7 +192,9 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
         <dt className="text-[var(--muted-foreground)]">{labels.startsAtLabel}</dt>
         <dd className="tabular font-semibold first-letter:uppercase">{timeRange}</dd>
         <dt className="text-[var(--muted-foreground)]">{labels.trainerLabel}</dt>
-        <dd>{lesson.trainerName ?? "-"}</dd>
+        <dd className={lesson.trainerName ? undefined : "text-[var(--muted-foreground)]"}>
+          {lesson.trainerName ?? (locale === "it" ? "Senza trainer" : "No trainer")}
+        </dd>
         <dt className="text-[var(--muted-foreground)]">{labels.bookedLabel}</dt>
         <dd className="tabular">
           {lesson.occupancy}

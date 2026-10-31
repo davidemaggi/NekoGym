@@ -53,6 +53,8 @@ const COPY = {
     prevMonth: "Mese precedente",
     nextMonth: "Mese successivo",
     closed: "chiuso",
+    lessonDay: "giorno della lezione",
+    lessonDayNote: "Il punto segna il giorno della lezione: c'è sempre.",
     preview: (n: number) => (n === 1 ? "Verrà creata 1 lezione" : `Verranno create ${n} lezioni`),
     previewNone: "Nessuna lezione con queste opzioni.",
     skipped: (n: number) => (n === 1 ? "1 giorno di chiusura saltato" : `${n} giorni di chiusura saltati`),
@@ -75,6 +77,8 @@ const COPY = {
     prevMonth: "Previous month",
     nextMonth: "Next month",
     closed: "closed",
+    lessonDay: "the lesson's day",
+    lessonDayNote: "The dot marks the lesson's own day: it is always included.",
     preview: (n: number) => (n === 1 ? "1 lesson will be created" : `${n} lessons will be created`),
     previewNone: "No lessons with these options.",
     skipped: (n: number) => (n === 1 ? "1 closed day skipped" : `${n} closed days skipped`),
@@ -265,7 +269,10 @@ export function RepeatControls({
 
       {mode === "dates" ? (
         <div className="space-y-2">
-          <p className="text-[15px] text-[var(--muted-foreground)]">{t.pickHint}</p>
+          <p className="text-[15px] text-[var(--muted-foreground)]">
+            {t.pickHint}
+            {firstDayIsLesson ? ` ${t.lessonDayNote}` : ""}
+          </p>
           <div className="flex items-center justify-between">
             <button
               type="button"
@@ -301,27 +308,31 @@ export function RepeatControls({
               const beforeStart = !validFirstDay || dateKey < validFirstDay;
               const closed = !isOpen(dateKey);
               const picked = pickedDates.includes(dateKey) || isFirst;
-              const disabled = beforeStart || closed || isFirst;
+              const disabled = beforeStart || closed;
               return (
                 <button
                   key={dateKey}
                   type="button"
                   aria-pressed={picked}
                   disabled={disabled}
-                  aria-label={`${shortDay.format(dayOf(dateKey))}${closed ? ` · ${t.closed}` : ""}`}
-                  onClick={() => togglePicked(dateKey)}
+                  // The lesson's own day is fixed (always created): pressed, not toggleable, and says why.
+                  aria-disabled={isFirst || undefined}
+                  aria-label={`${shortDay.format(dayOf(dateKey))}${closed ? ` · ${t.closed}` : ""}${isFirst ? ` · ${t.lessonDay}` : ""}`}
+                  onClick={() => {
+                    if (!isFirst) togglePicked(dateKey);
+                  }}
                   className={cn(
-                    "tabular h-11 rounded-lg text-[15px] font-semibold transition-colors",
-                    picked
-                      ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                      : "hover:bg-[var(--muted)]",
-                    // The lesson's own day is fixed: drawn picked but dashed, it is not a copy.
-                    isFirst ? "border-[1.5px] border-dashed border-[var(--primary-foreground)] ring-2 ring-[var(--primary)]" : "",
-                    disabled && !isFirst ? "cursor-not-allowed text-[var(--muted-foreground)] opacity-50" : "",
-                    closed && !isFirst ? "line-through decoration-1" : ""
+                    "tabular relative h-11 rounded-lg text-[15px] font-semibold transition-colors",
+                    picked ? "bg-[var(--primary)] text-[var(--primary-foreground)]" : "hover:bg-[var(--muted)]",
+                    isFirst ? "cursor-default" : "",
+                    disabled ? "cursor-not-allowed text-[var(--muted-foreground)] opacity-50" : "",
+                    closed ? "line-through decoration-1" : ""
                   )}
                 >
                   {Number.parseInt(dateKey.slice(8), 10)}
+                  {isFirst ? (
+                    <span aria-hidden="true" className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-[var(--primary-foreground)]" />
+                  ) : null}
                 </button>
               );
             })}

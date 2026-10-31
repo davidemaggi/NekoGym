@@ -389,11 +389,11 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
     if (user.subscriptionType === "NONE") return labels.subscriptionOptions.NONE;
     const base = labels.subscriptionOptions[user.subscriptionType];
     if (user.subscriptionLessons === null) return base;
-    // "Mensile [5/12 mese]": where the trainee stands now, not just the plan size.
+    // "Mensile [5/12 usate · mese]": lessons spent now, not just the plan size (packs skip the repeated period).
     return (
       <span className="inline-flex flex-wrap items-center gap-x-1.5 gap-y-1">
         {base}
-        {user.planUsage ? <PlanUsageTag usage={user.planUsage} locale={locale} /> : null}
+        {user.planUsage ? <PlanUsageTag usage={user.planUsage} locale={locale} hidePeriod={user.planUsage.kind === "FIXED"} /> : null}
       </span>
     );
   };

@@ -162,6 +162,7 @@ export function LessonManageDialog({
   const [isPending, startTransition] = useTransition();
   const [confirmRemove, setConfirmRemove] = useState<{ kind: "attendee" | "queue"; id: string; name: string } | null>(null);
   const [attendeeToAdd, setAttendeeToAdd] = useState("");
+  const [trainerDraft, setTrainerDraft] = useState(lesson.trainerId);
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("main");
   const [hasLoadedStoredTab, setHasLoadedStoredTab] = useState(false);
@@ -575,12 +576,13 @@ export function LessonManageDialog({
             {lesson.canManageTrainer && allowPeopleActions ? (
               <section className="space-y-1.5 pb-5">
                 <Label htmlFor={`trainer-update-${lesson.id}`}>{labels.trainerLabel}</Label>
-                {/* Saved on change: the trainer is notified, no separate save step. */}
+                {/* An explicit save: changing the trainer notifies people, so a stray pick must not send it. */}
+                <div className="flex flex-col gap-2 sm:flex-row">
                 <select
                   id={`trainer-update-${lesson.id}`}
-                  defaultValue={lesson.trainerId}
-                  className="ui-select w-full"
-                  onChange={(event) => handleTrainerUpdate(event.target.value)}
+                  value={trainerDraft}
+                  className="ui-select w-full min-w-0"
+                  onChange={(event) => setTrainerDraft(event.target.value)}
                   disabled={isPending}
                 >
                   <option value="">— {labels.trainerLabel} —</option>
@@ -590,6 +592,16 @@ export function LessonManageDialog({
                     </option>
                   ))}
                 </select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="shrink-0"
+                  disabled={isPending || trainerDraft === lesson.trainerId}
+                  onClick={() => handleTrainerUpdate(trainerDraft)}
+                >
+                  {labels.updateTrainerCta}
+                </Button>
+                </div>
               </section>
             ) : null}
 
@@ -603,7 +615,7 @@ export function LessonManageDialog({
                     const attendance = lesson.attendeeAttendance[attendee.id];
                     return (
                       <li key={`attendee-${lesson.id}-${attendee.id}`} className="space-y-2 py-3">
-                        <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center justify-between gap-2">
                           {personName(attendee)}
                           {allowPeopleActions ? moreMenu(attendee.name, labels.removeAttendeeCta, () => setConfirmRemove({ kind: "attendee", id: attendee.id, name: attendee.name })) : null}
                         </div>
