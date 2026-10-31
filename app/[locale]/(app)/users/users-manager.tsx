@@ -1,5 +1,7 @@
 "use client";
 
+import { appDateTimeLocalValue } from "@/lib/date-time";
+
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -187,12 +189,8 @@ function dateTimeInputValue(value: string | null): string {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  const y = String(date.getFullYear());
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const mm = String(date.getMinutes()).padStart(2, "0");
-  return `${y}-${m}-${d}T${hh}:${mm}`;
+  // Same wall clock the server parses the field with (gym time zone).
+  return appDateTimeLocalValue(date);
 }
 
 export function UsersManager({ locale, currentUserId, users, lessonTypes, labels }: UsersManagerProps) {

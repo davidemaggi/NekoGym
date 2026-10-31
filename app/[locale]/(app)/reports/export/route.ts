@@ -1,3 +1,4 @@
+import { formatDateTimeForApp } from "@/lib/date-time";
 import { getCurrentUser } from "@/lib/auth";
 import { buildReportPdfDocument, type PdfReportTableSection } from "@/lib/pdf";
 import { prisma } from "@/lib/prisma";
@@ -159,8 +160,8 @@ export async function GET(
     subtitle: locale === "it" ? `Periodo analisi: ultimi ${days} giorni` : `Analysis period: last ${days} days`,
     generatedAtLabel:
       locale === "it"
-        ? `Generato il: ${snapshot.range.generatedAt.toLocaleString("it-IT")}`
-        : `Generated at: ${snapshot.range.generatedAt.toLocaleString("en-US")}`,
+        ? `Generato il: ${formatDateTimeForApp(snapshot.range.generatedAt)}`
+        : `Generated at: ${formatDateTimeForApp(snapshot.range.generatedAt)}`,
     sections,
   });
   const fileName = `nekogym-reports-${days}d.pdf`;

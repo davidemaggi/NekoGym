@@ -1,3 +1,4 @@
+import { getAppDateTimeConfig } from "@/lib/date-time";
 import { parseTelegramStartLinkToken } from "@/lib/telegram";
 import { linkTelegramChatByToken } from "@/server/telegram/link-service";
 import { getMyLessonsForTelegramChat } from "@/server/telegram/my-lessons-service";
@@ -68,6 +69,7 @@ function formatLessonDate(date: Date) {
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: getAppDateTimeConfig().timeZone,
   }).format(date);
 }
 

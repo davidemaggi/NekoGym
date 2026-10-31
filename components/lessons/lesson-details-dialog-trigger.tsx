@@ -1,5 +1,7 @@
 "use client";
 
+import { getAppDateTimeConfig } from "@/lib/date-time";
+
 import { type ReactNode, useState, useTransition } from "react";
 import { Pencil, Send } from "lucide-react";
 import { toast } from "sonner";
@@ -119,12 +121,23 @@ type LessonDetailsDialogTriggerProps = {
   };
 };
 
+// Always in the gym's time zone, like every list that opens this dialog.
 function formatDay(value: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", { weekday: "short", day: "numeric", month: "short" }).format(new Date(value));
+  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    timeZone: getAppDateTimeConfig().timeZone,
+  }).format(new Date(value));
 }
 
 function formatTime(value: string, locale: string): string {
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
+  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: getAppDateTimeConfig().timeZone,
+  }).format(new Date(value));
 }
 
 export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels, lesson, manage }: LessonDetailsDialogTriggerProps) {

@@ -3,6 +3,7 @@ import { Archivo, Geist_Mono } from "next/font/google";
 
 import { SwRegister } from "@/components/pwa/sw-register";
 import { AppToaster } from "@/components/ui/toaster";
+import { getAppDateTimeConfig } from "@/lib/date-time";
 import { getSiteSettingsSafe } from "@/lib/site-settings";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
 import "./globals.css";
@@ -72,6 +73,10 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {/* Browser code formats dates in the gym's zone, read from the server at runtime (not baked at build). */}
+        <script
+          dangerouslySetInnerHTML={{ __html: `window.__NEKO_DATETIME__=${JSON.stringify(getAppDateTimeConfig()).replace(/</g, "\\u003c")};` }}
+        />
       </head>
       <body className="min-h-full bg-background text-foreground">
         <SwRegister />

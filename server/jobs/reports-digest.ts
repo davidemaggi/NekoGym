@@ -1,3 +1,4 @@
+import { appLocalDateTimeToUtc, getAppDateParts } from "@/lib/date-time";
 import { prisma } from "@/lib/prisma";
 import {
   buildReportDigestEmail,
@@ -25,12 +26,13 @@ function parseDailyTime(value: string): { hour: number; minute: number } {
   return { hour, minute };
 }
 
+// The configured time is on the gym's clock (app time zone), whatever the process zone is.
 function msUntilNextRun(hour: number, minute: number): number {
   const now = new Date();
-  const next = new Date(now);
-  next.setHours(hour, minute, 0, 0);
+  const today = getAppDateParts(now);
+  let next = appLocalDateTimeToUtc(today.year, today.month, today.day, hour, minute);
   if (next <= now) {
-    next.setDate(next.getDate() + 1);
+    next = appLocalDateTimeToUtc(today.year, today.month, today.day + 1, hour, minute);
   }
   return next.getTime() - now.getTime();
 }

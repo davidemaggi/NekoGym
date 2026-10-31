@@ -13,7 +13,7 @@ import {
   promoteNextEligibleWaitlistEntry,
   refundFixedPlanUnit,
 } from "@/lib/booking-rules";
-import { parseDateTimeLocalInputToUtc } from "@/lib/date-time";
+import { formatDateTimeForApp, parseDateTimeLocalInputToUtc } from "@/lib/date-time";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
@@ -1055,10 +1055,7 @@ export async function broadcastLessonNotificationMutationAction(formData: FormDa
 
       const lessonName = (lesson.title?.trim() || lesson.course?.name || "-").trim();
       const lessonTypeName = lesson.lessonType?.name?.trim() || "-";
-      const scheduleLabel = `${formatDateForNotification(lesson.startsAt, locale)} - ${new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }).format(lesson.endsAt)}`;
+      const scheduleLabel = `${formatDateForNotification(lesson.startsAt, locale)} - ${formatDateTimeForApp(lesson.endsAt, { hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}`;
       const detailsLabel = locale === "it" ? "Dettagli lezione" : "Lesson details";
       const subject = locale === "it" ? "Messaggio lezione" : "Lesson message";
       const body = `${message}\n\n${detailsLabel}:\n${locale === "it" ? "Nome" : "Name"}: ${lessonName}\n${locale === "it" ? "Tipo" : "Type"}: ${lessonTypeName}\n${locale === "it" ? "Quando" : "When"}: ${scheduleLabel}`;

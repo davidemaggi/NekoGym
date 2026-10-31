@@ -5,8 +5,17 @@ const DATETIME_LOCAL_INPUT_PATTERN = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?
 
 type DateValue = Date | string | number;
 
+type InjectedDateTimeConfig = { locale?: string; timeZone?: string };
+
+/** In the browser, the server's runtime config (written by the root layout) wins over build-time NEXT_PUBLIC_ values. */
+function injectedConfig(): InjectedDateTimeConfig | null {
+  if (typeof window === "undefined") return null;
+  return (window as unknown as { __NEKO_DATETIME__?: InjectedDateTimeConfig }).__NEKO_DATETIME__ ?? null;
+}
+
 function configuredLocale(): string {
   return (
+    injectedConfig()?.locale ||
     process.env.NEXT_PUBLIC_APP_DATETIME_LOCALE?.trim() ||
     process.env.APP_DATETIME_LOCALE?.trim() ||
     DEFAULT_LOCALE
@@ -15,6 +24,7 @@ function configuredLocale(): string {
 
 function configuredTimeZone(): string {
   return (
+    injectedConfig()?.timeZone ||
     process.env.NEXT_PUBLIC_APP_DATETIME_TIMEZONE?.trim() ||
     process.env.APP_DATETIME_TIMEZONE?.trim() ||
     DEFAULT_TIME_ZONE
@@ -169,6 +179,24 @@ export function appDateTimeLocalValue(value: DateValue): string {
   }).formatToParts(toDate(value));
   const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
   return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
+}
+
+/** Wall-clock hour and minute of an instant in the app time zone. */
+export function getAppTimeParts(value: DateValue): { hour: number; minute: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolvedTimeZone(),
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(toDate(value));
+  const read = (type: Intl.DateTimeFormatPartTypes) => Number.parseInt(parts.find((part) => part.type === type)?.value ?? "0", 10);
+  return { hour: read("hour"), minute: read("minute") };
+}
+
+/** Weekday (Sunday=0) of a `YYYY-MM-DD` calendar date, independent of any time zone. */
+export function weekdayOfDateKey(dateKey: string): number {
+  const [year, month, day] = dateKey.split("-").map((part) => Number.parseInt(part, 10));
+  return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
 }
 
 /** `YYYY-MM-DD` of an instant in the app time zone (same format as date inputs / closed dates). */

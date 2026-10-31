@@ -1,5 +1,7 @@
 "use client";
 
+import { appDateTimeLocalValue, weekdayOfDateKey } from "@/lib/date-time";
+
 import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -56,14 +58,6 @@ type StandaloneLessonDialogProps = {
   disableTrainerSelection?: boolean;
 };
 
-function toDateTimeLocalValue(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
 
 export function StandaloneLessonCreateDialog({
   locale,
@@ -90,10 +84,8 @@ export function StandaloneLessonCreateDialog({
 
   const startsAtDefault = useMemo(() => {
     if (defaultStartsAt) return defaultStartsAt;
-    const nextHour = new Date();
-    nextHour.setMinutes(0, 0, 0);
-    nextHour.setHours(nextHour.getHours() + 1);
-    return toDateTimeLocalValue(nextHour);
+    // Next full hour on the gym's clock, whatever the device's time zone.
+    return `${appDateTimeLocalValue(new Date(new Date().getTime() + 60 * 60 * 1000)).slice(0, 13)}:00`;
   }, [defaultStartsAt]);
   const openWeekdaySet = useMemo(
     () => new Set<Weekday>((openWeekdays && openWeekdays.length > 0) ? openWeekdays : DEFAULT_OPEN_WEEKDAYS),
@@ -108,14 +100,14 @@ export function StandaloneLessonCreateDialog({
       return true;
     }
 
-    const date = new Date(raw);
-    if (Number.isNaN(date.getTime())) {
+    // The input holds a wall-clock date: read it as written, never through the device's zone.
+    const dateKey = raw.slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dateKey)) {
       input.setCustomValidity("");
       return true;
     }
 
-    const weekday = WEEKDAY_BY_INDEX[date.getDay()];
-    const dateKey = toDateTimeLocalValue(date).slice(0, 10);
+    const weekday = WEEKDAY_BY_INDEX[weekdayOfDateKey(dateKey)];
     const isClosed = !openWeekdaySet.has(weekday) || closedDateSet.has(dateKey);
     if (isClosed) {
       input.setCustomValidity(

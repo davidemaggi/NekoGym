@@ -1,5 +1,7 @@
 "use client";
 
+import { getAppDateTimeConfig } from "@/lib/date-time";
+
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronRight, DatabaseBackup, Download, Trash2, TriangleAlert, Upload } from "lucide-react";
@@ -85,6 +87,7 @@ function formatDate(date: Date, locale: string) {
   return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
     dateStyle: "short",
     timeStyle: "medium",
+    timeZone: getAppDateTimeConfig().timeZone,
   }).format(date);
 }
 

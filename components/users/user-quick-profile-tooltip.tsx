@@ -1,5 +1,7 @@
 "use client";
 
+import { getAppDateTimeConfig } from "@/lib/date-time";
+
 import { type ReactNode, useMemo, useState } from "react";
 
 type QuickProfileResponse = {
@@ -66,6 +68,7 @@ function formatDate(value: string | null, locale: string): string {
     day: "2-digit",
     month: "short",
     year: "numeric",
+    timeZone: getAppDateTimeConfig().timeZone,
   }).format(date);
 }
 

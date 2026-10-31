@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { getAppDateParts } from "@/lib/date-time";
 import { cn } from "@/lib/utils";
 
 type RangeView = "week" | "month" | "year";
@@ -36,14 +37,27 @@ type DashboardTypeChartProps = {
 // (No violets: that hue is reserved for the stamp.)
 const FALLBACK = ["#3b5fc4", "#059669", "#db2777", "#d97706", "#0d9488", "#0891b2"];
 
-function dayKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+// Buckets follow the gym's calendar (app time zone), not the device's: a 23:30 lesson stays on its day.
+// Calendar days are held as UTC-midnight dates, so arithmetic and labels never shift.
+function calendarDay(year: number, month: number, day: number) {
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
-function startOfWeek(date: Date) {
-  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  result.setDate(result.getDate() - ((result.getDay() + 6) % 7));
-  return result;
+function dayKey(day: Date) {
+  return day.toISOString().slice(0, 10);
+}
+
+function addDays(day: Date, amount: number) {
+  return new Date(day.getTime() + amount * 24 * 60 * 60 * 1000);
+}
+
+function startOfWeek(day: Date) {
+  return addDays(day, -((day.getUTCDay() + 6) % 7));
+}
+
+function appCalendarDay(instant: Date) {
+  const { year, month, day } = getAppDateParts(instant);
+  return calendarDay(year, month, day);
 }
 
 /** Lessons per type over a week / month / year: done lessons solid, scheduled ones hatched. */
@@ -81,34 +95,41 @@ export function DashboardTypeChart({ locale, lessons, labels, defaultRange = "mo
       return row;
     };
 
-    const short = new Intl.DateTimeFormat(intlLocale, { weekday: "short", day: "numeric" });
-    const dayMonth = new Intl.DateTimeFormat(intlLocale, { day: "numeric", month: "short" });
-    const monthName = new Intl.DateTimeFormat(intlLocale, { month: "short" });
+    const short = new Intl.DateTimeFormat(intlLocale, { weekday: "short", day: "numeric", timeZone: "UTC" });
+    const dayMonth = new Intl.DateTimeFormat(intlLocale, { day: "numeric", month: "short", timeZone: "UTC" });
+    const monthName = new Intl.DateTimeFormat(intlLocale, { month: "short", timeZone: "UTC" });
+    const today = getAppDateParts(now);
+    const todayDay = calendarDay(today.year, today.month, today.day);
     let bucketOf: (date: Date) => string | null;
 
     if (range === "week") {
-      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 3);
+      const start = addDays(todayDay, -3);
       for (let i = 0; i < 7; i += 1) {
-        const day = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        const day = addDays(start, i);
         buckets.set(dayKey(day), emptyRow(short.format(day)));
       }
-      bucketOf = (date) => dayKey(date);
+      bucketOf = (date) => dayKey(appCalendarDay(date));
     } else if (range === "month") {
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-      for (let week = startOfWeek(monthStart); week <= monthEnd; week = new Date(week.getFullYear(), week.getMonth(), week.getDate() + 7)) {
-        const weekEnd = new Date(week.getFullYear(), week.getMonth(), week.getDate() + 6);
+      const monthStart = calendarDay(today.year, today.month, 1);
+      const monthEnd = calendarDay(today.year, today.month + 1, 0);
+      for (let week = startOfWeek(monthStart); week <= monthEnd; week = addDays(week, 7)) {
+        const weekEnd = addDays(week, 6);
         const from = week < monthStart ? monthStart : week;
         const to = weekEnd > monthEnd ? monthEnd : weekEnd;
         buckets.set(dayKey(week), emptyRow(`${dayMonth.format(from)}–${dayMonth.format(to)}`));
       }
-      bucketOf = (date) =>
-        date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth() ? dayKey(startOfWeek(date)) : null;
+      bucketOf = (date) => {
+        const parts = getAppDateParts(date);
+        return parts.year === today.year && parts.month === today.month ? dayKey(startOfWeek(appCalendarDay(date))) : null;
+      };
     } else {
       for (let month = 0; month < 12; month += 1) {
-        buckets.set(String(month), emptyRow(monthName.format(new Date(now.getFullYear(), month, 1))));
+        buckets.set(String(month), emptyRow(monthName.format(calendarDay(today.year, month + 1, 1))));
       }
-      bucketOf = (date) => (date.getFullYear() === now.getFullYear() ? String(date.getMonth()) : null);
+      bucketOf = (date) => {
+        const parts = getAppDateParts(date);
+        return parts.year === today.year ? String(parts.month - 1) : null;
+      };
     }
 
     let total = 0;

@@ -1,5 +1,6 @@
 "use server";
 
+import { formatDateTimeForApp } from "@/lib/date-time";
 import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import nodemailer from "nodemailer";
@@ -214,8 +215,8 @@ export async function sendTestSiteTelegramAction(formData: FormData): Promise<Te
         chat_id: userWithTelegram.telegramChatId,
         text:
           locale === "it"
-            ? `Test Telegram NekoGym (${new Date().toLocaleString("it-IT")})`
-            : `NekoGym Telegram test (${new Date().toLocaleString("en-US")})`,
+            ? `Test Telegram NekoGym (${formatDateTimeForApp(new Date())})`
+            : `NekoGym Telegram test (${formatDateTimeForApp(new Date())})`,
       }),
     });
 

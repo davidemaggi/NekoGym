@@ -1,5 +1,7 @@
 "use client";
 
+import { getAppTimeParts } from "@/lib/date-time";
+
 import { useId, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -481,7 +483,7 @@ export function BookingsManager({
   }
 
   function defaultStartsAt(dayKey: string) {
-    const hour = dayKey === todayKey ? Math.min(23, new Date().getHours() + 1) : 8;
+    const hour = dayKey === todayKey ? Math.min(23, getAppTimeParts(new Date()).hour + 1) : 8;
     return `${dayKey}T${String(hour).padStart(2, "0")}:00`;
   }
 
