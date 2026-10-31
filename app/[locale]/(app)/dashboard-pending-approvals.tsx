@@ -7,6 +7,7 @@ import { toast } from "sonner";
 
 import { confirmLessonBookingAction, rejectLessonBookingAction } from "@/app/[locale]/(app)/bookings/actions";
 import { Button } from "@/components/ui/button";
+import { textLinkActionClass } from "@/lib/ui-classes";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { UserQuickProfileTooltip } from "@/components/users/user-quick-profile-tooltip";
 
@@ -69,7 +70,7 @@ export function DashboardPendingApprovals({ locale, items, canGrantOpenAccess, l
       <DialogTrigger asChild>
         <button
           type="button"
-          className="mt-1 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold underline decoration-[1.5px] underline-offset-4 hover:decoration-2"
+          className={textLinkActionClass}
         >
           {labels.openCta}
           <ChevronRight size={16} aria-hidden="true" />

@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/authorization";
-import { appDateKey, appStartOfDayUtc, getAppDateTimeConfig } from "@/lib/date-time";
+import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateTimeConfig } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
@@ -22,19 +22,6 @@ function parseDayKey(value: string | undefined, fallback: string) {
   return { year, month, day, weekday: probe.getUTCDay() };
 }
 
-function toDateTimeLocalValue(date: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
-  return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
-}
 
 export default async function BookingsPage({
   params,
@@ -167,13 +154,14 @@ export default async function BookingsPage({
       description: lesson.description ?? null,
       startsAt: lesson.startsAt.toISOString(),
       endsAt: lesson.endsAt.toISOString(),
-      startsAtLocal: toDateTimeLocalValue(lesson.startsAt, timeZone),
+      startsAtLocal: appDateTimeLocalValue(lesson.startsAt),
       timeLabel: timeFormat.format(lesson.startsAt),
       endTimeLabel: timeFormat.format(lesson.endsAt),
       stampDateLabel: stampFormat.format(lesson.startsAt),
       cancelDeadlineLabel: deadlineFormat.format(cancellationDeadline),
       durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
       hasStarted,
+      hasEnded: lesson.endsAt <= now,
       maxAttendees: lesson.maxAttendees,
       cancellationWindowHours: lesson.cancellationWindowHours,
       bookedCount,

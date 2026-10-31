@@ -33,7 +33,8 @@ type DashboardTypeChartProps = {
 };
 
 // Fallback hues only for lesson types without an admin colour; colours follow the type, never its rank.
-const FALLBACK = ["#3b5fc4", "#059669", "#db2777", "#d97706", "#7c3aed", "#0891b2"];
+// (No violets: that hue is reserved for the stamp.)
+const FALLBACK = ["#3b5fc4", "#059669", "#db2777", "#d97706", "#0d9488", "#0891b2"];
 
 function dayKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
@@ -146,7 +147,7 @@ export function DashboardTypeChart({ locale, lessons, labels, defaultRange = "mo
               aria-pressed={range === value}
               onClick={() => setRange(value)}
               className={cn(
-                "h-9 rounded-lg px-3 text-sm font-semibold transition-colors",
+                "h-11 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
                 range === value
                   ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
                   : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"

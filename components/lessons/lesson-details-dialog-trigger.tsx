@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { broadcastLessonNotificationMutationAction } from "@/app/[locale]/(app)/lessons/standalone-create-action";
 import { LessonManageDialog } from "@/app/[locale]/(app)/lessons/lesson-manage-dialog";
-import { Badge } from "@/components/ui/badge";
 import { UserQuickProfileTooltip } from "@/components/users/user-quick-profile-tooltip";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -120,15 +119,12 @@ type LessonDetailsDialogTriggerProps = {
   };
 };
 
-function formatDateTime(value: string, locale: string): string {
-  const date = new Date(value);
-  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-US", {
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+function formatDay(value: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", { weekday: "short", day: "numeric", month: "short" }).format(new Date(value));
+}
+
+function formatTime(value: string, locale: string): string {
+  return new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(value));
 }
 
 export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels, lesson, manage }: LessonDetailsDialogTriggerProps) {
@@ -165,45 +161,27 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
     });
   }
 
+  const timeRange = `${formatDay(lesson.startsAt, locale)} · ${formatTime(lesson.startsAt, locale)}–${formatTime(lesson.endsAt, locale)}`;
+
   const infoPanel = (
-    <div
-      className="space-y-2 rounded-md p-2 text-sm"
-      style={
-        lesson.lessonTypeColor
-          ? {
-              backgroundColor: hexToRgba(lesson.lessonTypeColor, 0.14),
-              border: `1px solid ${hexToRgba(lesson.lessonTypeColor, 0.45)}`,
-            }
-          : undefined
-      }
-    >
+    <div className="space-y-5">
+      <dl className="grid grid-cols-[minmax(0,7rem)_minmax(0,1fr)] gap-x-4 gap-y-3 text-[15px]">
+        <dt className="text-[var(--muted-foreground)]">{labels.startsAtLabel}</dt>
+        <dd className="tabular font-semibold first-letter:uppercase">{timeRange}</dd>
+        <dt className="text-[var(--muted-foreground)]">{labels.trainerLabel}</dt>
+        <dd>{lesson.trainerName ?? "-"}</dd>
+        <dt className="text-[var(--muted-foreground)]">{labels.bookedLabel}</dt>
+        <dd className="tabular">
+          {lesson.occupancy}
+          {lesson.canViewWaitlist && lesson.queueLength > 0 ? ` · ${labels.queuedLabel} ${lesson.queueLength}` : ""}
+        </dd>
+      </dl>
       {lesson.description ? (
-        <p className="text-xs text-[var(--muted-foreground)]">
-          {labels.lessonDescriptionLabel}: {lesson.description}
-        </p>
+        <p className="max-w-[60ch] text-[15px] text-[var(--muted-foreground)]">{lesson.description}</p>
       ) : null}
-      <p>{labels.startsAtLabel}: {formatDateTime(lesson.startsAt, locale)}</p>
-      <p>{labels.endsAtLabel}: {formatDateTime(lesson.endsAt, locale)}</p>
-      <p>{labels.trainerLabel}: {lesson.trainerName ?? "-"}</p>
-      <p>{labels.bookedLabel}: {lesson.occupancy}</p>
-      {lesson.canViewWaitlist ? <p>{labels.queuedLabel}: {lesson.queueLength}</p> : null}
-      {lesson.isCourseLesson ? (
-        <Badge variant="info">{labels.courseTag}</Badge>
-      ) : null}
-      <div className="flex items-center gap-2 text-xs text-[var(--muted-foreground)]">
-        {lesson.lessonTypeIcon ? (
-          <LessonTypeIcon
-            iconPath={lesson.lessonTypeIcon}
-            colorHex={lesson.lessonTypeColor}
-            size={16}
-            title={lesson.lessonTypeName ?? undefined}
-          />
-        ) : null}
-        <span>{lesson.lessonTypeName ?? "-"}</span>
-      </div>
       {lesson.canBroadcast ? (
-        <div className="space-y-1 border-t border-[var(--surface-border)] pt-2">
-          <p className="text-sm font-semibold">{labels.notifySectionTitle}</p>
+        <div className="space-y-2 border-t border-[var(--rule)] pt-4">
+          <p className="text-[15px] font-semibold">{labels.notifySectionTitle}</p>
           <Textarea
             value={message}
             onChange={(event) => setMessage(event.target.value)}
@@ -211,14 +189,38 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
             placeholder={labels.notifyMessagePlaceholder}
             disabled={isPending}
           />
-          <Button type="button" onClick={sendNotification} disabled={isPending || !message.trim()} className="gap-1">
-            <Send className="h-4 w-4" />
-            <span>{labels.notifySendCta}</span>
+          <Button type="button" variant="outline" onClick={sendNotification} disabled={isPending || !message.trim()}>
+            <Send size={16} aria-hidden="true" />
+            {labels.notifySendCta}
           </Button>
         </div>
       ) : null}
     </div>
   );
+
+  function peopleList(title: string, empty: string, people: Array<{ id: string; name: string }>, prefix: string) {
+    return (
+      <section>
+        <h3 className="flex items-baseline justify-between text-[15px] font-semibold">
+          {title}
+          <span className="tabular text-sm font-medium text-[var(--muted-foreground)]">{people.length}</span>
+        </h3>
+        {people.length === 0 ? (
+          <p className="mt-1 text-[15px] text-[var(--muted-foreground)]">{empty}</p>
+        ) : (
+          <ul className="mt-1 divide-y divide-[var(--rule)]">
+            {people.map((person) => (
+              <li key={`${prefix}-${lesson.id}-${person.id}`} className="flex min-h-11 items-center text-[15px]">
+                <UserQuickProfileTooltip userId={person.id} locale={locale}>
+                  {person.name}
+                </UserQuickProfileTooltip>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    );
+  }
 
   return (
     <>
@@ -231,7 +233,8 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
             <div className="flex items-start gap-3">
               {lesson.lessonTypeIcon ? (
                 <span
-                  className="inline-flex h-16 w-16 items-center justify-center rounded-xl"
+                  aria-hidden="true"
+                  className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl"
                   style={{
                     backgroundColor: lesson.lessonTypeColor ? hexToRgba(lesson.lessonTypeColor, 0.18) : undefined,
                     border: lesson.lessonTypeColor ? `1px solid ${hexToRgba(lesson.lessonTypeColor, 0.5)}` : undefined,
@@ -240,14 +243,17 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
                   <LessonTypeIcon
                     iconPath={lesson.lessonTypeIcon}
                     colorHex={lesson.lessonTypeColor}
-                    size={44}
-                    title={lesson.lessonTypeName ?? undefined}
+                    size={28}
                   />
                 </span>
               ) : null}
               <div className="space-y-1">
                 <DialogTitle>{lesson.title}</DialogTitle>
-                <DialogDescription>{labels.detailsDescription}</DialogDescription>
+                <DialogDescription>
+                  {lesson.lessonTypeName
+                    ? `${lesson.lessonTypeName}${lesson.isCourseLesson ? ` · ${labels.courseTag}` : ""}`
+                    : labels.detailsDescription}
+                </DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -258,67 +264,16 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
                 <TabsTrigger value="info">{manage.labels.tabMain}</TabsTrigger>
                 <TabsTrigger value="people" title={`${manage.labels.tabPeople} (${peopleCount})`}>
                   <span>{manage.labels.tabPeople}</span>
-                  <Badge variant="neutral" className="ml-1 h-5 min-w-5 px-1 text-[10px] leading-none">
-                    {peopleCount}
-                  </Badge>
+                  <span className="tabular ml-1 text-sm text-[var(--muted-foreground)]">{peopleCount}</span>
                 </TabsTrigger>
               </TabsList>
 
               <TabsContent value="info">{infoPanel}</TabsContent>
 
-              <TabsContent value="people" className="mt-0">
-                <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-2 text-sm">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium">{manage.labels.attendeesLabel}</p>
-                    {manage.lesson.attendees.length === 0 ? (
-                      <p className="text-xs text-[var(--muted-foreground)]">{manage.labels.noAttendees}</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {manage.lesson.attendees.map((attendee) => (
-                          <span key={`detail-attendee-${lesson.id}-${attendee.id}`} className="rounded border border-[var(--surface-border)] px-2 py-0.5 text-xs">
-                            <UserQuickProfileTooltip userId={attendee.id} locale={locale}>
-                              {attendee.name}
-                            </UserQuickProfileTooltip>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium">{manage.labels.pendingApprovalsLabel}</p>
-                    {manage.lesson.pendingApprovals.length === 0 ? (
-                      <p className="text-xs text-[var(--muted-foreground)]">{manage.labels.noPendingApprovals}</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {manage.lesson.pendingApprovals.map((pendingUser) => (
-                          <span key={`detail-pending-${lesson.id}-${pendingUser.id}`} className="rounded border border-[var(--surface-border)] px-2 py-0.5 text-xs">
-                            <UserQuickProfileTooltip userId={pendingUser.id} locale={locale}>
-                              {pendingUser.name}
-                            </UserQuickProfileTooltip>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium">{manage.labels.waitlistLabel}</p>
-                    {manage.lesson.waitlist.length === 0 ? (
-                      <p className="text-xs text-[var(--muted-foreground)]">{manage.labels.noWaitlist}</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1">
-                        {manage.lesson.waitlist.map((queuedUser) => (
-                          <span key={`detail-waitlist-${lesson.id}-${queuedUser.id}`} className="rounded border border-[var(--surface-border)] px-2 py-0.5 text-xs">
-                            <UserQuickProfileTooltip userId={queuedUser.id} locale={locale}>
-                              {queuedUser.name}
-                            </UserQuickProfileTooltip>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+              <TabsContent value="people" className="space-y-5">
+                {peopleList(manage.labels.attendeesLabel, manage.labels.noAttendees, manage.lesson.attendees, "attendee")}
+                {peopleList(manage.labels.pendingApprovalsLabel, manage.labels.noPendingApprovals, manage.lesson.pendingApprovals, "pending")}
+                {peopleList(manage.labels.waitlistLabel, manage.labels.noWaitlist, manage.lesson.waitlist, "waitlist")}
               </TabsContent>
             </Tabs>
           ) : (
@@ -326,26 +281,22 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
           )}
 
           <DialogFooter>
+            {footerSlot}
+            <Button type="button" variant="ghost" onClick={closeDialog}>
+              {labels.closeCta}
+            </Button>
             {manage ? (
               <Button
                 type="button"
-                variant="outline"
                 onClick={() => {
                   setOpen(false);
                   setManageOpen(true);
                 }}
-                aria-label={manage.labels.manageTriggerLabel}
-                title={manage.labels.manageTriggerLabel}
-                className="gap-1"
               >
-                <Pencil className="h-4 w-4" />
-                <span>{manage.labels.manageTriggerLabel}</span>
+                <Pencil size={16} aria-hidden="true" />
+                {manage.labels.manageTriggerLabel}
               </Button>
             ) : null}
-            {footerSlot}
-            <Button type="button" variant="secondary" onClick={closeDialog}>
-              {labels.closeCta}
-            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

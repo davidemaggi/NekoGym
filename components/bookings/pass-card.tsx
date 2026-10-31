@@ -16,6 +16,14 @@ export function fill(template: string, values: Record<string, string | number>) 
   return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
 }
 
+/** Fills {placeholders} with React nodes, so figures can be set as ticket figures inside a sentence. */
+export function fillNodes(template: string, values: Record<string, ReactNode>): ReactNode {
+  return template.split(/(\{\w+\})/g).map((part, index) => {
+    const key = /^\{(\w+)\}$/.exec(part)?.[1];
+    return key && key in values ? <span key={index}>{values[key]}</span> : part;
+  });
+}
+
 /** Like fill(), but sets {date} in condensed tabular figures, as printed on a ticket. */
 function fillDate(template: string, date: string): ReactNode {
   const [before, after = ""] = template.split("{date}");

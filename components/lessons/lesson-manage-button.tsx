@@ -1,9 +1,11 @@
 "use client";
 
+import type React from "react";
 import { ChevronRight } from "lucide-react";
 
 import { LessonDetailsDialogTrigger } from "@/components/lessons/lesson-details-dialog-trigger";
 import type { Dictionary } from "@/lib/i18n";
+import { textLinkActionClass } from "@/lib/ui-classes";
 
 type Person = { id: string; name: string; email?: string };
 
@@ -51,6 +53,8 @@ type LessonManageButtonProps = {
   triggerLabel?: string;
   /** "link" matches the to-do actions on the home (underlined text with chevron). */
   triggerVariant?: "button" | "link";
+  /** Extra actions rendered in the dialog footer (e.g. "Annulla lezione"). */
+  footerSlot?: React.ReactNode;
 };
 
 /** Opens the shared lesson dialog (info, people, attendance, broadcast) for staff. */
@@ -66,6 +70,7 @@ export function LessonManageButton({
   attendeeCandidates,
   triggerLabel,
   triggerVariant = "button",
+  footerSlot,
 }: LessonManageButtonProps) {
   const manageLabels = {
     title: lessonCreateLabels.manageTitle,
@@ -114,6 +119,7 @@ export function LessonManageButton({
   return (
     <LessonDetailsDialogTrigger
       locale={locale}
+      footerSlot={footerSlot}
       lesson={{
         id: lesson.id,
         title: lesson.title ?? lesson.courseName,
@@ -173,7 +179,7 @@ export function LessonManageButton({
       }}
       trigger={
         triggerVariant === "link" ? (
-          <span className="mt-1 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold underline decoration-[1.5px] underline-offset-4 hover:decoration-2">
+          <span className={textLinkActionClass}>
             {triggerLabel ?? labels.manageCta}
             <ChevronRight size={16} aria-hidden="true" />
           </span>

@@ -4,15 +4,17 @@ import { AlertTriangle, CalendarCheck, ChevronRight } from "lucide-react";
 
 import { requireAuth } from "@/lib/authorization";
 import { appDayRange } from "@/lib/booking-rules";
-import { appDateKey, appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
+import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { loadMemberPass } from "@/lib/member-pass";
 import { prisma } from "@/lib/prisma";
+import { textLinkActionClass } from "@/lib/ui-classes";
 import { cn } from "@/lib/utils";
-import { PassCard, fill } from "@/components/bookings/pass-card";
+import { PassCard, fill, fillNodes } from "@/components/bookings/pass-card";
 import { LessonManageButton, type ManageableLesson } from "@/components/lessons/lesson-manage-button";
+import { SeatStrip } from "@/components/lessons/seat-strip";
 import { PwaInstallBanner } from "@/components/pwa/install-banner";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { DashboardCrowdingChart } from "@/app/[locale]/(app)/dashboard-crowding-chart";
@@ -26,71 +28,10 @@ type HomeLesson = ManageableLesson & {
   phase: "ended" | "inProgress" | "upcoming";
 };
 
-function toDateTimeLocalValue(date: Date, timeZone: string): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  }).formatToParts(date);
-  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
-  return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
-}
 
 /** Seat strip: one segment per seat up to 16, a continuous bar beyond. */
-/**
- * Seat strip: one segment per seat up to 16, a continuous bar beyond. Confirmed seats are solid ink;
- * seats held by pending requests are dashed (Perforation rule: dashed means provisional).
- */
-function Occupancy({ booked, pending, max, label }: { booked: number; pending: number; max: number; label: string }) {
-  const solid = max > 0 ? Math.min(1, booked / max) : 0;
-  const held = max > 0 ? Math.min(1 - solid, pending / max) : 0;
-  return (
-    <div title={label}>
-      <p className="tabular text-sm text-[var(--muted-foreground)]">
-        <span className="text-[17px] font-bold text-[var(--foreground)]">{booked}</span>/{max}
-        {pending > 0 ? <span> +{pending}</span> : null}
-        <span className="sr-only"> · {label}</span>
-      </p>
-      {max <= 16 ? (
-        <div aria-hidden="true" className="mt-1.5 flex gap-0.5">
-          {Array.from({ length: max }, (_, index) => (
-            <span
-              key={index}
-              className={cn(
-                "h-[7px] flex-1 rounded-[2px]",
-                index < booked
-                  ? "bg-[var(--foreground)]"
-                  : index < booked + pending
-                    ? "border border-dashed border-[var(--foreground)]"
-                    : "bg-[var(--surface-border)]"
-              )}
-            />
-          ))}
-        </div>
-      ) : (
-        <div aria-hidden="true" className="mt-1.5 flex h-[7px] overflow-hidden rounded-full bg-[var(--surface-border)]">
-          <div className="h-full bg-[var(--foreground)]" style={{ width: `${solid * 100}%` }} />
-          <div className="h-full border border-dashed border-[var(--foreground)]" style={{ width: `${held * 100}%` }} />
-        </div>
-      )}
-    </div>
-  );
-}
 
-/** Fills {placeholders} with React nodes, so figures can be set as ticket figures inside a sentence. */
-function fillNodes(template: string, values: Record<string, ReactNode>): ReactNode {
-  return template.split(/(\{\w+\})/g).map((part, index) => {
-    const key = /^\{(\w+)\}$/.exec(part)?.[1];
-    return key && key in values ? <span key={index}>{values[key]}</span> : part;
-  });
-}
 
-const todoLinkClass =
-  "mt-1 inline-flex min-h-11 items-center gap-1 text-[15px] font-semibold underline decoration-[1.5px] underline-offset-4 hover:decoration-2";
 
 function TodoItem({
   count,
@@ -277,7 +218,7 @@ export default async function DashboardPage({
                   <li key={item.id} className="border-b border-[var(--rule)] last:border-b-0">
                     <Link
                       href={bookingsHref(item.dayKey)}
-                      className="grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 transition-colors hover:text-[var(--foreground)]"
+                      className="-mx-2 grid min-h-16 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--surface)]"
                     >
                       <span className="min-w-0">
                         <span className="flex items-center gap-2 font-semibold">
@@ -356,7 +297,7 @@ export default async function DashboardPage({
       description: lesson.description ?? null,
       startsAt: lesson.startsAt.toISOString(),
       endsAt: lesson.endsAt.toISOString(),
-      startsAtLocal: toDateTimeLocalValue(lesson.startsAt, timeZone),
+      startsAtLocal: appDateTimeLocalValue(lesson.startsAt),
       timeLabel: timeFormat.format(lesson.startsAt),
       durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
       hasStarted: lesson.startsAt <= now,
@@ -540,7 +481,7 @@ export default async function DashboardPage({
                       </p>
                     </div>
                     <div className="hidden sm:block">
-                      <Occupancy booked={lesson.bookedCount} pending={lesson.pendingCount} max={lesson.maxAttendees} label={occupancyLabel} />
+                      <SeatStrip booked={lesson.bookedCount} pending={lesson.pendingCount} max={lesson.maxAttendees} label={occupancyLabel} />
                     </div>
                     <div className="justify-self-end">
                       {lesson.canManageLesson ? (
@@ -627,7 +568,7 @@ export default async function DashboardPage({
                   </p>
                   <Link
                     href={`/${safeLocale}/bookings?day=${appDateKey(lesson.startsAt)}`}
-                    className={todoLinkClass}
+                    className={textLinkActionClass}
                   >
                     {home.todoRiskCta}
                     <ChevronRight size={16} aria-hidden="true" />

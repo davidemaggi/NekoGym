@@ -156,6 +156,21 @@ export function appStartOfDayUtc(year: number, month: number, day: number): Date
   return appLocalDateTimeToUtc(year, month, day, 0, 0);
 }
 
+/** `YYYY-MM-DDTHH:mm` of an instant in the app time zone, for <input type="datetime-local"> values. */
+export function appDateTimeLocalValue(value: DateValue): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolvedTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(toDate(value));
+  const read = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "00";
+  return `${read("year")}-${read("month")}-${read("day")}T${read("hour")}:${read("minute")}`;
+}
+
 /** `YYYY-MM-DD` of an instant in the app time zone (same format as date inputs / closed dates). */
 export function appDateKey(value: DateValue): string {
   const { year, month, day } = getAppDateParts(value);

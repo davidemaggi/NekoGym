@@ -196,6 +196,7 @@ export type Dictionary = {
     costPeriod: string;
     requiresConfirmation: string;
     lessonEnded: string;
+    lessonInProgress: string;
     manageCta: string;
     showDetails: string;
     upcomingTitle: string;
@@ -221,6 +222,21 @@ export type Dictionary = {
     };
   };
   lessonsPage: {
+    todayTag: string;
+    emptyMonthTitle: string;
+    emptyMonthFiltered: string;
+    backToCurrentMonth: string;
+    showAllLessonsCta: string;
+    onlyMineCta: string;
+    filtersLabel: string;
+    cancelledTag: string;
+    standaloneTag: string;
+    lessonsCount: string;
+    lessonsCountOne: string;
+    monthLessonsSummary: string;
+    manageCta: string;
+    moreActionsLabel: string;
+    emptyMonth: string;
     title: string;
     description: string;
     prevMonth: string;
@@ -987,6 +1003,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       costPeriod: "Conta nel limite del tuo abbonamento",
       requiresConfirmation: "La prenotazione va confermata dallo staff",
       lessonEnded: "Conclusa",
+      lessonInProgress: "In corso",
       manageCta: "Gestisci lezione",
       showDetails: "Mostra dettagli di {name}",
       upcomingTitle: "Le tue prossime lezioni",
@@ -1012,6 +1029,21 @@ const dictionaries: Record<Locale, Dictionary> = {
       },
     },
     lessonsPage: {
+      todayTag: "Oggi",
+      emptyMonthTitle: "Nessuna lezione",
+      emptyMonthFiltered: "Nessuna lezione corrisponde ai filtri in questo mese.",
+      backToCurrentMonth: "Torna al mese corrente",
+      showAllLessonsCta: "Mostra le lezioni di tutti",
+      onlyMineCta: "Solo le mie",
+      filtersLabel: "Filtri",
+      cancelledTag: "Annullata",
+      standaloneTag: "Singola",
+      lessonsCount: "{n} lezioni",
+      lessonsCountOne: "1 lezione",
+      monthLessonsSummary: "{lessons} lezioni · {people} iscritti nel mese",
+      manageCta: "Gestisci",
+      moreActionsLabel: "Altre azioni per {name}",
+      emptyMonth: "Non ci sono lezioni in programma in questo mese. Le lezioni dei corsi vengono generate fino al limite di prenotazione di ciascun corso.",
       title: "Lezioni",
       description: "Elenco mensile delle lezioni, raggruppate per giorno.",
       prevMonth: "Mese precedente",
@@ -1038,12 +1070,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       createStandaloneCta: "Crea lezione",
       updateStandaloneCta: "Salva modifiche",
       deleteStandaloneCta: "Elimina",
-      deleteLessonCta: "Cancella",
-      confirmDeleteLessonTitle: "Conferma cancellazione lezione",
-      confirmDeleteLessonDescription: "Questa azione annullera manualmente la lezione selezionata. Vuoi continuare?",
+      deleteLessonCta: "Annulla lezione",
+      confirmDeleteLessonTitle: "Annullare la lezione?",
+      confirmDeleteLessonDescription: "Gli iscritti riceveranno un avviso e, se hanno un abbonamento a ingressi, la lezione verrà restituita. Potrai ripristinarla dalle lezioni annullate.",
       restoreLessonCta: "Ripristina",
-      showDeletedCta: "Mostra cancellate",
-      hideDeletedCta: "Nascondi cancellate",
+      showDeletedCta: "Mostra annullate",
+      hideDeletedCta: "Nascondi annullate",
       showPastCta: "Mostra passate",
       hidePastCta: "Nascondi passate",
       deletedTag: "Cancellata",
@@ -1272,16 +1304,16 @@ const dictionaries: Record<Locale, Dictionary> = {
       },
       schedule: {
         title: "Schedulazione settimanale",
-        description: "Per ogni giorno puoi aggiungere uno o piu orari di inizio. L'orario di fine e calcolato automaticamente.",
+        description: "Per ogni giorno puoi aggiungere uno o più orari di inizio. L'orario di fine è calcolato automaticamente.",
         addSlot: "Aggiungi orario",
         noSlots: "Nessun orario configurato",
         removeSlot: "Rimuovi",
         weekdays: {
-          MONDAY: "Lunedi",
-          TUESDAY: "Martedi",
-          WEDNESDAY: "Mercoledi",
-          THURSDAY: "Giovedi",
-          FRIDAY: "Venerdi",
+          MONDAY: "Lunedì",
+          TUESDAY: "Martedì",
+          WEDNESDAY: "Mercoledì",
+          THURSDAY: "Giovedì",
+          FRIDAY: "Venerdì",
           SATURDAY: "Sabato",
           SUNDAY: "Domenica",
         },
@@ -1434,11 +1466,11 @@ const dictionaries: Record<Locale, Dictionary> = {
           uniqueTrainees: "Trainee unici",
         },
         weekdays: {
-          MONDAY: "Lunedi",
-          TUESDAY: "Martedi",
-          WEDNESDAY: "Mercoledi",
-          THURSDAY: "Giovedi",
-          FRIDAY: "Venerdi",
+          MONDAY: "Lunedì",
+          TUESDAY: "Martedì",
+          WEDNESDAY: "Mercoledì",
+          THURSDAY: "Giovedì",
+          FRIDAY: "Venerdì",
           SATURDAY: "Sabato",
           SUNDAY: "Domenica",
         },
@@ -1525,11 +1557,11 @@ const dictionaries: Record<Locale, Dictionary> = {
         closedDates: "Date chiusura (una per riga)",
       },
       weekdays: {
-        MONDAY: "Lunedi",
-        TUESDAY: "Martedi",
-        WEDNESDAY: "Mercoledi",
-        THURSDAY: "Giovedi",
-        FRIDAY: "Venerdi",
+        MONDAY: "Lunedì",
+        TUESDAY: "Martedì",
+        WEDNESDAY: "Mercoledì",
+        THURSDAY: "Giovedì",
+        FRIDAY: "Venerdì",
         SATURDAY: "Sabato",
         SUNDAY: "Domenica",
       },
@@ -1805,6 +1837,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       costPeriod: "Counts toward your plan limit",
       requiresConfirmation: "Staff must confirm this booking",
       lessonEnded: "Ended",
+      lessonInProgress: "In progress",
       manageCta: "Manage lesson",
       showDetails: "Show details for {name}",
       upcomingTitle: "Your next lessons",
@@ -1830,6 +1863,21 @@ const dictionaries: Record<Locale, Dictionary> = {
       },
     },
     lessonsPage: {
+      todayTag: "Today",
+      emptyMonthTitle: "No lessons",
+      emptyMonthFiltered: "No lessons match the filters this month.",
+      backToCurrentMonth: "Back to this month",
+      showAllLessonsCta: "Show everyone's lessons",
+      onlyMineCta: "Only mine",
+      filtersLabel: "Filters",
+      cancelledTag: "Cancelled",
+      standaloneTag: "One-off",
+      lessonsCount: "{n} lessons",
+      lessonsCountOne: "1 lesson",
+      monthLessonsSummary: "{lessons} lessons · {people} booked this month",
+      manageCta: "Manage",
+      moreActionsLabel: "More actions for {name}",
+      emptyMonth: "There are no lessons scheduled this month. Course lessons are generated up to each course's booking horizon.",
       title: "Lessons",
       description: "Monthly list of lessons grouped by day.",
       prevMonth: "Previous month",
@@ -1856,9 +1904,9 @@ const dictionaries: Record<Locale, Dictionary> = {
       createStandaloneCta: "Create lesson",
       updateStandaloneCta: "Save changes",
       deleteStandaloneCta: "Delete",
-      deleteLessonCta: "Cancel",
-      confirmDeleteLessonTitle: "Confirm lesson cancellation",
-      confirmDeleteLessonDescription: "This action manually cancels the selected lesson. Do you want to continue?",
+      deleteLessonCta: "Cancel lesson",
+      confirmDeleteLessonTitle: "Cancel this lesson?",
+      confirmDeleteLessonDescription: "Attendees will be notified and, on entry passes, get the lesson back. You can restore it from cancelled lessons.",
       restoreLessonCta: "Restore",
       showDeletedCta: "Show deleted",
       hideDeletedCta: "Hide deleted",

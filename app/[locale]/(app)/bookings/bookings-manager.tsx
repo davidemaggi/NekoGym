@@ -54,6 +54,7 @@ export type BookingsLesson = {
   cancelDeadlineLabel: string;
   durationMinutes: number;
   hasStarted: boolean;
+  hasEnded: boolean;
   maxAttendees: number;
   cancellationWindowHours: number;
   bookedCount: number;
@@ -260,7 +261,11 @@ function BookingAction({
   }
 
   if (lesson.hasStarted) {
-    return <span className="text-sm font-semibold text-[var(--muted-foreground)]">{labels.lessonEnded}</span>;
+    return lesson.hasEnded ? (
+      <span className="text-sm font-semibold text-[var(--muted-foreground)]">{labels.lessonEnded}</span>
+    ) : (
+      <span className="text-sm font-semibold text-[var(--success-fg)]">{labels.lessonInProgress}</span>
+    );
   }
 
   const isFull = lesson.availableSeats <= 0;
