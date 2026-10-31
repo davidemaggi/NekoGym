@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T12:52:27.675060+00:00",
+  "generatedAt": "2026-10-31T13:12:24.732570+00:00",
   "title": "Design System: NekoGym",
   "extensions": {
     "colorMeta": {
@@ -826,12 +826,20 @@
       "css": ".ds-input { display: flex; width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--surface-border, #dde1e9); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 16px; outline: none; caret-color: var(--stamp, #5b3fa0); transition: border-color 150ms; } .ds-input::placeholder { color: var(--muted-foreground, #555a78); } .ds-input:hover { border-color: var(--muted-foreground, #555a78); } .ds-input:focus-visible { border-color: var(--ring, #5b3fa0); outline: 2px solid var(--ring, #5b3fa0); outline-offset: 0; }"
     },
     {
+      "name": "Native Select",
+      "kind": "input",
+      "refersTo": "select",
+      "description": "Every <select> in the field style: 44px, 16px text, drawn muted chevron.",
+      "html": "<select class=\"ds-select\" aria-label=\"Trainer\"><option>Sara Villa</option><option>Marco Testa</option></select>",
+      "css": ".ds-select { height: 44px; padding: 0 40px 0 14px; border: 1px solid var(--surface-border, #dde1e9); border-radius: 12px; background-color: var(--surface, #ffffff); background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555a78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 0.85rem center; color: var(--foreground, #1f2340); font: 400 16px Archivo, ui-sans-serif, system-ui, sans-serif; appearance: none; -webkit-appearance: none; transition: border-color 150ms; } .ds-select:hover { border-color: var(--muted-foreground, #555a78); } .ds-select:focus-visible { border-color: var(--ring, #5b3fa0); outline: 2px solid var(--ring, #5b3fa0); outline-offset: 0; }"
+    },
+    {
       "name": "Badges",
       "kind": "chip",
       "refersTo": "badge-neutral",
-      "description": "Pale semantic grounds with deep ink. Badges have no stamp variant.",
-      "html": "<span class=\"ds-badge\">Bozza</span> <span class=\"ds-badge ds-badge-success\">Attivo</span> <span class=\"ds-badge ds-badge-warning\">In prova</span> <span class=\"ds-badge ds-badge-danger\">Annullata</span>",
-      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 600; } .ds-badge-success { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-badge-warning { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); } .ds-badge-danger { background: var(--danger-bg, #f8e1e4); color: var(--danger-fg, #8c2236); }"
+      "description": "Status tags: 13px semibold on pale semantic grounds with deep ink; 'Modificata' names its reasons. Badges have no stamp variant.",
+      "html": "<span class=\"ds-badge\">Bozza</span> <span class=\"ds-badge ds-badge-success\">Attivo</span> <span class=\"ds-badge ds-badge-warning\">Modificata: orario</span> <span class=\"ds-badge ds-badge-danger\">Annullata</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; } .ds-badge-success { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-badge-warning { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); } .ds-badge-danger { background: var(--danger-bg, #f8e1e4); color: var(--danger-fg, #8c2236); }"
     },
     {
       "name": "Validator Stamp",
@@ -885,9 +893,17 @@
       "name": "Segmented Control",
       "kind": "custom",
       "refersTo": "segmented-control",
-      "description": "Range switch on a muted rail; the pressed option sits on surface with Lift.",
-      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Periodo\"><button aria-pressed=\"false\">Settimanale</button><button aria-pressed=\"true\">Mensile</button><button aria-pressed=\"false\">Annuale</button></div>",
-      "css": ".ds-seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--muted, #eceef3); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-seg button { height: 36px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: var(--muted-foreground, #555a78); font: 600 14px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: color 150ms, background-color 150ms; } .ds-seg button:hover { color: var(--foreground, #1f2340); } .ds-seg button[aria-pressed='true'] { background: var(--surface, #ffffff); color: var(--foreground, #1f2340); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-seg button:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+      "description": "Exclusive views or filters on a muted rail (chart range, course trainer filter, course form panels); 44px options, the pressed one on surface with Lift.",
+      "html": "<div class=\"ds-seg\" role=\"group\" aria-label=\"Trainer\"><button aria-pressed=\"true\">Tutti</button><button aria-pressed=\"false\">Con trainer</button><button aria-pressed=\"false\">Senza trainer</button></div>",
+      "css": ".ds-seg { display: inline-flex; padding: 4px; border-radius: 12px; background: var(--muted, #eceef3); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-seg button { height: 44px; padding: 0 14px; border: 0; border-radius: 8px; background: transparent; color: var(--muted-foreground, #555a78); font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; cursor: pointer; transition: color 150ms, background-color 150ms; } .ds-seg button:hover { color: var(--foreground, #1f2340); } .ds-seg button[aria-pressed='true'] { background: var(--surface, #ffffff); color: var(--foreground, #1f2340); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); } .ds-seg button:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Filter Toggle",
+      "kind": "chip",
+      "refersTo": "filter-toggle-active",
+      "description": "Independent on/off filter in a page band; on = surface fill, 1.5px ink stroke and a check.",
+      "html": "<div class=\"ds-band\"><a class=\"ds-ftoggle\" role=\"button\" aria-pressed=\"true\" href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M20 6 9 17l-5-5\"/></svg>Mostra passate</a> <a class=\"ds-ftoggle\" role=\"button\" aria-pressed=\"false\" href=\"#\">Mostra annullate</a></div>",
+      "css": ".ds-band { display: flex; gap: 8px; padding: 16px; background: var(--stock-azzurro, #dceaf6); } .ds-ftoggle { display: inline-flex; align-items: center; gap: 6px; height: 44px; padding: 0 14px; border-radius: 12px; border: 1.5px solid var(--stock-edge, rgb(31 35 64 / 0.1)); color: var(--stock-ink, #1f2340); opacity: 1; font: 600 15px Archivo, ui-sans-serif, system-ui, sans-serif; text-decoration: none; transition: background-color 150ms; } .ds-ftoggle[aria-pressed='false'] { color: rgb(31 35 64 / 0.8); } .ds-ftoggle[aria-pressed='false']:hover { background: rgb(255 255 255 / 0.6); } .ds-ftoggle[aria-pressed='true'] { background: var(--surface, #ffffff); border-color: var(--foreground, #1f2340); color: var(--foreground, #1f2340); } .ds-ftoggle:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
     },
     {
       "name": "Chart Tooltip and Legend",
@@ -904,11 +920,19 @@
       "description": "Phones: four role destinations plus Menu; the active icon sits in a pill of its section stock.",
       "html": "<nav class=\"ds-tabbar\"><a href=\"#\" class=\"ds-tab-item\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg></span>Home</a><a href=\"#\" class=\"ds-tab-item is-active\" aria-current=\"page\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4\"/><path d=\"M8 2v4\"/><path d=\"M3 10h18\"/><path d=\"m9 16 2 2 4-4\"/></svg></span>Prenotazioni</a><a href=\"#\" class=\"ds-tab-item\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 6h16\"/><path d=\"M4 12h16\"/><path d=\"M4 18h16\"/></svg></span>Menu</a></nav>",
       "css": ".ds-tabbar { display: flex; max-width: 36rem; border-top: 1px solid var(--rule, #e6e9ef); background: var(--surface, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 12px; font-weight: 600; color: var(--muted-foreground, #555a78); text-decoration: none; } .ds-tab-item:hover { color: var(--foreground, #1f2340); } .ds-tab-item:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: -2px; } .ds-tab-pill { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 32px; border-radius: 9999px; transition: background-color 150ms; } .ds-tab-item.is-active { color: var(--foreground, #1f2340); } .ds-tab-item.is-active .ds-tab-pill { background: var(--stock-mint, #dcefe3); color: var(--stock-ink, #1f2340); }"
+    },
+    {
+      "name": "Course Week Timetable",
+      "kind": "custom",
+      "refersTo": "timetable-chip",
+      "description": "A course's week as a printed timetable: one column per open weekday, giallino tabular time chips, an empty cell keeps the column.",
+      "html": "<div class=\"ds-tt\" role=\"group\" aria-label=\"Schedulazione\"><div><p>Lun</p><span class=\"ds-tt-chip\">07:30</span></div><div><p>Mar</p><span class=\"ds-tt-chip\">07:30</span><span class=\"ds-tt-chip\">18:00</span></div><div><p>Mer</p><span class=\"ds-tt-empty\" aria-hidden=\"true\"></span></div><div><p>Gio</p><span class=\"ds-tt-chip\">07:30</span></div><div><p>Ven</p><span class=\"ds-tt-empty\" aria-hidden=\"true\"></span></div><div><p>Sab</p><span class=\"ds-tt-chip\">10:00</span></div></div>",
+      "css": ".ds-tt { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 4px; max-width: 480px; font-family: Archivo, ui-sans-serif, system-ui, sans-serif; text-align: center; } .ds-tt div { display: grid; gap: 4px; align-content: start; } .ds-tt p { margin: 0 0 0; font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--muted-foreground, #555a78); } .ds-tt-chip { display: block; padding: 4px 0; border-radius: 6px; background: var(--stock-giallino, #f4ecc6); color: var(--stock-ink, #1f2340); font-size: 13px; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-tt-empty { display: block; height: 28px; border-radius: 6px; border: 1px solid var(--rule, #e6e9ef); }"
     }
   ],
   "narrative": {
     "northStar": "Abbonamento",
-    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: the bookings surface, the per-role home (staff and member), the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui`, the home charts, the toaster, the Web Push banner and the PWA install banner are in the world. Lessons, courses, users, settings, reports and the auth screens currently only inherit the tokens and primitives; their layouts are pre-redesign and are not part of this system. Do not copy their compositions as precedent.",
+    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: four surfaces are the world: Bookings, the per-role Home (staff and member), Lessons and Courses, together with the shared lesson dialog, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui` (including the native select), the home charts, the toaster, the Web Push banner and the PWA install banner. Users, settings, reports, notifications and the auth screens still only inherit the tokens and primitives; their layouts are pre-redesign and are not part of this system. Do not copy their compositions as precedent.",
     "keyCharacteristics": [
       "One paper stock per section; the current stock tints the shell and the page header band.",
       "Night-blue ink for text and primary actions; never a neutral admin grey ground.",
@@ -964,6 +988,11 @@
         "name": "The Hatch Rule",
         "body": "In charts, a lesson that is scheduled but not yet held is a 45° hatch in its type colour over surface, outlined 1.5px in the same colour; held lessons are solid. The legend always explains the hatch. The hatch is the chart's counterpart of the perforation and appears nowhere else.",
         "section": "shapes"
+      },
+      {
+        "name": "The Deliberate Delete Rule",
+        "body": "Cancelling a lesson and deleting a course are never row actions. They live in the footer of the object's own dialog as a ghost-danger button and always pass through a confirmation with the solid destructive button. Rows carry only the forward action (manage, edit) or the undo (restore).",
+        "section": "components"
       }
     ],
     "dos": [
@@ -977,17 +1006,21 @@
       "**Do** give every to-do item exactly one action, as a text-link action with a chevron.",
       "**Do** show seats as a seat strip (solid booked, dashed pending) rather than a percentage.",
       "**Do** colour chart categories by their lesson type, use `chart-1` for a single series, hatch scheduled lessons, and keep a legend for two or more series.",
-      "**Do** dim behind overlays with the `overlay` token, never an ad-hoc black."
+      "**Do** dim behind overlays with the `overlay` token, never an ad-hoc black.",
+      "**Do** put page filters in the band: independent filters as filter toggles (check icon plus ink stroke when on), exclusive choices as a segmented control.",
+      "**Do** give every native select the `.ui-select` class.",
+      "**Do** set status tags at 13px semibold on a semantic ground, and say why a lesson is modified (\"Modificata: orario\")."
     ],
     "donts": [
       "**Don't** use stamp violet for anything but the user's own bookings (beyond focus ring, caret and control accent).",
       "**Don't** put content on a neutral grey ground; the field is the section paper.",
       "**Don't** add gradient washes, glass, or blur. The only gradients in the build are hard-stop marks: the punched centre of a used entry slot and the hatch key in the chart legend.",
       "**Don't** add shadow to lists, nav, inline banners or ordinary cards; lift is for the pass, the opened or in-progress row, the next-lesson card, the active tab or segment, and overlays.",
-      "**Don't** use uppercase tracked lettering outside a stamp face, a stamp chip and the day strip's weekday abbreviations.",
+      "**Don't** use uppercase lettering outside a stamp face, a stamp chip and weekday abbreviations (the day strip, the course timetable heads); tracking belongs to the stamp alone.",
       "**Don't** use stamp violet or Chart Blue for seats, counts or to-do tiles; seats are ink, tiles are semantic grounds.",
       "**Don't** reorder rows or animate layout when state changes.",
-      "**Don't** treat the lessons, courses, users, settings, reports or auth layouts as precedent until they are redesigned."
+      "**Don't** put cancel or delete buttons in list rows; they belong in the object's dialog footer behind a confirmation.",
+      "**Don't** treat the users, settings, reports, notifications or auth layouts as precedent until they are redesigned."
     ]
   }
 }
