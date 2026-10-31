@@ -18,6 +18,17 @@ import {
 } from "@/app/[locale]/(app)/settings/profile/actions";
 import { PageBand } from "@/components/layout/page-band";
 import { CheckRow, SegmentedTabs, SettingsSection, StatusNote } from "@/components/settings/settings-ui";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -72,6 +83,7 @@ type ProfileSettingsManagerProps = {
     twoFactorSecretLabel: string;
     twoFactorOtpAuthLabel: string;
     twoFactorHint: string;
+    cancelCta: string;
     webPushTitle: string;
     webPushDescription: string;
     webPushSupported: string;
@@ -254,8 +266,8 @@ function SecurityTabContent(props: {
                 </li>
                 <li>
                   <form id="totp-enable-form" className="space-y-3" onSubmit={(event) => event.preventDefault()}>
-                    <Label>{props.labels.twoFactorCodeLabel}</Label>
-                    <OtpCodeField />
+                    <Label htmlFor="totp-code">{props.labels.twoFactorCodeLabel}</Label>
+                    <OtpCodeField id="totp-code" />
                     <Button type="button" onClick={props.onEnableTotp} disabled={props.isTotpPending}>
                       {props.labels.twoFactorVerifyCta}
                     </Button>
@@ -265,9 +277,31 @@ function SecurityTabContent(props: {
             )}
           </>
         ) : (
-          <Button type="button" variant="destructive" onClick={props.onDisableTotp} disabled={props.isTotpPending}>
-            {props.labels.twoFactorDisableCta}
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button type="button" variant="ghost" className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]" disabled={props.isTotpPending}>
+                {props.labels.twoFactorDisableCta}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{props.labels.twoFactorDisableCta}</AlertDialogTitle>
+                <AlertDialogDescription>{props.labels.twoFactorDescription}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel asChild>
+                  <Button type="button" variant="ghost">
+                    {props.labels.cancelCta}
+                  </Button>
+                </AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button type="button" variant="destructive" onClick={props.onDisableTotp}>
+                    {props.labels.twoFactorDisableCta}
+                  </Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
       </SettingsSection>
     </div>
@@ -304,7 +338,8 @@ function NotificationsTabContent(props: {
   return (
     <div>
       <SettingsSection title={props.labels.notificationPrefsTitle} description={props.labels.notificationPrefsDescription}>
-        <div className="-my-1">
+        <fieldset className="-my-1">
+          <legend className="sr-only">{props.labels.notificationPrefsTitle}</legend>
           <CheckRow checked={props.notifyByEmail} onChange={props.onToggleNotifyByEmail}>
             {props.labels.notificationEmailLabel}
           </CheckRow>
@@ -314,8 +349,8 @@ function NotificationsTabContent(props: {
           <CheckRow checked={props.notifyByWebPush} onChange={props.onToggleNotifyByWebPush}>
             {props.labels.notificationWebPushLabel}
           </CheckRow>
-        </div>
-        <div className="space-y-1.5">
+        </fieldset>
+        <div className="space-y-1.5 pt-2">
           <Label htmlFor="notificationsRetentionDays">{props.labels.notificationsRetentionDaysLabel}</Label>
           <Input
             id="notificationsRetentionDays"
@@ -433,7 +468,7 @@ function TelegramTabContent(props: {
         <SettingsSection title={props.labels.codeLabel} description={props.labels.codeHint}>
           <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
             <div className="min-w-0 space-y-3">
-              <p className="tabular inline-block rounded-xl bg-[var(--muted)] px-4 py-2.5 font-mono text-[1.375rem] font-semibold tracking-wider">
+              <p className="inline-block rounded-xl bg-[var(--muted)] px-4 py-2.5 font-mono text-[1.375rem] font-semibold tracking-wider">
                 {props.state.linkToken}
               </p>
               {props.linkCommand ? (

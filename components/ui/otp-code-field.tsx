@@ -5,13 +5,15 @@ import { useState } from "react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 
 type OtpCodeFieldProps = {
+  /** Id of the real input, for <Label htmlFor>. */
+  id?: string;
   name?: string;
   length?: number;
   value?: string;
   onChange?: (value: string) => void;
 };
 
-export function OtpCodeField({ name = "code", length = 6, value, onChange }: OtpCodeFieldProps) {
+export function OtpCodeField({ id, name = "code", length = 6, value, onChange }: OtpCodeFieldProps) {
   const [internalValue, setInternalValue] = useState("");
   const currentValue = value ?? internalValue;
 
@@ -24,7 +26,7 @@ export function OtpCodeField({ name = "code", length = 6, value, onChange }: Otp
 
   return (
     <div className="space-y-2">
-      <InputOTP maxLength={length} value={currentValue} onChange={handleChange}>
+      <InputOTP id={id} autoComplete="one-time-code" maxLength={length} value={currentValue} onChange={handleChange}>
         <InputOTPGroup>
           {Array.from({ length }).map((_, index) => (
             <InputOTPSlot key={index} index={index} />

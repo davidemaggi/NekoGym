@@ -1,10 +1,3 @@
-"use client";
-
-import { Bar, BarChart, CartesianGrid, Line, ResponsiveContainer, XAxis, YAxis } from "recharts";
-
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-
 type HealthRow = {
   courseName: string;
   fillRatePct: number;
@@ -22,36 +15,64 @@ type ReportsHealthChartProps = {
   };
 };
 
-const config: ChartConfig = {
-  fillRatePct: { label: "fill", color: "#d89a73" },
-  noShowRatePct: { label: "no-show", color: "#b74b4b" },
-};
+function Meter({ value, color, label }: { value: number; color: string; label: string }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_3.5rem] items-center gap-3">
+      <div
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={clamped}
+        className="h-2 overflow-hidden rounded-full bg-[var(--muted)]"
+      >
+        <div className="h-full rounded-full" style={{ width: `${clamped}%`, background: color }} />
+      </div>
+      <span className="tabular text-right text-[15px]">{value}%</span>
+    </div>
+  );
+}
 
+/**
+ * Fill rate and no-show per course, both 0–100%: one row per course with two thin meters
+ * on the same scale, values always printed (the meter is never the only carrier).
+ */
 export function ReportsHealthChart({ rows, labels }: ReportsHealthChartProps) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{labels.title}</CardTitle>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
-        ) : (
-          <ChartContainer config={config} className="h-[280px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows} margin={{ left: 8, right: 8 }}>
-                <CartesianGrid vertical={false} />
-                <XAxis dataKey="courseName" tickLine={false} axisLine={false} interval={0} angle={-18} textAnchor="end" height={70} />
-                <YAxis tickLine={false} axisLine={false} domain={[0, 100]} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="fillRatePct" fill="var(--color-fillRatePct)" radius={4} />
-                <Line type="monotone" dataKey="noShowRatePct" stroke="var(--color-noShowRatePct)" strokeWidth={2} dot />
-              </BarChart>
-            </ResponsiveContainer>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+    <section aria-labelledby="course-health-heading" className="border-t border-[var(--rule)] py-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="max-w-prose">
+          <h2 id="course-health-heading" className="text-[17px] font-semibold">{labels.title}</h2>
+          <p className="mt-1 text-[15px] text-[var(--muted-foreground)]">{labels.description}</p>
+        </div>
+        <ul className="flex gap-4 text-sm">
+          <li className="inline-flex items-center gap-2">
+            <span aria-hidden="true" className="h-2 w-5 rounded-full bg-[var(--chart-1)]" />
+            {labels.fillRate}
+          </li>
+          <li className="inline-flex items-center gap-2">
+            <span aria-hidden="true" className="h-2 w-5 rounded-full bg-[var(--muted-foreground)]" />
+            {labels.noShowRate}
+          </li>
+        </ul>
+      </div>
+
+      {rows.length === 0 ? (
+        <p className="mt-3 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
+      ) : (
+        <ul className="mt-4 space-y-4">
+          {rows.map((row) => (
+            <li key={row.courseName} className="grid gap-1.5 sm:grid-cols-[12rem_minmax(0,1fr)] sm:gap-6">
+              <p className="text-[15px] font-semibold leading-snug">{row.courseName}</p>
+              <div className="space-y-1.5">
+                <Meter value={row.fillRatePct} color="var(--chart-1)" label={`${row.courseName} · ${labels.fillRate}`} />
+                <Meter value={row.noShowRatePct} color="var(--muted-foreground)" label={`${row.courseName} · ${labels.noShowRate}`} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

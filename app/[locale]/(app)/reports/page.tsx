@@ -3,7 +3,16 @@ import { getDictionary, isLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { buildReportsSnapshot, parseReportDays, parseSelectedReportIds, reportRangeForDays } from "@/lib/reports";
 import { updateReportDeliverySettingsAction } from "@/app/[locale]/(app)/reports/actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import Link from "next/link";
+import { FileDown, Minus, TrendingDown, TrendingUp } from "lucide-react";
+
+import { PageBand } from "@/components/layout/page-band";
+import { CheckRow, SettingsSection, StatusNote } from "@/components/settings/settings-ui";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { formatDateTimeForApp } from "@/lib/date-time";
+import { cn } from "@/lib/utils";
+import { ReportTable } from "@/app/[locale]/(app)/reports/report-table";
 import { ReportsHealthChart } from "@/app/[locale]/(app)/reports/reports-health-chart";
 
 function trendDelta(current: number, previous: number): { deltaPct: number; sign: "up" | "down" | "flat" } {
@@ -49,368 +58,237 @@ export default async function ReportsPage({
   });
   const selectedReportIds = parseSelectedReportIds(settings?.reportDigestReportsCsv ?? null);
 
+  const periods: Array<[number, string]> = [
+    [7, labels.filters.last7Days],
+    [30, labels.filters.last30Days],
+    [90, labels.filters.last90Days],
+  ];
+  const kpis: Array<{ label: string; value: string; trend: ReturnType<typeof trendDelta> }> = [
+    { label: labels.kpis.lessonsCount, value: String(snapshot.totals.lessonsCount), trend: lessonsTrend },
+    { label: labels.kpis.totalBookings, value: String(snapshot.totals.totalBookings), trend: bookingsTrend },
+    { label: labels.kpis.avgFillRate, value: `${snapshot.totals.avgFillRatePct}%`, trend: fillTrend },
+  ];
+  const TREND_ICON = { up: TrendingUp, down: TrendingDown, flat: Minus } as const;
+  const highlights = [
+    topCourse
+      ? labels.executiveTopCourse.replace("{course}", topCourse.courseName).replace("{bookings}", String(topCourse.totalBookings))
+      : null,
+    busiestSlot
+      ? labels.executiveBusiestSlot
+          .replace("{weekday}", labels.weekdays[busiestSlot.weekday])
+          .replace("{time}", busiestSlot.slotLabel)
+          .replace("{fill}", `${busiestSlot.fillRatePct}%`)
+      : null,
+    topNoShow
+      ? labels.executiveTopNoShow
+          .replace("{name}", topNoShow.traineeName)
+          .replace("{rate}", `${topNoShow.noShowRatePct}%`)
+          .replace("{count}", String(topNoShow.noShowCount))
+      : null,
+  ].filter((line): line is string => Boolean(line));
+  const digestReports = [
+    ["COURSE_POPULARITY", labels.sections.coursePopularityTitle],
+    ["TIME_CROWDING", labels.sections.timeCrowdingTitle],
+    ["TRAINER_PERFORMANCE", labels.sections.trainerPerformanceTitle],
+    ["NO_SHOW_ANALYTICS", labels.sections.noShowAnalyticsTitle],
+  ] as const;
+
   return (
-    <section className="space-y-4">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 rounded-md border border-[var(--surface-border)] p-3">
-        <form method="get" className="flex items-center gap-2">
-          <label htmlFor="days" className="text-sm font-medium">
-            {labels.filters.periodLabel}
-          </label>
-          <select id="days" name="days" defaultValue={String(days)} className="ui-select">
-            <option value="7">{labels.filters.last7Days}</option>
-            <option value="30">{labels.filters.last30Days}</option>
-            <option value="90">{labels.filters.last90Days}</option>
-          </select>
-          <button type="submit" className="rounded-md border border-[var(--surface-border)] px-3 py-1 text-sm">
-            {labels.filters.applyCta}
-          </button>
-        </form>
-
-        <a
-          href={`/${safeLocale}/reports/export?days=${days}`}
-          className="rounded-md border border-[var(--surface-border)] px-3 py-1 text-sm"
-        >
-          {labels.exportPdfCta}
-        </a>
-      </div>
-
-      {saved === "1" ? (
-        <p className="rounded-md border border-emerald-300/40 bg-emerald-100/40 px-3 py-2 text-sm text-emerald-900 dark:text-emerald-200">
-          {labels.settings.savedMessage}
-        </p>
-      ) : null}
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>{labels.kpis.lessonsCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{snapshot.totals.lessonsCount}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {labels.trendLabel}: {lessonsTrend.deltaPct > 0 ? "+" : ""}{lessonsTrend.deltaPct}%
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{labels.kpis.totalBookings}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{snapshot.totals.totalBookings}</p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {labels.trendLabel}: {bookingsTrend.deltaPct > 0 ? "+" : ""}{bookingsTrend.deltaPct}%
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader>
-            <CardTitle>{labels.kpis.avgFillRate}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-2xl font-semibold">{snapshot.totals.avgFillRatePct}%</p>
-            <p className="text-xs text-[var(--muted-foreground)]">
-              {labels.trendLabel}: {fillTrend.deltaPct > 0 ? "+" : ""}{fillTrend.deltaPct}%
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.executiveTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <p>
-            {topCourse
-              ? labels.executiveTopCourse
-                .replace("{course}", topCourse.courseName)
-                .replace("{bookings}", String(topCourse.totalBookings))
-              : labels.empty}
-          </p>
-          <p>
-            {busiestSlot
-              ? labels.executiveBusiestSlot
-                .replace("{weekday}", labels.weekdays[busiestSlot.weekday])
-                .replace("{time}", busiestSlot.slotLabel)
-                .replace("{fill}", `${busiestSlot.fillRatePct}%`)
-              : labels.empty}
-          </p>
-          <p>
-            {topNoShow
-              ? labels.executiveTopNoShow
-                .replace("{name}", topNoShow.traineeName)
-                .replace("{rate}", `${topNoShow.noShowRatePct}%`)
-                .replace("{count}", String(topNoShow.noShowCount))
-              : labels.empty}
-          </p>
-        </CardContent>
-      </Card>
-
-      <ReportsHealthChart
-        rows={snapshot.courseHealth.slice(0, 8).map((row) => ({
-          courseName: row.courseName,
-          fillRatePct: row.fillRatePct,
-          noShowRatePct: row.noShowRatePct,
-        }))}
-        labels={{
-          title: labels.sections.courseHealthChartTitle,
-          description: labels.sections.courseHealthChartDescription,
-          empty: labels.empty,
-          fillRate: labels.columns.fillRate,
-          noShowRate: labels.columns.noShowRate,
-        }}
-      />
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.sections.coursePopularityTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-sm">
-            <thead>
-              <tr className="border-b border-[var(--surface-border)] text-left">
-                <th className="py-2 pr-2">{labels.columns.course}</th>
-                <th className="py-2 pr-2">{labels.columns.lessons}</th>
-                <th className="py-2 pr-2">{labels.columns.bookings}</th>
-                <th className="py-2 pr-2">{labels.columns.avgAttendees}</th>
-                <th className="py-2 pr-2">{labels.columns.fillRate}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.coursePopularity.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-3 text-[var(--muted-foreground)]">
-                    {labels.empty}
-                  </td>
-                </tr>
-              ) : (
-                snapshot.coursePopularity.map((row) => (
-                  <tr key={row.courseId} className="border-b border-[var(--surface-border)]/60">
-                    <td className="py-2 pr-2">{row.courseName}</td>
-                    <td className="py-2 pr-2">{row.lessonsCount}</td>
-                    <td className="py-2 pr-2">{row.totalBookings}</td>
-                    <td className="py-2 pr-2">{row.avgAttendees}</td>
-                    <td className="py-2 pr-2">{row.fillRatePct}%</td>
-                  </tr>
-                ))
+    <div className="space-y-5">
+      <PageBand
+        title={labels.title}
+        description={labels.description}
+        action={
+          <a
+            href={`/${safeLocale}/reports/export?days=${days}`}
+            aria-label={labels.exportPdfCta}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border-[1.5px] border-[var(--foreground)] bg-[var(--surface)] text-[15px] font-semibold hover:bg-[var(--muted)] sm:w-auto sm:px-4"
+          >
+            <FileDown size={18} aria-hidden="true" />
+            <span className="hidden sm:inline">{labels.exportPdfCta}</span>
+          </a>
+        }
+      >
+        <nav aria-label={labels.filters.periodLabel} className="mt-5 inline-flex max-w-full flex-wrap gap-0.5 rounded-xl bg-[var(--muted)] p-1">
+          {periods.map(([value, label]) => (
+            <Link
+              key={value}
+              href={`/${safeLocale}/reports?days=${value}`}
+              aria-current={days === value ? "page" : undefined}
+              className={cn(
+                "inline-flex h-11 items-center rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
+                days === value
+                  ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                  : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
               )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+            >
+              {label}
+            </Link>
+          ))}
+        </nav>
+      </PageBand>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.sections.timeCrowdingTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-sm">
-            <thead>
-              <tr className="border-b border-[var(--surface-border)] text-left">
-                <th className="py-2 pr-2">{labels.columns.weekday}</th>
-                <th className="py-2 pr-2">{labels.columns.time}</th>
-                <th className="py-2 pr-2">{labels.columns.lessons}</th>
-                <th className="py-2 pr-2">{labels.columns.bookings}</th>
-                <th className="py-2 pr-2">{labels.columns.fillRate}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.timeCrowding.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-3 text-[var(--muted-foreground)]">
-                    {labels.empty}
-                  </td>
-                </tr>
-              ) : (
-                snapshot.timeCrowding.map((row) => (
-                  <tr key={`${row.weekday}-${row.hour}`} className="border-b border-[var(--surface-border)]/60">
-                    <td className="py-2 pr-2">{labels.weekdays[row.weekday]}</td>
-                    <td className="py-2 pr-2">{row.slotLabel}</td>
-                    <td className="py-2 pr-2">{row.lessonsCount}</td>
-                    <td className="py-2 pr-2">
-                      {row.totalBookings}/{row.totalCapacity}
-                    </td>
-                    <td className="py-2 pr-2">{row.fillRatePct}%</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      {saved === "1" ? <StatusNote tone="ok">{labels.settings.savedMessage}</StatusNote> : null}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.sections.trainerPerformanceTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[700px] text-sm">
-            <thead>
-              <tr className="border-b border-[var(--surface-border)] text-left">
-                <th className="py-2 pr-2">{labels.columns.trainer}</th>
-                <th className="py-2 pr-2">{labels.columns.lessons}</th>
-                <th className="py-2 pr-2">{labels.columns.bookings}</th>
-                <th className="py-2 pr-2">{labels.columns.uniqueTrainees}</th>
-                <th className="py-2 pr-2">{labels.columns.avgAttendees}</th>
-                <th className="py-2 pr-2">{labels.columns.fillRate}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.trainerPerformance.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-3 text-[var(--muted-foreground)]">
-                    {labels.empty}
-                  </td>
-                </tr>
-              ) : (
-                snapshot.trainerPerformance.map((row) => (
-                  <tr key={row.trainerId} className="border-b border-[var(--surface-border)]/60">
-                    <td className="py-2 pr-2">{row.trainerName}</td>
-                    <td className="py-2 pr-2">{row.lessonsCount}</td>
-                    <td className="py-2 pr-2">{row.totalBookings}</td>
-                    <td className="py-2 pr-2">{row.uniqueTrainees}</td>
-                    <td className="py-2 pr-2">{row.avgAttendees}</td>
-                    <td className="py-2 pr-2">{row.fillRatePct}%</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+      <div className="max-w-5xl">
+        <dl className="grid grid-cols-3 gap-3 pb-6 sm:gap-6">
+          {kpis.map((kpi) => {
+            const Icon = TREND_ICON[kpi.trend.sign];
+            return (
+              <div key={kpi.label} className="min-w-0">
+                <dt className="text-sm font-semibold text-[var(--muted-foreground)] sm:text-[15px]">{kpi.label}</dt>
+                <dd className="tabular mt-1 text-[1.75rem] font-bold leading-none sm:text-[2.5rem]">{kpi.value}</dd>
+                <dd className="mt-2 flex items-start gap-1 text-sm text-[var(--muted-foreground)]">
+                  <Icon size={16} aria-hidden="true" className="mt-0.5 shrink-0" />
+                  <span>
+                    <span className="tabular font-semibold text-[var(--foreground)]">
+                      {kpi.trend.deltaPct > 0 ? "+" : ""}
+                      {kpi.trend.deltaPct}%
+                    </span>{" "}
+                    <span className="hidden sm:inline">{labels.trendLabel}</span>
+                  </span>
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.sections.noShowAnalyticsTitle}</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-[var(--surface-border)] text-left">
-                <th className="py-2 pr-2">{labels.columns.trainee}</th>
-                <th className="py-2 pr-2">{labels.columns.bookings}</th>
-                <th className="py-2 pr-2">{labels.columns.markedAttendances}</th>
-                <th className="py-2 pr-2">{labels.columns.present}</th>
-                <th className="py-2 pr-2">{labels.columns.noShow}</th>
-                <th className="py-2 pr-2">{labels.columns.noShowRate}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {snapshot.noShowAnalytics.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="py-3 text-[var(--muted-foreground)]">
-                    {labels.empty}
-                  </td>
-                </tr>
-              ) : (
-                snapshot.noShowAnalytics.map((row) => (
-                  <tr key={row.traineeId} className="border-b border-[var(--surface-border)]/60">
-                    <td className="py-2 pr-2">{row.traineeName}</td>
-                    <td className="py-2 pr-2">{row.totalBookings}</td>
-                    <td className="py-2 pr-2">{row.markedAttendances}</td>
-                    <td className="py-2 pr-2">{row.presentCount}</td>
-                    <td className="py-2 pr-2">{row.noShowCount}</td>
-                    <td className={["py-2 pr-2", row.noShowRatePct >= 30 ? "font-semibold text-[var(--danger-fg)]" : ""].join(" ")}>
-                      {row.noShowRatePct}%
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+        <section aria-labelledby="highlights-heading" className="border-t border-[var(--rule)] py-6">
+          <h2 id="highlights-heading" className="text-[17px] font-semibold">{labels.executiveTitle}</h2>
+          {highlights.length === 0 ? (
+            <p className="mt-3 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
+          ) : (
+            <ul className="mt-3 max-w-prose list-disc space-y-1.5 pl-5 text-[16px]">
+              {highlights.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.settings.title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.settings.description}</p>
-          <form action={updateReportDeliverySettingsAction} className="space-y-3">
+        <ReportsHealthChart
+          rows={snapshot.courseHealth.slice(0, 8).map((row) => ({
+            courseName: row.courseName,
+            fillRatePct: row.fillRatePct,
+            noShowRatePct: row.noShowRatePct,
+          }))}
+          labels={{
+            title: labels.sections.courseHealthChartTitle,
+            description: labels.sections.courseHealthChartDescription,
+            empty: labels.empty,
+            fillRate: labels.columns.fillRate,
+            noShowRate: labels.columns.noShowRate,
+          }}
+        />
+
+        <ReportTable
+          title={labels.sections.coursePopularityTitle}
+          empty={labels.empty}
+          rows={snapshot.coursePopularity}
+          rowKey={(row) => row.courseId}
+          columns={[
+            { key: "course", label: labels.columns.course, render: (row) => row.courseName },
+            { key: "lessons", label: labels.columns.lessons, numeric: true, render: (row) => row.lessonsCount },
+            { key: "bookings", label: labels.columns.bookings, numeric: true, render: (row) => row.totalBookings },
+            { key: "avg", label: labels.columns.avgAttendees, numeric: true, render: (row) => row.avgAttendees },
+            { key: "fill", label: labels.columns.fillRate, numeric: true, render: (row) => `${row.fillRatePct}%` },
+          ]}
+        />
+
+        <ReportTable
+          title={labels.sections.timeCrowdingTitle}
+          empty={labels.empty}
+          rows={snapshot.timeCrowding}
+          rowKey={(row) => `${row.weekday}-${row.hour}`}
+          columns={[
+            { key: "slot", label: labels.columns.time, render: (row) => `${labels.weekdays[row.weekday]} ${row.slotLabel}` },
+            { key: "lessons", label: labels.columns.lessons, numeric: true, render: (row) => row.lessonsCount },
+            { key: "bookings", label: labels.columns.bookings, numeric: true, render: (row) => `${row.totalBookings}/${row.totalCapacity}` },
+            { key: "fill", label: labels.columns.fillRate, numeric: true, render: (row) => `${row.fillRatePct}%` },
+          ]}
+        />
+
+        <ReportTable
+          title={labels.sections.trainerPerformanceTitle}
+          empty={labels.empty}
+          rows={snapshot.trainerPerformance}
+          rowKey={(row) => row.trainerId}
+          columns={[
+            { key: "trainer", label: labels.columns.trainer, render: (row) => row.trainerName },
+            { key: "lessons", label: labels.columns.lessons, numeric: true, render: (row) => row.lessonsCount },
+            { key: "bookings", label: labels.columns.bookings, numeric: true, render: (row) => row.totalBookings },
+            { key: "unique", label: labels.columns.uniqueTrainees, numeric: true, render: (row) => row.uniqueTrainees },
+            { key: "avg", label: labels.columns.avgAttendees, numeric: true, render: (row) => row.avgAttendees },
+            { key: "fill", label: labels.columns.fillRate, numeric: true, render: (row) => `${row.fillRatePct}%` },
+          ]}
+        />
+
+        <ReportTable
+          title={labels.sections.noShowAnalyticsTitle}
+          empty={labels.empty}
+          rows={snapshot.noShowAnalytics}
+          rowKey={(row) => row.traineeId}
+          columns={[
+            { key: "trainee", label: labels.columns.trainee, render: (row) => row.traineeName },
+            { key: "bookings", label: labels.columns.bookings, numeric: true, render: (row) => row.totalBookings },
+            { key: "marked", label: labels.columns.markedAttendances, numeric: true, render: (row) => row.markedAttendances },
+            { key: "present", label: labels.columns.present, numeric: true, render: (row) => row.presentCount },
+            { key: "noShow", label: labels.columns.noShow, numeric: true, render: (row) => row.noShowCount },
+            {
+              key: "rate",
+              label: labels.columns.noShowRate,
+              numeric: true,
+              render: (row) => `${row.noShowRatePct}%`,
+              emphasize: (row) => row.noShowRatePct >= 30,
+            },
+          ]}
+        />
+
+        <SettingsSection title={labels.settings.title} description={labels.settings.description}>
+          <form action={updateReportDeliverySettingsAction} className="space-y-4">
             <input type="hidden" name="locale" value={safeLocale} />
             <input type="hidden" name="days" value={days} />
-
-            <div className="space-y-1">
-              <label htmlFor="reportDigestFrequency" className="text-sm font-medium">
-                {labels.settings.frequencyLabel}
-              </label>
+            <div className="space-y-1.5">
+              <Label htmlFor="reportDigestFrequency">{labels.settings.frequencyLabel}</Label>
               <select
                 id="reportDigestFrequency"
                 name="reportDigestFrequency"
                 defaultValue={settings?.reportDigestFrequency ?? "NEVER"}
-                className="ui-select"
+                className="ui-select w-full sm:max-w-xs"
               >
                 <option value="NEVER">{labels.settings.frequencyNever}</option>
                 <option value="WEEKLY">{labels.settings.frequencyWeekly}</option>
                 <option value="MONTHLY">{labels.settings.frequencyMonthly}</option>
               </select>
             </div>
-
-            <fieldset className="space-y-1">
-              <legend className="text-sm font-medium">{labels.settings.reportsLabel}</legend>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="reportIds"
-                  value="COURSE_POPULARITY"
-                  defaultChecked={selectedReportIds.includes("COURSE_POPULARITY")}
-                />
-                {labels.sections.coursePopularityTitle}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="reportIds"
-                  value="TIME_CROWDING"
-                  defaultChecked={selectedReportIds.includes("TIME_CROWDING")}
-                />
-                {labels.sections.timeCrowdingTitle}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="reportIds"
-                  value="TRAINER_PERFORMANCE"
-                  defaultChecked={selectedReportIds.includes("TRAINER_PERFORMANCE")}
-                />
-                {labels.sections.trainerPerformanceTitle}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="reportIds"
-                  value="NO_SHOW_ANALYTICS"
-                  defaultChecked={selectedReportIds.includes("NO_SHOW_ANALYTICS")}
-                />
-                {labels.sections.noShowAnalyticsTitle}
-              </label>
+            <fieldset>
+              <legend className="text-sm font-semibold">{labels.settings.reportsLabel}</legend>
+              <div className="mt-1 grid sm:grid-cols-2 sm:gap-x-6">
+                {digestReports.map(([id, label]) => (
+                  <CheckRow key={id} name="reportIds" value={id} defaultChecked={selectedReportIds.includes(id)}>
+                    {label}
+                  </CheckRow>
+                ))}
+              </div>
             </fieldset>
-
             {settings?.reportDigestLastSentAt ? (
-              <p className="text-xs text-[var(--muted-foreground)]">
-                {labels.settings.lastSentLabel}: {new Intl.DateTimeFormat(safeLocale === "it" ? "it-IT" : "en-US", {
-                  year: "numeric",
-                  month: "2-digit",
-                  day: "2-digit",
-                  hour: "2-digit",
-                  minute: "2-digit",
-                }).format(settings.reportDigestLastSentAt)}
+              <p className="text-sm text-[var(--muted-foreground)]">
+                {labels.settings.lastSentLabel}:{" "}
+                <span className="tabular">
+                  {formatDateTimeForApp(settings.reportDigestLastSentAt, {
+                    year: "numeric",
+                    month: "2-digit",
+                    day: "2-digit",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
               </p>
             ) : null}
-
-            <button type="submit" className="rounded-md border border-[var(--surface-border)] px-3 py-1 text-sm">
-              {labels.settings.saveCta}
-            </button>
+            <Button type="submit">{labels.settings.saveCta}</Button>
           </form>
-        </CardContent>
-      </Card>
-    </section>
+        </SettingsSection>
+      </div>
+    </div>
   );
 }

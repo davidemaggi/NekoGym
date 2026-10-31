@@ -339,7 +339,7 @@ export function SiteSettingsManager({ locale, labels, initialValues, envValues }
               <Textarea
                 id="closedDates"
                 name="closedDates"
-                className="tabular font-mono sm:max-w-xs"
+                className="tabular sm:max-w-xs"
                 aria-invalid={!areClosedDatesValid}
                 aria-describedby={!areClosedDatesValid ? "closedDates-error" : undefined}
                 value={formValues.closedDates}

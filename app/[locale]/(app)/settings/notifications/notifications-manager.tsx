@@ -213,10 +213,18 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
     });
   }
 
-  const pageInfo = labels.outbox.pagination.pageInfo
-    .replace("{page}", String(filters.page))
-    .replace("{totalPages}", String(filters.totalPages))
-    .replace("{total}", String(filters.total));
+  const pageFigures: Record<string, number> = { page: filters.page, totalPages: filters.totalPages, total: filters.total };
+  // Only the figures are set as ticket numerals, never the sentence around them.
+  const pageInfo = labels.outbox.pagination.pageInfo.split(/(\{\w+\})/).map((part, index) => {
+    const key = part.match(/^\{(\w+)\}$/)?.[1];
+    return key && key in pageFigures ? (
+      <span key={index} className="tabular">
+        {pageFigures[key]}
+      </span>
+    ) : (
+      part
+    );
+  });
 
   return (
     <div className="space-y-5">
@@ -253,7 +261,7 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
           </form>
         </SettingsSection>
 
-        <SettingsSection title={labels.outbox.title} description={<span className="tabular">{pageInfo}</span>}>
+        <SettingsSection title={labels.outbox.title} description={pageInfo}>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-[repeat(4,minmax(0,1fr))_auto] md:items-end">
             <div className="space-y-1.5">
               <Label htmlFor="outbox-status">{labels.outbox.filters.status}</Label>

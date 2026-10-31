@@ -18,7 +18,16 @@ export function SegmentedTabs<T extends string>({
   className?: string;
 }) {
   return (
-    <div role="group" aria-label={label} className={cn("inline-flex max-w-full flex-wrap gap-0.5 rounded-xl bg-[var(--muted)] p-1", className)}>
+    <div
+      role="group"
+      aria-label={label}
+      className={cn(
+        "gap-0.5 rounded-xl bg-[var(--muted)] p-1",
+        // Four or more views split into an even 2×2 grid on phones instead of a ragged wrap.
+        options.length > 3 ? "grid w-full grid-cols-2 sm:inline-flex sm:w-auto" : "inline-flex max-w-full",
+        className
+      )}
+    >
       {options.map(([option, text]) => (
         <button
           key={option}
@@ -26,7 +35,7 @@ export function SegmentedTabs<T extends string>({
           aria-pressed={value === option}
           onClick={() => onChange(option)}
           className={cn(
-            "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
+            "min-h-11 shrink-0 rounded-lg px-3.5 py-2 text-center text-[15px] font-semibold leading-tight transition-colors",
             value === option
               ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
               : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
@@ -78,6 +87,7 @@ export function CheckRow({
   children,
   hint,
   name,
+  value,
   defaultChecked,
   disabled,
 }: {
@@ -86,6 +96,7 @@ export function CheckRow({
   children: ReactNode;
   hint?: ReactNode;
   name?: string;
+  value?: string;
   defaultChecked?: boolean;
   disabled?: boolean;
 }) {
@@ -94,6 +105,7 @@ export function CheckRow({
       <input
         type="checkbox"
         name={name}
+        value={value}
         checked={checked}
         defaultChecked={defaultChecked}
         disabled={disabled}

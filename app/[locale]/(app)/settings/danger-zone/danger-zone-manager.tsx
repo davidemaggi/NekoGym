@@ -319,8 +319,8 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label>{labels.restoreOtpLabel}</Label>
-                <OtpCodeField name="otpCode" value={restoreOtpCode} onChange={setRestoreOtpCode} />
+                <Label htmlFor="restore-otp">{labels.restoreOtpLabel}</Label>
+                <OtpCodeField id="restore-otp" name="otpCode" value={restoreOtpCode} onChange={setRestoreOtpCode} />
               </div>
               <Button type="submit" variant="outline" disabled={!canSubmitRestore}>
                 {isRestorePending ? labels.restoring : labels.restoreCta}
@@ -345,15 +345,15 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
                   placeholder="RESET"
                   autoComplete="off"
                   aria-describedby="confirmation-hint"
-                  className="font-mono sm:max-w-xs"
+                  className="sm:max-w-xs"
                   value={resetConfirmation}
                   onChange={(event) => setResetConfirmation(event.target.value)}
                 />
                 <p id="confirmation-hint" className="text-sm text-[var(--muted-foreground)]">{labels.resetConfirmationHint}</p>
               </div>
               <div className="space-y-1.5">
-                <Label>{labels.resetOtpLabel}</Label>
-                <OtpCodeField name="otpCode" value={resetOtpCode} onChange={setResetOtpCode} />
+                <Label htmlFor="reset-otp">{labels.resetOtpLabel}</Label>
+                <OtpCodeField id="reset-otp" name="otpCode" value={resetOtpCode} onChange={setResetOtpCode} />
               </div>
               <Button type="submit" variant="destructive" disabled={!canSubmitReset}>
                 {isResetPending ? labels.resetting : labels.resetCta}
