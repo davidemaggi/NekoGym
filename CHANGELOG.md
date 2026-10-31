@@ -1,3 +1,34 @@
+# [1.1.0](https://github.com/davidemaggi/NekoGym/compare/v1.0.12...v1.1.0) (2026-10-31)
+
+
+### Bug Fixes
+
+* booking rules, lesson time zone, notice-window job and backups ([2801e87](https://github.com/davidemaggi/NekoGym/commit/2801e87c145af04cfb65d789d8e70530d014f63d))
+* courses and users review fixes (alignment, deliberate delete, a11y) ([48a892a](https://github.com/davidemaggi/NekoGym/commit/48a892ab560faf1b62010b41b0a3d94d11fa3e25))
+* every date shown and parsed in the gym time zone ([deb3f07](https://github.com/davidemaggi/NekoGym/commit/deb3f07b1abc78f55d0b107417c10c23672c3af2))
+* final review fixes for lesson management and repeat ([77448cc](https://github.com/davidemaggi/NekoGym/commit/77448ccad099d42039710134d5a32c15ff6a8cff))
+* keep staff-cancelled course lessons cancelled across reconcile ([bd18060](https://github.com/davidemaggi/NekoGym/commit/bd1806029b884fbf4369b0bb69c6960234a7c538))
+* named destructive confirm buttons; wrapping user form tabs ([77ed811](https://github.com/davidemaggi/NekoGym/commit/77ed811ccf37650f4e6341168a00df94b577833b))
+* PWA manifest colours and description match the app ([ee68ba7](https://github.com/davidemaggi/NekoGym/commit/ee68ba7269f8707a9c1ad4f130100c0edba0380a))
+* quick profile name ellipsis and member-since line ([45fb200](https://github.com/davidemaggi/NekoGym/commit/45fb200b47e329812d39a91080a7359c6a775834))
+* reports and sign-in review fixes ([ad47a7c](https://github.com/davidemaggi/NekoGym/commit/ad47a7c119467cd4f1b91186b4fd91568646ef4e))
+
+
+### Features
+
+* "Abbonamento" redesign, new app shell and bookings screen ([01dc0b7](https://github.com/davidemaggi/NekoGym/commit/01dc0b7573a980aee13c5c5ad2ea01527d531679))
+* per-role home with today's lessons, to-do list and member pass ([d2cc37f](https://github.com/davidemaggi/NekoGym/commit/d2cc37f04d8e9e4583e71e90198ca994b9f85ba1))
+* plan usage at a glance for staff ([be73160](https://github.com/davidemaggi/NekoGym/commit/be73160ed05df8cd7bb4fcbe770a15b2a8955822))
+* redesigned courses catalog and system-styled native selects ([afd9b21](https://github.com/davidemaggi/NekoGym/commit/afd9b21ff14bbb9d28221e7a56f24fd455a4924e))
+* redesigned lesson management, lesson form, quick profile and status pages ([f3ac3ad](https://github.com/davidemaggi/NekoGym/commit/f3ac3ad0ed64b46911d86b1eb854fed21e22ba0d))
+* redesigned notifications inbox ([1888b93](https://github.com/davidemaggi/NekoGym/commit/1888b9374584ad37b37cd5bb496d92f42b65d9af))
+* redesigned reports; settings review fixes ([093ee9b](https://github.com/davidemaggi/NekoGym/commit/093ee9bef3a45d3edc63693c3f94eface71f2e29))
+* redesigned settings pages (profile, site, registries, notifications, danger zone) ([22b120c](https://github.com/davidemaggi/NekoGym/commit/22b120c52f7f072109da57ef17e63fcc62d01188))
+* redesigned sign-in pages ([10461ef](https://github.com/davidemaggi/NekoGym/commit/10461efc22b1cc1e55a141342882e494cf6fb30a))
+* redesigned staff lessons list and shared lesson dialog ([b0a65dc](https://github.com/davidemaggi/NekoGym/commit/b0a65dc9ba6ee400f308852685bd500b2a236648))
+* redesigned users list; drift fixes from the design docs pass ([d415c9f](https://github.com/davidemaggi/NekoGym/commit/d415c9f0427b8a24d8b3f0a70ae5c315dc9ba0ff))
+* repeat standalone lessons without a course ([14e89be](https://github.com/davidemaggi/NekoGym/commit/14e89bebd1ccf8de3a2fd46f2ed6c317c894fbf7))
+
 ## [1.0.12](https://github.com/davidemaggi/NekoGym/compare/v1.0.11...v1.0.12) (2026-07-11)
 
 
