@@ -762,7 +762,15 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                 onClick={submitConfirmedAction}
                 disabled={isPending}
               >
-                {isPending ? labels.actions.processing : labels.actions.confirm}
+                {isPending
+                  ? labels.actions.processing
+                  : confirmation?.kind === "delete"
+                    ? labels.actions.delete
+                    : confirmation?.kind === "toggleActivation"
+                      ? confirmation.payload.disable
+                        ? localActions.deactivate
+                        : localActions.activate
+                      : labels.actions.confirm}
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -803,7 +811,7 @@ function UserFormFields({
 
   return (
     <>
-      <div role="group" className="flex max-w-full overflow-x-auto rounded-xl bg-[var(--muted)] p-1">
+      <div role="group" className="flex flex-wrap gap-0.5 rounded-xl bg-[var(--muted)] p-1">
         <button
           type="button"
           onClick={() => setActiveTab("profile")}

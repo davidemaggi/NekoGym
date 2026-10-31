@@ -934,7 +934,7 @@ export function CoursesManager({
                 onClick={submitConfirmedAction}
                 disabled={isPending}
               >
-                {isPending ? labels.actions.processing : labels.actions.confirm}
+                {isPending ? labels.actions.processing : confirmation?.kind === "delete" ? labels.actions.delete : labels.actions.confirm}
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
