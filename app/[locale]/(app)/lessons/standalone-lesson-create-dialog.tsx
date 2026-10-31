@@ -153,8 +153,8 @@ export function StandaloneLessonCreateDialog({
       <DialogTrigger asChild>
         {trigger ?? (
           <Button>
-            <Plus className="h-4 w-4" />
-            <span>{labels.triggerCta}</span>
+            <Plus size={18} aria-hidden="true" />
+            {labels.triggerCta}
           </Button>
         )}
       </DialogTrigger>
@@ -164,14 +164,14 @@ export function StandaloneLessonCreateDialog({
           <DialogDescription>{labels.description}</DialogDescription>
         </DialogHeader>
 
-        <form action={handleSubmit} className="grid gap-3">
+        <form action={handleSubmit} className="space-y-4">
           <input type="hidden" name="locale" value={locale} />
           {lessonId ? <input type="hidden" name="lessonId" value={lessonId} /> : null}
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor={lessonId ? `lessonTitle-${lessonId}` : "lessonTitle-create"}>{labels.lessonTitleLabel}</Label>
             <Input id={lessonId ? `lessonTitle-${lessonId}` : "lessonTitle-create"} name="title" defaultValue={defaultTitle ?? ""} />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor={lessonId ? `lessonDescription-${lessonId}` : "lessonDescription-create"}>{labels.lessonDescriptionLabel}</Label>
             <Textarea
               id={lessonId ? `lessonDescription-${lessonId}` : "lessonDescription-create"}
@@ -180,11 +180,12 @@ export function StandaloneLessonCreateDialog({
               rows={3}
             />
           </div>
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <Label htmlFor={lessonId ? `startsAt-${lessonId}` : "startsAt-create"}>{labels.startsAtLabel}</Label>
             <Input
               id={lessonId ? `startsAt-${lessonId}` : "startsAt-create"}
               type="datetime-local"
+              className="tabular"
               name="startsAt"
               required
               defaultValue={startsAtDefault}
@@ -195,43 +196,49 @@ export function StandaloneLessonCreateDialog({
               onInvalid={(event) => validateScheduleDate(event.currentTarget)}
             />
           </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div className="space-y-1.5">
               <Label htmlFor={lessonId ? `duration-${lessonId}` : "duration-create"}>{labels.standaloneDuration}</Label>
               <Input
                 id={lessonId ? `duration-${lessonId}` : "duration-create"}
                 type="number"
+                inputMode="numeric"
+                className="tabular"
                 name="durationMinutes"
                 min={1}
                 defaultValue={defaultDurationMinutes ?? 60}
                 required
               />
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor={lessonId ? `maxAttendees-${lessonId}` : "maxAttendees-create"}>{labels.standaloneMaxAttendees}</Label>
               <Input
                 id={lessonId ? `maxAttendees-${lessonId}` : "maxAttendees-create"}
                 type="number"
+                inputMode="numeric"
+                className="tabular"
                 name="maxAttendees"
                 min={1}
                 defaultValue={defaultMaxAttendees ?? 12}
                 required
               />
             </div>
+            <div className="col-span-2 space-y-1.5 sm:col-span-1">
+              <Label htmlFor={lessonId ? `cancelWindow-${lessonId}` : "cancelWindow-create"}>{labels.standaloneCancellationWindow}</Label>
+              <Input
+                id={lessonId ? `cancelWindow-${lessonId}` : "cancelWindow-create"}
+                type="number"
+                inputMode="numeric"
+                className="tabular"
+                name="cancellationWindowHours"
+                min={1}
+                defaultValue={defaultCancellationWindowHours ?? 24}
+                required
+              />
+            </div>
           </div>
-          <div className="space-y-1">
-            <Label htmlFor={lessonId ? `cancelWindow-${lessonId}` : "cancelWindow-create"}>{labels.standaloneCancellationWindow}</Label>
-            <Input
-              id={lessonId ? `cancelWindow-${lessonId}` : "cancelWindow-create"}
-              type="number"
-              name="cancellationWindowHours"
-              min={1}
-              defaultValue={defaultCancellationWindowHours ?? 24}
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-1">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
               <Label htmlFor={lessonId ? `trainer-${lessonId}` : "trainer-create"}>{labels.trainerLabel}</Label>
               {disableTrainerSelection ? (
                 <input type="hidden" name="trainerId" value={defaultTrainerId ?? ""} />
@@ -243,7 +250,7 @@ export function StandaloneLessonCreateDialog({
                 disabled={disableTrainerSelection}
                 className="ui-select w-full"
               >
-                <option value="">- {labels.trainerLabel} -</option>
+                <option value="">— {labels.trainerLabel} —</option>
                 {trainerCandidates.map((trainer) => (
                   <option key={`create-dialog-${trainer.id}`} value={trainer.id}>
                     {trainer.name}
@@ -251,7 +258,7 @@ export function StandaloneLessonCreateDialog({
                 ))}
               </select>
             </div>
-            <div className="space-y-1">
+            <div className="space-y-1.5">
               <Label htmlFor={lessonId ? `lessonType-${lessonId}` : "lessonType-create"}>{labels.standaloneLessonType}</Label>
               <select
                 id={lessonId ? `lessonType-${lessonId}` : "lessonType-create"}
@@ -259,7 +266,7 @@ export function StandaloneLessonCreateDialog({
                 defaultValue={defaultLessonTypeId ?? ""}
                 className="ui-select w-full"
               >
-                <option value="">- {labels.standaloneLessonType} -</option>
+                <option value="">— {labels.standaloneLessonType} —</option>
                 {lessonTypeCandidates.map((type) => (
                   <option key={`create-dialog-type-${type.id}`} value={type.id}>
                     {type.name}
@@ -282,7 +289,7 @@ export function StandaloneLessonCreateDialog({
           ) : null}
 
           <DialogFooter>
-            <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+            <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
               {labels.closeCta}
             </Button>
             <Button type="submit" disabled={isPending}>
