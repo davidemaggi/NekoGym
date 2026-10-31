@@ -132,6 +132,7 @@ export type Dictionary = {
     nameLabel: string;
     emailLabel: string;
     passwordLabel: string;
+    passwordHint: string;
     loginMethodPassword: string;
     loginMethodOtp: string;
     loginMethodMagicLink: string;
@@ -593,6 +594,9 @@ export type Dictionary = {
       description: string;
       empty: string;
       trendLabel: string;
+      trendShort: string;
+      trendNoPrevious: string;
+      pointsUnit: string;
       executiveTitle: string;
       executiveTopCourse: string;
       executiveBusiestSlot: string;
@@ -1222,6 +1226,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Nome",
       emailLabel: "Email",
       passwordLabel: "Password",
+      passwordHint: "Almeno 8 caratteri.",
       loginMethodPassword: "Password",
       loginMethodOtp: "Codice",
       loginMethodMagicLink: "Link",
@@ -1436,6 +1441,9 @@ const dictionaries: Record<Locale, Dictionary> = {
         description: "Analizza report su corsi, orari, trainer e no-show.",
         empty: "Nessun dato disponibile nel periodo selezionato.",
         trendLabel: "rispetto al periodo precedente",
+        trendShort: "vs prec.",
+        trendNoPrevious: "nessun dato nel periodo precedente",
+        pointsUnit: "pt",
         executiveTitle: "In sintesi",
         executiveTopCourse: "Corso top: {course} con {bookings} prenotazioni.",
         executiveBusiestSlot: "Slot più affollato: {weekday} {time} con riempimento medio {fill}.",
@@ -2064,6 +2072,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Name",
       emailLabel: "Email",
       passwordLabel: "Password",
+      passwordHint: "At least 8 characters.",
       loginMethodPassword: "Password",
       loginMethodOtp: "Code",
       loginMethodMagicLink: "Link",
@@ -2278,6 +2287,9 @@ const dictionaries: Record<Locale, Dictionary> = {
         description: "Analyze reports for courses, time slots, trainers and no-shows.",
         empty: "No data available in the selected range.",
         trendLabel: "vs previous period",
+        trendShort: "vs prev.",
+        trendNoPrevious: "no data in the previous period",
+        pointsUnit: "pt",
         executiveTitle: "At a glance",
         executiveTopCourse: "Top course: {course} with {bookings} bookings.",
         executiveBusiestSlot: "Busiest slot: {weekday} {time} with average fill {fill}.",

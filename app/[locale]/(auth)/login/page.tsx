@@ -1,12 +1,9 @@
 import Link from "next/link";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { KeyRound, Mail, MessageSquareText } from "lucide-react";
 
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
-import { DEFAULT_SITE_LOGO_SVG, sanitizeSiteLogoSvg } from "@/lib/site-logo";
-import { getSiteSettings } from "@/lib/site-settings";
 import { cn } from "@/lib/utils";
 
 import {
@@ -19,6 +16,7 @@ import {
   verifyLoginOtpAction,
 } from "../actions";
 import { OtpCodeField } from "@/components/ui/otp-code-field";
+import { AuthHeader } from "@/components/auth/auth-header";
 import { AuthField, AuthNotice, authSubmitClass } from "@/components/auth/auth-ui";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -43,14 +41,8 @@ export default async function LoginPage({
   if (!isLocale(locale)) notFound();
 
   const t = getDictionary(locale);
-  const [siteSettings, registeredUser] = await Promise.all([
-    getSiteSettings(),
-    prisma.user.findFirst({
-      select: { id: true },
-    }),
-  ]);
+  const registeredUser = await prisma.user.findFirst({ select: { id: true } });
   const hasRegisteredUsers = Boolean(registeredUser);
-  const siteLogoSrc = sanitizeSiteLogoSvg(siteSettings?.siteLogoSvg ?? DEFAULT_SITE_LOGO_SVG);
   const activeTab = tab === "register" ? "register" : "login";
   const activeMethod = method === "otp" || method === "magic" ? method : "password";
   const isPassword2faStep = activeMethod === "password" && step === "2fa" && Boolean(challenge);
@@ -80,14 +72,8 @@ export default async function LoginPage({
 
   return (
     <section className="space-y-6">
-      <header className="flex flex-col items-center gap-3 text-center">
-        <Image src={siteLogoSrc} alt="" width={88} height={88} priority className="h-[88px] w-[88px]" />
-        {/* The tabs below already say Accedi / Iscriviti: the heading names the gym. */}
-        <h1 className="text-[1.75rem] font-bold leading-tight">
-          {siteSettings?.siteName ?? t.appName}
-          <span className="sr-only"> · {activeTab === "login" ? t.auth.loginTitle : t.auth.registerTitle}</span>
-        </h1>
-      </header>
+      {/* The tabs below already say Accedi / Iscriviti: the heading names the gym. */}
+      <AuthHeader fallbackName={t.appName} asHeading headingSuffix={activeTab === "login" ? t.auth.loginTitle : t.auth.registerTitle} />
 
       {!inStep ? (
         <nav aria-label={`${t.auth.tabLogin} / ${t.auth.tabRegister}`} className="grid grid-cols-2 gap-0.5 rounded-xl bg-[var(--muted)] p-1">
@@ -101,6 +87,20 @@ export default async function LoginPage({
       ) : null}
 
       {error ? <AuthNotice tone="error">{decodeURIComponent(error)}</AuthNotice> : null}
+      {error && activeTab === "register" ? (
+        <ul className="-mt-3 flex flex-wrap gap-x-5 text-[15px]">
+          <li>
+            <Link href={loginTabHref} className="inline-flex min-h-11 items-center font-semibold underline decoration-[1.5px] underline-offset-4">
+              {t.auth.hasAccount} {t.auth.loginCta}
+            </Link>
+          </li>
+          <li>
+            <Link href={`/${locale}/forgot-password`} className="inline-flex min-h-11 items-center font-semibold underline decoration-[1.5px] underline-offset-4">
+              {t.auth.forgotPasswordCta}
+            </Link>
+          </li>
+        </ul>
+      ) : null}
       {info ? <AuthNotice tone="info">{decodeURIComponent(info)}</AuthNotice> : null}
 
       {activeTab === "login" && !inStep ? (
@@ -218,7 +218,7 @@ export default async function LoginPage({
             <input type="hidden" name="locale" value={locale} />
             <AuthField id="register-name" label={t.auth.nameLabel} name="name" type="text" autoComplete="name" required />
             <AuthField id="register-email" label={t.auth.emailLabel} name="email" type="email" autoComplete="email" required defaultValue={initialEmail} />
-            <AuthField id="register-password" label={t.auth.passwordLabel} name="password" type="password" autoComplete="new-password" required minLength={8} />
+            <AuthField id="register-password" label={t.auth.passwordLabel} hint={t.auth.passwordHint} name="password" type="password" autoComplete="new-password" required minLength={8} />
             <button type="submit" className={authSubmitClass}>
               {t.auth.registerCta}
             </button>

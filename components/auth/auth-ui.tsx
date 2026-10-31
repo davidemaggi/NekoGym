@@ -25,12 +25,18 @@ export function AuthNotice({ tone, children }: { tone: "error" | "info"; childre
 export function AuthField({
   id,
   label,
+  hint,
   ...inputProps
-}: { id: string; label: string } & React.ComponentProps<typeof Input>) {
+}: { id: string; label: string; hint?: string } & React.ComponentProps<typeof Input>) {
   return (
     <div className="space-y-1.5">
       <Label htmlFor={id}>{label}</Label>
-      <Input id={id} {...inputProps} />
+      <Input id={id} aria-describedby={hint ? `${id}-hint` : undefined} {...inputProps} />
+      {hint ? (
+        <p id={`${id}-hint`} className="text-sm text-[var(--muted-foreground)]">
+          {hint}
+        </p>
+      ) : null}
     </div>
   );
 }

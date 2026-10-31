@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { ArrowLeft } from "lucide-react";
 
+import { AuthHeader } from "@/components/auth/auth-header";
 import { AuthField, AuthNotice, authSubmitClass } from "@/components/auth/auth-ui";
 import { getDictionary, isLocale } from "@/lib/i18n";
 
@@ -21,7 +22,8 @@ export default async function ForgotPasswordPage({
 
   return (
     <section className="space-y-6">
-      <h1 className="text-[1.75rem] font-bold leading-tight">{locale === "it" ? "Recupera password" : "Reset password"}</h1>
+      <AuthHeader fallbackName={t.appName} />
+      <h1 className="text-[17px] font-semibold leading-snug">{locale === "it" ? "Recupera password" : "Reset password"}</h1>
 
       {error ? <AuthNotice tone="error">{decodeURIComponent(error)}</AuthNotice> : null}
 
