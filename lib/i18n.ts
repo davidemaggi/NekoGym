@@ -135,6 +135,9 @@ export type Dictionary = {
     loginMethodPassword: string;
     loginMethodOtp: string;
     loginMethodMagicLink: string;
+    loginMethodLabel: string;
+    loginMethodOtpHint: string;
+    loginMethodMagicHint: string;
     sendCodeCta: string;
     verifyCodeCta: string;
     sendMagicLinkCta: string;
@@ -1219,12 +1222,15 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Nome",
       emailLabel: "Email",
       passwordLabel: "Password",
-      loginMethodPassword: "Accedi con password",
-      loginMethodOtp: "Codice OTP (telefono)",
-      loginMethodMagicLink: "Magic link",
+      loginMethodPassword: "Password",
+      loginMethodOtp: "Codice",
+      loginMethodMagicLink: "Link",
+      loginMethodLabel: "Come vuoi accedere?",
+      loginMethodOtpHint: "Ti inviamo un codice di 6 cifre via email o Telegram.",
+      loginMethodMagicHint: "Ti inviamo un link via email: aprilo e sei dentro.",
       sendCodeCta: "Invia codice",
       verifyCodeCta: "Verifica codice",
-      sendMagicLinkCta: "Invia magic link",
+      sendMagicLinkCta: "Invia link",
       twoFactorTitle: "Conferma 2FA",
       twoFactorHint: "Inserisci il codice dell'app authenticator per completare l'accesso con password.",
       forgotPasswordCta: "Password dimenticata?",
@@ -2058,9 +2064,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       nameLabel: "Name",
       emailLabel: "Email",
       passwordLabel: "Password",
-      loginMethodPassword: "Sign in with password",
-      loginMethodOtp: "OTP code (phone)",
-      loginMethodMagicLink: "Magic link",
+      loginMethodPassword: "Password",
+      loginMethodOtp: "Code",
+      loginMethodMagicLink: "Link",
+      loginMethodLabel: "How do you want to sign in?",
+      loginMethodOtpHint: "We send a 6-digit code by email or Telegram.",
+      loginMethodMagicHint: "We email you a link: open it and you're in.",
       sendCodeCta: "Send code",
       verifyCodeCta: "Verify code",
       sendMagicLinkCta: "Send magic link",
