@@ -43,6 +43,10 @@ colors:
   stock-carta-dark: "#22264a"
   stamp-dark: "#bba8f2"
   destructive-dark: "#e07a8c"
+  chart-1: "#3b5fc4"
+  chart-1-dark: "#6386e3"
+  overlay: "rgb(18 20 42 / 0.45)"
+  overlay-dark: "rgb(4 5 14 / 0.62)"
 typography:
   display:
     fontFamily: "Archivo, ui-sans-serif, system-ui, sans-serif"
@@ -99,6 +103,8 @@ typography:
     fontSize: "14px"
     fontWeight: 400
 rounded:
+  xs: "2px"
+  sm: "4px"
   lg: "8px"
   xl: "12px"
   2xl: "16px"
@@ -174,6 +180,16 @@ components:
     rounded: "{rounded.lg}"
     padding: "6px 10px"
     width: "108px"
+  stamp-chip:
+    textColor: "{colors.stamp}"
+    rounded: "{rounded.lg}"
+    padding: "4px 8px"
+  stamp-face-compact:
+    textColor: "{colors.stamp}"
+    typography: "{typography.stamp-lettering}"
+    rounded: "{rounded.lg}"
+    padding: "6px 8px"
+    width: "92px"
   badge-neutral:
     backgroundColor: "{colors.muted}"
     textColor: "{colors.ink}"
@@ -225,6 +241,61 @@ components:
     textColor: "{colors.ink}"
     rounded: "{rounded.lg}"
     height: "36px"
+  segmented-control:
+    backgroundColor: "{colors.muted}"
+    textColor: "{colors.muted-ink}"
+    rounded: "{rounded.xl}"
+    padding: "4px"
+  segmented-control-active:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.lg}"
+    padding: "0 12px"
+    height: "36px"
+  text-link-action:
+    textColor: "{colors.ink}"
+    height: "44px"
+  todo-tile-warning:
+    backgroundColor: "{colors.warning-bg}"
+    textColor: "{colors.warning-fg}"
+    rounded: "{rounded.xl}"
+    size: "44px"
+  todo-tile-info:
+    backgroundColor: "{colors.info-bg}"
+    textColor: "{colors.info-fg}"
+    rounded: "{rounded.xl}"
+    size: "44px"
+  todo-tile-danger:
+    backgroundColor: "{colors.danger-bg}"
+    textColor: "{colors.danger-fg}"
+    rounded: "{rounded.xl}"
+    size: "44px"
+  seat-segment-booked:
+    backgroundColor: "{colors.ink}"
+    rounded: "{rounded.xs}"
+    height: "7px"
+  seat-segment-free:
+    backgroundColor: "{colors.surface-border}"
+    rounded: "{rounded.xs}"
+    height: "7px"
+  row-in-progress:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.2xl}"
+    padding: "14px 16px"
+  next-lesson-card:
+    backgroundColor: "{colors.surface}"
+    rounded: "{rounded.2xl}"
+    padding: "20px"
+  next-lesson-card-hover:
+    backgroundColor: "{colors.surface-sunken}"
+  chart-bar:
+    backgroundColor: "{colors.chart-1}"
+    rounded: "{rounded.sm}"
+  chart-tooltip:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.muted-ink}"
+    rounded: "{rounded.xl}"
+    padding: "10px 12px"
 ---
 
 # Design System: NekoGym
@@ -233,13 +304,13 @@ components:
 
 **Creative North Star: "Abbonamento"**
 
-NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row.
+NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.
 
 The system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for "simple, elegant, pastel" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.
 
 The world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.
 
-Status of the build: the bookings surface, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui`, the toaster and the Web Push banner are in the world. Dashboard, lessons, courses, users, settings and reports currently only inherit the tokens and primitives; their layouts are pre-redesign and are not part of this system. Do not copy their compositions as precedent.
+Status of the build: the bookings surface, the per-role home (staff and member), the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui`, the home charts, the toaster, the Web Push banner and the PWA install banner are in the world. Lessons, courses, users, settings, reports and the auth screens currently only inherit the tokens and primitives; their layouts are pre-redesign and are not part of this system. Do not copy their compositions as precedent.
 
 **Key Characteristics:**
 - One paper stock per section; the current stock tints the shell and the page header band.
@@ -247,7 +318,8 @@ Status of the build: the bookings surface, the app shell (rail, mobile top bar, 
 - One reserved violet stamp for the user's own bookings.
 - Condensed tabular figures for every time, count and date.
 - Dashed perforation as the only ornament, also meaning "provisional".
-- Flat paper; lift only on the pass card, the opened row, the active tab, and overlays.
+- Flat paper; lift only on things picked up: the pass card, the opened or in-progress row, the member's next lesson, the active tab or segment, and overlays.
+- Seats are counted, not charted: one ink segment per seat, dashed while held by a pending request.
 - 44px touch targets, 16px input text, bottom sheets on phones.
 
 ## Colors
@@ -258,7 +330,7 @@ A cool paper-and-ink palette: pale transit-pass stocks as grounds, night-blue in
 - **Night-Blue Ink** (`ink`): body text, headings, primary buttons, the selected day chip, outline-button strokes (1.5px). In dark mode it inverts to Pale Ink (`ink-dark`) on the night ground, and primary buttons become pale with night text.
 
 ### Secondary
-- **Validator Violet** (`stamp`; dark `stamp-dark`): the stamp. Fills the used entry slots on the pass, draws the stamp face on booked rows, the own-booking dot under a day in the day strip, and the booked chips in the upcoming list. Its tint **Stamp Wash** (`stamp-soft`) is the hover behind a stamp button and the text-selection colour. The same violet is also the focus ring, text caret and native control accent: interaction affordances, not content marks.
+- **Validator Violet** (`stamp`; dark `stamp-dark`): the stamp. Fills the used entry slots on the pass, draws the stamp face on booked rows, the own-booking dot under a day in the day strip, and the booked chips in the upcoming list. On the member home it also stamps the next-lesson card and the booked chips in the later list. Its tint **Stamp Wash** (`stamp-soft`) is the hover behind a stamp button and the text-selection colour. The same violet is also the focus ring, text caret and native control accent: interaction affordances, not content marks.
 
 ### Tertiary: Ticket Stocks
 - **Mint** (`stock-mint`): Prenotazioni (bookings).
@@ -266,7 +338,7 @@ A cool paper-and-ink palette: pale transit-pass stocks as grounds, night-blue in
 - **Giallino** (`stock-giallino`): Corsi, Notifiche, Registri; also the Web Push banner's icon tile.
 - **Rosa** (`stock-rosa`): Utenti, Danger Zone.
 - **Lilla** (`stock-lilla`): Report, manual notifications; also the user-initials avatar.
-- **Carta** (`stock-carta`): Dashboard, profile, site settings, and the fallback.
+- **Carta** (`stock-carta`): Home (dashboard), profile, site settings, and the fallback.
 
 The shell resolves the current section to one stock (`STOCK_BY_KEY` in the app shell) and sets `data-stock` on the layout root; `--stock` then resolves to that stock. Each nav link carries its own section's `data-stock`, so its icon tile shows its stock as a swatch. Text on any stock uses `--stock-ink` (night blue light, pale ink dark).
 
@@ -276,10 +348,16 @@ The shell resolves the current section to one stock (`STOCK_BY_KEY` in the app s
 - **Section Paper** (derived, `--paper`): the main content field is `color-mix(in oklab, var(--stock) 34%, var(--surface))`, a light print of the section's stock.
 - **Surface Sunken** (`surface-sunken`): disabled inputs, the account block in the menu sheet.
 - **Rule** (`rule`) and **Surface Border** (`surface-border`): hairlines between rows, card edges, input strokes, empty entry slots, the perforation line.
-- **Muted** (`muted`) and **Muted Ink** (`muted-ink`): hover fills, tab rails, secondary text and meta lines. Muted ink passes AA on surface and on every light stock.
+- **Muted** (`muted`) and **Muted Ink** (`muted-ink`): hover fills, tab and segmented-control rails, the chart hover cursor, secondary text, meta lines and chart axis labels. Muted ink passes AA on surface and on every light stock.
+- **Overlay** (`overlay`; dark `overlay-dark`): the night-blue scrim behind every dialog, alert dialog and sheet, always through the `--overlay` token.
 
 ### Semantic states
 Info, success, warning and danger each pair a pale ground with a deep ink (`info-bg`/`info-fg` and so on); the pale grounds deliberately share the stock family. **Destructive** (`destructive`) is the only solid alarm fill: destructive buttons and the unread-notification count. States are always paired with text or an icon.
+
+### Data
+- **Chart Blue** (`chart-1`; dark `chart-1-dark`): the single-series bar colour (the staff crowding chart). Validated for an OKLCH lightness band, a chroma floor and at least 3:1 against surface in both themes. It is a data ink only, never a UI accent.
+- **Lesson-type colours** (admin-chosen, per installation): the categorical palette. A multi-series chart colours each series by its lesson type's own colour, exactly as the type icon is coloured in rows.
+- **Grid and axes**: grid lines in surface border, horizontal only; no axis lines or ticks; axis labels 13px muted ink.
 
 ### Named Rules
 **The Reserved Stamp Rule.** Violet as a mark belongs only to the current user's own bookings: booked, pending (dashed) and the pass slots they have used. Never use it for brand accents, links, charts, or other people's bookings. The focus ring, caret and control accent are the only non-booking uses.
@@ -287,6 +365,8 @@ Info, success, warning and danger each pair a pale ground with a deep ink (`info
 **The One Stock Per Section Rule.** A section owns exactly one stock, assigned in the shell. A page never mixes stocks as decoration; a stock appears outside its section only as a nav swatch.
 
 **The Paper, Not Grey Rule.** The content field is always the section paper derived from the stock, never a neutral grey panel.
+
+**The Type Owns Its Colour Rule.** In charts a category's colour is its lesson type's admin colour, keyed to the type and never to its rank or position; a single series uses Chart Blue. Identity is never colour alone: any chart with two or more series carries a legend.
 
 ## Typography
 
@@ -298,16 +378,16 @@ Info, success, warning and danger each pair a pale ground with a deep ink (`info
 
 ### Hierarchy
 - **Display** (700, 1.375rem mobile / 2rem desktop, 1.25): the page title in the header band.
-- **Figure** (700, 2.5rem, 1, condensed tabular): the remaining-entries count on the pass.
-- **Time** (700, 1.375rem mobile / 1.625rem desktop, 1, condensed tabular): lesson start times in the fixed time column; day numbers in the strip at 1.25rem.
+- **Figure** (700, 2.5rem, 1, condensed tabular): the remaining-entries count on the pass. Smaller ticket figures: the to-do count tile (20px) and the booked-seats count over a seat strip (17px).
+- **Time** (700, 1.375rem mobile / 1.625rem desktop, 1, condensed tabular): lesson start times in the fixed time column; day numbers in the strip at 1.25rem; 2rem on the member's next-lesson card.
 - **Headline** (700, 1.25rem, 1.25, balanced): dialog and sheet titles.
-- **Title** (600, 17px, 1.375): card titles, pass title, lesson names, day heading, brand name.
+- **Title** (600, 17px, 1.375): card titles, pass title, lesson names, day heading, brand name, and section headings on the home (Oggi, Da fare, chart titles). To-do item titles step down to 15px semibold.
 - **Body** (400, 15px, 1.5): meta lines, descriptions, toasts; long text capped at 65ch. Form inputs are 16px.
 - **Label** (600, 13–14px): form labels, section captions in the nav, avatar sublines.
-- **Stamp lettering** (800, 11px, uppercase, 0.08em): only inside a stamp face, always above a 15px condensed date-time detail.
+- **Stamp lettering** (800, 11px, uppercase, 0.08em): inside a stamp face, always above a 15px condensed date or date-time detail. The stamp chip in lists uses the same face at 12px with 0.06em tracking and no detail line.
 
 ### Named Rules
-**The Ticket Figures Rule.** Every time, count, date, duration and version number uses the `.tabular` treatment (condensed width, `tnum` + `lnum`, zero tracking). Running text never does.
+**The Ticket Figures Rule.** Every time, count, date, duration and version number uses the `.tabular` treatment (condensed width, `tnum` + `lnum`, zero tracking), including chart tooltip values. Running text never does: when a figure sits inside a sentence, only the figure is set tabular (fill the sentence template with nodes, not strings).
 
 **The Mono Is For Codes Rule.** Geist Mono appears only where a machine string must be read character by character.
 
@@ -319,6 +399,7 @@ Mobile first, built around a phone held in one hand.
 - **Header band.** The shell paints a generic stock band (176px, 240px desktop) behind the top of each page. A page that draws its own band marks it `data-page-band`, which hides the shell band; on bookings the band carries title, pass card and day strip and ends exactly on the strip's edge, never across a line of text. Below the band, the field is section paper.
 - **Fixed-time rows.** Lesson lists are a three-column grid: a fixed time column (3.5rem, 4.25rem from `sm`), a flexible lesson column (type icon, name, trainer and seats), and a right action column (Prenota, stamp, queue, or a reason). Rows sit directly on the paper, separated by hairline rules, 14px vertical padding, full-bleed on phones.
 - **Day strip.** Seven equal 60px day cells between previous/next week arrows; the selected day is filled with ink.
+- **Home.** One home per role, on the carta stock. The page draws its own band (greeting at display size, then the long date in stock ink at 75%; staff add "N lessons · M booked"; members get the pass card inside the band). Staff: two columns from `lg`, today's rows on the left and a 22rem to-do column on the right, 40px apart; on phones they stack with the to-do list first whenever it has items. Today's rows add a fourth column from `sm` (time 4.25rem, lesson, 8.5rem seat strip, action); on phones the seat count moves under the time as a 13px figure. Charts sit below a full-width rule, side by side from `xl`. Members: a single 48rem column with the next lesson, the later list, then the Prenota call to action and the chart below a rule.
 - **Desktop aside.** On bookings, a 20rem column on the right lists upcoming own bookings; on phones it moves below the list.
 - **Rhythm.** 4px base; 8, 12, 16, 20 and 24px are the working steps. Every tappable element is at least 44px.
 
@@ -327,19 +408,21 @@ Mobile first, built around a phone held in one hand.
 Flat paper with a hybrid exception: depth comes from stock against paper against surface, and soft night-tinted shadows appear only on the few things that are physically "picked up".
 
 ### Shadow Vocabulary
-- **Lift** (`--shadow-lift`: `0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)`): the pass card, the opened lesson row, the active tab trigger.
-- **Sheet** (`--shadow-sheet`: `0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3)`): dialogs, bottom sheets, toasts, the Web Push banner.
+- **Lift** (`--shadow-lift`: `0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)`): the pass card, the opened lesson row, the in-progress row on the staff home, the member's next-lesson card, the active tab trigger and the active segment.
+- **Sheet** (`--shadow-sheet`: `0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3)`): dialogs, bottom sheets, toasts, chart tooltips, the Web Push banner.
 
-Dark mode swaps both for black-based equivalents. Overlays dim the page with night blue at 45%.
+Dark mode swaps both for black-based equivalents. Overlays dim the page with the `overlay` token (night blue at 45%; near-black at 62% in dark mode).
 
 ### Named Rules
-**The Picked-Up Rule.** Only the pass, the one opened row, and overlays carry shadow. Lists, nav and ordinary cards stay flat with a hairline.
+**The Picked-Up Rule.** Only the pass, the one opened or in-progress row, the member's next lesson, the active tab or segment, and overlays carry shadow. Lists, nav, inline banners and ordinary cards stay flat with a hairline.
 
 ## Shapes
 
-Soft rectangular ticket forms. Radii step from 8px (badges, stamp faces, icon tiles) to 12px (buttons, inputs, nav links, day cells, rows on desktop) to 16px (cards, the pass, toasts, the banner) to 24px (sheets, top corners only on phones). Avatars, entry slots, tab-bar pills and the notification count are full circles or pills. Strokes are hairlines (1px), outline buttons and entry slots use 1.5px, stamps use 2px.
+Soft rectangular ticket forms. Radii step from 8px (badges, stamp faces, icon tiles) to 12px (buttons, inputs, nav links, day cells, rows on desktop) to 16px (cards, the pass, toasts, the banner) to 24px (sheets, top corners only on phones). Avatars, entry slots, tab-bar pills and the notification count are full circles or pills. Data marks are nearly square: seat segments at 2px, chart bar tops at 4px, legend and tooltip swatches at 3px. Strokes are hairlines (1px), outline buttons, entry slots and the scheduled-bar outline use 1.5px, stamps and stamp chips use 2px.
 
-**The Perforation Rule.** The 2px dashed line is the only ornament: it separates the pass's header from its slots, and as a border it marks anything provisional (pending stamp, queued stamp, waitlist button). Never use dashed borders as decoration.
+**The Perforation Rule.** The 2px dashed line is the only ornament: it separates the pass's header from its slots, and as a border it marks anything provisional (pending stamp, pending stamp chip, queued stamp, waitlist button, a seat held by a pending request). Never use dashed borders as decoration.
+
+**The Hatch Rule.** In charts, a lesson that is scheduled but not yet held is a 45° hatch in its type colour over surface, outlined 1.5px in the same colour; held lessons are solid. The legend always explains the hatch. The hatch is the chart's counterpart of the perforation and appears nowhere else.
 
 ## Components
 
@@ -349,11 +432,13 @@ Firm, ink-led, quiet at rest.
 - **Primary:** night-blue ink fill with white text; hover deepens to `ink-hover`.
 - **Outline:** surface fill with a 1.5px ink stroke. This is the row action Prenota. With a dashed stroke it becomes "Metti in coda" (waitlist), same weight.
 - **Secondary / Ghost / Destructive:** muted fill; transparent with muted hover; solid destructive red.
+- **Text-link action (tertiary):** 15px semibold ink text with a 1.5px underline at 4px offset that thickens to 2px on hover, a trailing 16px chevron when it navigates or opens a sheet, and a 44px minimum height. It is the one action language of the to-do list (Apri conferme, Segna presenze, Apri il giorno) and the tertiary action in sheets.
+- **Lesson manage trigger:** the staff row action (Gestisci, or Presenze once a lesson has ended with attendance to mark) is an outline button; the same trigger renders as a text-link action inside a to-do item.
 - **Feedback:** 150ms colour transition and a 0.98 press scale; disabled at 45% opacity, no press.
 
 ### Chips (Badges)
-- **Style:** 8px corners, 12px semibold, pale semantic ground with deep ink (neutral, info, success, warning, danger).
-- **Stamp variant:** transparent with a violet stroke; reserved for own bookings.
+- **Style:** 8px corners, 12px semibold, pale semantic ground with deep ink (neutral, info, success, warning, danger). Badges have no stamp variant.
+- **Stamp chip:** own bookings in compact lists (the upcoming aside on bookings, the later list on the member home) wear the stamp face itself, reduced: transparent, 2px violet stroke, 8px corners, 12px extra-bold uppercase lettering at 0.06em, no detail line; dashed when pending.
 
 ### Cards / Containers
 - **Corner Style:** 16px.
@@ -371,7 +456,10 @@ Firm, ink-led, quiet at rest.
 - **Mobile:** top bar on the current stock; bottom tab bar with 21px icons over 12px labels, the active tab's icon in a 56x32 stock pill; Menu opens a bottom sheet with the account block and the full nav.
 
 ### Dialogs and Sheets
-Bottom sheet on phones (full width, 24px top corners, safe-area padding, up to 92dvh), centred 24px-radius panel from `sm`. Title 20px bold, description 15px muted, footer buttons stacked on phones and right-aligned from `sm`. A 44px close button sits top right. Alert dialogs use the same form at a narrower width.
+Bottom sheet on phones (full width, 24px top corners, safe-area padding, up to 92dvh), centred 24px-radius panel from `sm`, over the `overlay` scrim. Title 20px bold, description 15px muted, footer buttons stacked on phones and right-aligned from `sm`. A 44px close button sits top right. Alert dialogs use the same form at a narrower width. Lists inside a sheet (the approval sheet) are hairline-separated rows: 17px name, 15px muted meta with tabular date, then a 44px action group in descending weight: primary (Conferma), outline (Non confermare), and a flush text-link action for the rare third choice.
+
+### Segmented Control
+A range switch (week / month / year) on a muted rail: 12px corners, 4px inset, 14px semibold muted-ink options at 8px corners; the pressed option sits on surface with Lift in ink. Options are `aria-pressed` buttons in a labelled group.
 
 ### Season Pass Card (signature)
 The member's plan as a season pass at the top of bookings: ticket icon and plan title on the left, the remaining-entries figure (2.5rem condensed) on the right, a dashed perforation, then one round entry slot per entry (up to 20; 10 per row). Used slots carry a violet stroke with a punched violet centre; unused slots are empty rings. Footer: validity date and active bookings, separated by middle dots. Inactive membership turns the whole card to the warning stock with an alert icon. Open plans and trials replace the slots with a sentence.
@@ -379,11 +467,26 @@ The member's plan as a season pass at the top of bookings: ticket icon and plan 
 ### Validator Stamp (signature)
 A booked row's action column holds a stamp face: 2px violet stroke, 8px corners, 11px uppercase lettering over a 15px condensed date and time. Pending approval is the same stamp dashed; queued is a dashed stamp in muted ink. When cancellable, the stamp is a button (violet wash on hover) that opens the cancel confirmation. On booking, the stamp lands with `stamp-land`: 180ms, scale 1.12 to 0.98 to 1 with opacity in, `cubic-bezier(0.22, 1, 0.36, 1)`, no bounce; instant under reduced motion.
 
+### Seat Strip (signature)
+Occupancy on staff rows: the booked count as a 17px bold ticket figure over "/max" in 14px muted, then a 7px strip with one segment per seat (2px corners, 2px gaps) up to 16 seats. Confirmed seats are solid ink, seats held by pending requests are dashed ink outlines, free seats are surface border. Beyond 16 seats the strip becomes one continuous rounded bar with the same three states. Seats are ink, never stamp violet: they are other people's bookings.
+
+### Staff Today Row
+The fixed-time row on the home: time and duration (muted once the lesson has ended), type icon and name, a meta line (trainer, "in corso" in semibold success ink, queue and pending counts), the seat strip, and the manage trigger. The lesson in progress is lifted out of the list: surface fill, Lift, 16px corners from `sm`, full-bleed on phones.
+
+### To-do Item
+A hairline-separated item: a 44px tile with 12px corners carrying either a 20px condensed count or a 20px icon on a semantic ground (warning for requests to confirm, info for attendance to mark, danger for a lesson about to auto-cancel), a 15px semibold title, a 15px muted sentence with its figures set tabular, and one text-link action. The column heading carries the total count in muted tabular figures.
+
+### Next-Lesson Ticket (member)
+The member's next booking as a lifted surface card (16px corners, 20px padding; 16px on phones) that links to its day in bookings. On phones it reads like a ticket: the 2rem time and a compact stamp face (date only) on top, the lesson name and meta at full width below; from `sm` it is a three-column row. Hover sinks to surface sunken.
+
+### Charts
+Recharts bar charts on the section paper, no frame: horizontal grid in surface border, no axis lines or ticks, 13px muted-ink labels, bars capped with `maxBarSize` (36px per type, 44px single series) and 4px top corners, a muted hover cursor. The tooltip is a 12px-radius surface panel with a hairline and the Sheet shadow, the bucket label in semibold ink, then one line per series with a 10px swatch, muted label and tabular ink value. A day stepper uses 44px icon links with muted hover around a 15px semibold date. Single-series charts name the series in the title and omit the legend; categorical charts end with a legend row of 12px swatches, including the hatch key.
+
 ### Lesson Row with In-Place Disclosure (signature)
 Tapping a row's time or name opens it in place: the row gains the surface fill and Lift, and a detail list (time range, trainer, cancellation deadline, plan cost, access, seats) appears aligned to the lesson column. Every other row steps back to muted ink. Rows that cannot be acted on (started, access denied) are quiet too and state why in the action column. Nothing reorders.
 
 ### Toasts and Banners
-Toasts sit top centre: 16px corners, surface, hairline, Sheet shadow, 15px text, semantic icon colour. The Web Push banner floats above the tab bar on phones and bottom right on desktop, with a giallino icon tile and primary plus ghost actions.
+Toasts sit top centre: 16px corners, surface, hairline, Sheet shadow, 15px text, semantic icon colour. The Web Push banner floats above the tab bar on phones and bottom right on desktop, with a giallino icon tile and primary plus ghost actions. The PWA install banner is inline instead, under the home band: flat surface with a hairline, 16px corners, 16px padding, 15px semibold title over a 14px muted line, primary plus ghost actions beside it from `sm`.
 
 ## Do's and Don'ts
 
@@ -395,12 +498,17 @@ Toasts sit top centre: 16px corners, surface, hairline, Sheet shadow, 15px text,
 - **Do** use dashed strokes to mean provisional, and only that.
 - **Do** keep 44px targets, 16px input text, and bottom sheets for dialogs on phones.
 - **Do** design both themes; check muted ink and stamp on every stock in light and dark.
+- **Do** give every to-do item exactly one action, as a text-link action with a chevron.
+- **Do** show seats as a seat strip (solid booked, dashed pending) rather than a percentage.
+- **Do** colour chart categories by their lesson type, use `chart-1` for a single series, hatch scheduled lessons, and keep a legend for two or more series.
+- **Do** dim behind overlays with the `overlay` token, never an ad-hoc black.
 
 ### Don't:
 - **Don't** use stamp violet for anything but the user's own bookings (beyond focus ring, caret and control accent).
 - **Don't** put content on a neutral grey ground; the field is the section paper.
-- **Don't** add gradient washes, glass, or blur. The only gradient in the build is the hard-stop punched centre of a used entry slot.
-- **Don't** add shadow to lists, nav or ordinary cards; lift is for the pass, the opened row and overlays.
-- **Don't** use uppercase tracked lettering outside a stamp face and the day strip's weekday abbreviations.
+- **Don't** add gradient washes, glass, or blur. The only gradients in the build are hard-stop marks: the punched centre of a used entry slot and the hatch key in the chart legend.
+- **Don't** add shadow to lists, nav, inline banners or ordinary cards; lift is for the pass, the opened or in-progress row, the next-lesson card, the active tab or segment, and overlays.
+- **Don't** use uppercase tracked lettering outside a stamp face, a stamp chip and the day strip's weekday abbreviations.
+- **Don't** use stamp violet or Chart Blue for seats, counts or to-do tiles; seats are ink, tiles are semantic grounds.
 - **Don't** reorder rows or animate layout when state changes.
-- **Don't** treat the dashboard, lessons, courses, users, settings or reports layouts as precedent until they are redesigned.
+- **Don't** treat the lessons, courses, users, settings, reports or auth layouts as precedent until they are redesigned.
