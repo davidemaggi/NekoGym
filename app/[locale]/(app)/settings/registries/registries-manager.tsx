@@ -3,15 +3,15 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 
 import {
   createLessonTypeAction,
   deleteLessonTypeAction,
   updateLessonTypeAction,
 } from "@/app/[locale]/(app)/courses/actions";
+import { PageBand } from "@/components/layout/page-band";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -81,7 +81,6 @@ type RegistriesManagerProps = {
 export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, colorOptions }: RegistriesManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [activeTab, setActiveTab] = useState<"lessonTypes">("lessonTypes");
   const [createOpen, setCreateOpen] = useState(false);
   const [editingType, setEditingType] = useState<LessonTypeItem | null>(null);
   const [deletingType, setDeletingType] = useState<LessonTypeItem | null>(null);
@@ -160,172 +159,142 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
     });
   }
 
-  return (
-    <section className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
-      </header>
-
-      <div className="flex border-b border-[var(--surface-border)]">
-        <button
-          type="button"
-          onClick={() => setActiveTab("lessonTypes")}
-          className={[
-            "px-3 py-2 text-sm",
-            activeTab === "lessonTypes"
-              ? "border-b-2 border-[var(--primary)] font-medium"
-              : "text-[var(--muted-foreground)]",
-          ].join(" ")}
-        >
-          {labels.tabs.lessonTypes}
-        </button>
-      </div>
-
-      {activeTab === "lessonTypes" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>{labels.lessonTypes.title}</CardTitle>
-            <p className="text-sm text-[var(--muted-foreground)]">{labels.lessonTypes.description}</p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-end">
-              <Dialog
-                open={createOpen}
-                onOpenChange={(nextOpen) => {
-                  setCreateOpen(nextOpen);
-                  if (!nextOpen) {
-                    setCreateIcon(defaultIcon);
-                    setCreateColor(defaultColor);
-                  }
-                }}
+  function renderTypeFields(prefix: string, icon: string, setIcon: (value: string) => void, color: string, setColor: (value: string) => void, icons: string[], defaults?: LessonTypeItem) {
+    return (
+      <>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${prefix}-name`}>{labels.lessonTypes.nameLabel}</Label>
+          <Input id={`${prefix}-name`} name="name" required defaultValue={defaults?.name} />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${prefix}-description`}>{labels.lessonTypes.descriptionLabel}</Label>
+          <Textarea id={`${prefix}-description`} name="description" defaultValue={defaults?.description ?? ""} />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor={`${prefix}-icon`}>{labels.lessonTypes.iconSvgLabel}</Label>
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: hexToRgba(color, 0.16) }}>
+                {icon ? <LessonTypeIcon iconPath={icon} colorHex={color} size={24} /> : null}
+              </span>
+              <select
+                id={`${prefix}-icon`}
+                name="iconSvg"
+                required
+                value={icon}
+                onChange={(event) => setIcon(event.target.value)}
+                className="ui-select w-full min-w-0"
               >
-                <DialogTrigger asChild>
-                  <Button disabled={isPending}>
-                    <Plus className="h-4 w-4" />
-                    <span>{labels.lessonTypes.createCta}</span>
+                {icons.map((option) => (
+                  <option key={option} value={option}>
+                    {iconFileName(option)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor={`${prefix}-color`}>{labels.lessonTypes.colorLabel}</Label>
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="h-11 w-11 shrink-0 rounded-xl" style={{ backgroundColor: color }} />
+              <select
+                id={`${prefix}-color`}
+                name="colorHex"
+                required
+                value={color}
+                onChange={(event) => setColor(event.target.value)}
+                className="ui-select w-full min-w-0"
+              >
+                {colorOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <PageBand
+        title={labels.title}
+        description={labels.subtitle}
+        action={
+          <Dialog
+            open={createOpen}
+            onOpenChange={(nextOpen) => {
+              setCreateOpen(nextOpen);
+              if (!nextOpen) {
+                setCreateIcon(defaultIcon);
+                setCreateColor(defaultColor);
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button aria-label={labels.lessonTypes.createCta} className="w-11 px-0 sm:w-auto sm:px-4" disabled={isPending}>
+                <Plus size={18} aria-hidden="true" />
+                <span className="hidden sm:inline">{labels.lessonTypes.createCta}</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{labels.lessonTypes.createCta}</DialogTitle>
+                <DialogDescription>{labels.lessonTypes.description}</DialogDescription>
+              </DialogHeader>
+              <form className="space-y-4" onSubmit={onCreateLessonType}>
+                {renderTypeFields("registry-lt", createIcon, setCreateIcon, createColor, setCreateColor, iconOptions)}
+                <DialogFooter>
+                  <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
+                    {labels.lessonTypes.cancelCta}
                   </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{labels.lessonTypes.createCta}</DialogTitle>
-                    <DialogDescription>{labels.lessonTypes.description}</DialogDescription>
-                  </DialogHeader>
-                  <form className="space-y-3" onSubmit={onCreateLessonType}>
-                    <div className="space-y-1">
-                      <Label htmlFor="registry-lt-name">{labels.lessonTypes.nameLabel}</Label>
-                      <Input id="registry-lt-name" name="name" required />
-                    </div>
+                  <Button type="submit" disabled={isPending}>
+                    <Plus size={18} aria-hidden="true" />
+                    {isPending ? labels.lessonTypes.processing : labels.lessonTypes.createCta}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        }
+      />
 
-                    <div className="space-y-1">
-                      <Label htmlFor="registry-lt-description">{labels.lessonTypes.descriptionLabel}</Label>
-                      <Textarea id="registry-lt-description" name="description" />
-                    </div>
+      <section aria-labelledby="lesson-types-heading" className="max-w-3xl">
+        <h2 id="lesson-types-heading" className="text-[17px] font-semibold">{labels.lessonTypes.title}</h2>
+        <p className="mt-1 text-[15px] text-[var(--muted-foreground)]">{labels.lessonTypes.description}</p>
 
-                    <div className="space-y-1">
-                      <Label htmlFor="registry-lt-icon">{labels.lessonTypes.iconSvgLabel}</Label>
-                      <select
-                        id="registry-lt-icon"
-                        name="iconSvg"
-                        required
-                        value={createIcon}
-                        onChange={(event) => setCreateIcon(event.target.value)}
-                        className="ui-select w-full"
-                      >
-                        {iconOptions.map((icon) => (
-                          <option key={icon} value={icon}>
-                            {iconFileName(icon)}
-                          </option>
-                        ))}
-                      </select>
-                      {createIcon ? (
-                        <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-                          <LessonTypeIcon iconPath={createIcon} colorHex={createColor} size={26} />
-                          <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(createIcon)}</span>
-                        </div>
-                      ) : null}
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="registry-lt-color">{labels.lessonTypes.colorLabel}</Label>
-                      <select
-                        id="registry-lt-color"
-                        name="colorHex"
-                        required
-                        value={createColor}
-                        onChange={(event) => setCreateColor(event.target.value)}
-                        className="ui-select w-full"
-                      >
-                        {colorOptions.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label} ({option.value})
-                          </option>
-                        ))}
-                      </select>
-                      <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-                        <span
-                          className="inline-block h-5 w-5 rounded"
-                          style={{
-                            backgroundColor: hexToRgba(createColor, 0.2),
-                            border: `1px solid ${createColor}`,
-                          }}
-                        />
-                        <span className="text-xs text-[var(--muted-foreground)]">{createColor}</span>
-                      </div>
-                    </div>
-
-                    <DialogFooter>
-                      <Button type="submit" disabled={isPending}>
-                        <Plus className="h-4 w-4" />
-                        <span>{isPending ? labels.lessonTypes.processing : labels.lessonTypes.createCta}</span>
-                      </Button>
-                    </DialogFooter>
-                  </form>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <div className="space-y-2">
-              {lessonTypes.length === 0 ? (
-                <p className="text-sm text-[var(--muted-foreground)]">{labels.lessonTypes.empty}</p>
-              ) : (
-                lessonTypes.map((type) => (
-                  <div
-                    key={type.id}
-                    className="flex items-center justify-between rounded-md border border-[var(--surface-border)] px-3 py-2"
-                  >
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <LessonTypeIcon iconPath={type.iconSvg} colorHex={type.colorHex} size={20} />
-                        <p className="text-sm font-medium">{type.name}</p>
-                      </div>
-                      {type.description ? <p className="text-xs text-[var(--muted-foreground)]">{type.description}</p> : null}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEdit(type)}
-                      disabled={isPending}
-                    >
-                      <Pencil className="h-4 w-4" />
-                      <span>{labels.lessonTypes.editCta}</span>
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => setDeletingType(type)}
-                      disabled={isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                      <span>{labels.lessonTypes.deleteCta}</span>
-                    </Button>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
+        {lessonTypes.length === 0 ? (
+          <p className="mt-6 text-[15px] text-[var(--muted-foreground)]">{labels.lessonTypes.empty}</p>
+        ) : (
+          <ul className="mt-3 border-t border-[var(--rule)]">
+            {lessonTypes.map((type) => (
+              <li key={type.id} className="border-b border-[var(--rule)]">
+                <button
+                  type="button"
+                  onClick={() => openEdit(type)}
+                  disabled={isPending}
+                  aria-label={`${labels.lessonTypes.editCta}: ${type.name}`}
+                  className="flex min-h-16 w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[var(--surface)]/60"
+                >
+                  <span aria-hidden="true" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: hexToRgba(type.colorHex, 0.16) }}>
+                    <LessonTypeIcon iconPath={type.iconSvg} colorHex={type.colorHex} size={22} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[17px] font-semibold leading-snug">{type.name}</span>
+                    {type.description ? (
+                      <span className="mt-0.5 block text-[15px] text-[var(--muted-foreground)]">{type.description}</span>
+                    ) : null}
+                  </span>
+                  <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       <Dialog open={Boolean(editingType)} onOpenChange={(open) => !open && setEditingType(null)}>
         <DialogContent>
@@ -335,73 +304,28 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
           </DialogHeader>
 
           {editingType ? (
-            <form className="space-y-3" onSubmit={onUpdateLessonType}>
-              <div className="space-y-1">
-                <Label htmlFor="edit-lt-name">{labels.lessonTypes.nameLabel}</Label>
-                <Input id="edit-lt-name" name="name" required defaultValue={editingType.name} />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="edit-lt-description">{labels.lessonTypes.descriptionLabel}</Label>
-                <Textarea id="edit-lt-description" name="description" defaultValue={editingType.description ?? ""} />
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="edit-lt-icon">{labels.lessonTypes.iconSvgLabel}</Label>
-                <select
-                  id="edit-lt-icon"
-                  name="iconSvg"
-                  required
-                  value={editIcon}
-                  onChange={(event) => setEditIcon(event.target.value)}
-                  className="ui-select w-full"
-                >
-                  {[...new Set([editingType.iconSvg, ...iconOptions])].map((icon) => (
-                    <option key={icon} value={icon}>
-                      {iconFileName(icon)}
-                    </option>
-                  ))}
-                </select>
-                {editIcon ? (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-                    <LessonTypeIcon iconPath={editIcon} colorHex={editColor} size={26} />
-                    <span className="text-xs text-[var(--muted-foreground)]">{iconFileName(editIcon)}</span>
-                  </div>
-                ) : null}
-              </div>
-
-              <div className="space-y-1">
-                <Label htmlFor="edit-lt-color">{labels.lessonTypes.colorLabel}</Label>
-                <select
-                  id="edit-lt-color"
-                  name="colorHex"
-                  required
-                  value={editColor}
-                  onChange={(event) => setEditColor(event.target.value)}
-                  className="ui-select w-full"
-                >
-                  {colorOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label} ({option.value})
-                    </option>
-                  ))}
-                </select>
-                <div className="mt-2 inline-flex items-center gap-2 rounded-md border border-[var(--surface-border)] px-2 py-1">
-                  <span
-                    className="inline-block h-5 w-5 rounded"
-                    style={{
-                      backgroundColor: hexToRgba(editColor, 0.2),
-                      border: `1px solid ${editColor}`,
-                    }}
-                  />
-                  <span className="text-xs text-[var(--muted-foreground)]">{editColor}</span>
-                </div>
-              </div>
-
+            <form className="space-y-4" onSubmit={onUpdateLessonType}>
+              {renderTypeFields("edit-lt", editIcon, setEditIcon, editColor, setEditColor, [...new Set([editingType.iconSvg, ...iconOptions])], editingType)}
               <DialogFooter>
+                {/* Deleting is deliberate: it lives here, away from the list. */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] sm:mr-auto"
+                  disabled={isPending}
+                  onClick={() => {
+                    setDeletingType(editingType);
+                    setEditingType(null);
+                  }}
+                >
+                  <Trash2 size={18} aria-hidden="true" />
+                  {labels.lessonTypes.deleteCta}
+                </Button>
+                <Button type="button" variant="ghost" onClick={() => setEditingType(null)}>
+                  {labels.lessonTypes.cancelCta}
+                </Button>
                 <Button type="submit" disabled={isPending}>
-                  <Pencil className="h-4 w-4" />
-                  <span>{isPending ? labels.lessonTypes.processing : labels.lessonTypes.updateCta}</span>
+                  {isPending ? labels.lessonTypes.processing : labels.lessonTypes.updateCta}
                 </Button>
               </DialogFooter>
             </form>
@@ -419,7 +343,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary" disabled={isPending}>
+              <Button variant="ghost" disabled={isPending}>
                 {labels.lessonTypes.cancelCta}
               </Button>
             </AlertDialogCancel>
@@ -432,15 +356,13 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                   onDeleteLessonType(deletingType.id);
                 }}
               >
-                <Trash2 className="h-4 w-4" />
-                <span>{isPending ? labels.lessonTypes.processing : labels.lessonTypes.deleteCta}</span>
+                <Trash2 size={18} aria-hidden="true" />
+                {isPending ? labels.lessonTypes.processing : labels.lessonTypes.deleteCta}
               </Button>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }
-
-

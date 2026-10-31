@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import { ChevronRight, DatabaseBackup, Download, Trash2, TriangleAlert, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import {
@@ -21,12 +22,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PageBand } from "@/components/layout/page-band";
+import { SegmentedTabs, SettingsSection } from "@/components/settings/settings-ui";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { OtpCodeField } from "@/components/ui/otp-code-field";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type DangerZoneManagerProps = {
   locale: string;
@@ -98,6 +100,9 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
   const [resetConfirmation, setResetConfirmation] = useState("");
   const [resetOtpCode, setResetOtpCode] = useState("");
   const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
+  const [openBackup, setOpenBackup] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"backup" | "restore" | "reset">("backup");
+  const openBackupItem = backups.find((backup) => backup.fileName === openBackup);
   const [pendingConfirm, setPendingConfirm] = useState<{ type: "restore" | "reset"; formData: FormData } | null>(
     null
   );
@@ -115,7 +120,10 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
       : "This action permanently deletes the selected backup file.",
     deleteBackupCta: isIt ? "Elimina backup" : "Delete backup",
     download: isIt ? "Scarica" : "Download",
-    delete: isIt ? "Cancella" : "Delete",
+    delete: isIt ? "Elimina" : "Delete",
+    tabBackup: "Backup",
+    tabRestore: isIt ? "Ripristino" : "Restore",
+    tabReset: "Reset",
   };
   const canSubmitRestore =
     backups.length > 0 &&
@@ -225,152 +233,176 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
   }
 
   return (
-    <section className="space-y-4">
-      <header>
-        <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.subtitle}</p>
-      </header>
+    <div className="space-y-5">
+      <PageBand title={labels.title} description={labels.subtitle}>
+        <SegmentedTabs
+          className="mt-5"
+          value={activeTab}
+          onChange={setActiveTab}
+          options={[
+            ["backup", confirmLabels.tabBackup],
+            ["restore", confirmLabels.tabRestore],
+            ["reset", confirmLabels.tabReset],
+          ]}
+        />
+      </PageBand>
 
-      <Tabs defaultValue="backup" className="space-y-3">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="backup">Backup</TabsTrigger>
-          <TabsTrigger value="restore">Restore</TabsTrigger>
-          <TabsTrigger value="reset">Reset</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="backup" className="mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle>{labels.backupTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-[var(--muted-foreground)]">{labels.backupDescription}</p>
+      <div className="max-w-2xl">
+        {activeTab === "backup" ? (
+          <>
+            <SettingsSection title={labels.backupTitle} description={labels.backupDescription}>
               <Button type="button" onClick={onCreateBackup} disabled={isCreatePending}>
+                <DatabaseBackup size={18} aria-hidden="true" />
                 {isCreatePending ? labels.backupCreating : labels.backupCreateCta}
               </Button>
-              <div className="space-y-2 rounded-md border border-[var(--surface-border)] p-3">
-                <p className="text-sm font-medium">{labels.uploadTitle}</p>
-                <p className="text-xs text-[var(--muted-foreground)]">{labels.uploadDescription}</p>
-                <form className="space-y-2" onSubmit={onUploadSubmit}>
-                  <div className="space-y-1">
-                    <Label htmlFor="backupFile">{labels.uploadFileLabel}</Label>
-                    <Input id="backupFile" name="backupFile" type="file" required accept=".sqlite,.db,.sqlite3" />
-                  </div>
-                  <Button type="submit" variant="outline" disabled={isUploadPending}>
-                    {isUploadPending ? labels.uploading : labels.uploadCta}
-                  </Button>
-                </form>
-              </div>
-
               {backups.length === 0 ? (
-                <p className="text-sm text-[var(--muted-foreground)]">{labels.backupEmpty}</p>
+                <p className="text-[15px] text-[var(--muted-foreground)]">{labels.backupEmpty}</p>
               ) : (
-                <div className="space-y-2">
+                <ul className="border-t border-[var(--rule)]">
                   {backups.map((backup) => (
-                    <div key={backup.fileName} className="rounded-md border border-[var(--surface-border)] p-2 text-sm">
-                      <p className="font-medium">{backup.fileName}</p>
-                      <p className="text-xs text-[var(--muted-foreground)]">
-                        {labels.backupDateLabel}: {formatDate(new Date(backup.createdAtIso), locale)} · {labels.backupSizeLabel}:{" "}
-                        {formatBytes(backup.sizeBytes, locale)}
-                      </p>
-                      <div className="mt-2 flex items-center gap-2">
-                        <a
-                          href={`/${locale}/settings/danger-zone/download?file=${encodeURIComponent(backup.fileName)}`}
-                          className="inline-flex h-10 items-center justify-center rounded-md border border-[var(--surface-border)] bg-transparent px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--muted)]"
-                        >
-                          {confirmLabels.download}
-                        </a>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          onClick={() => setBackupToDelete(backup.fileName)}
-                          disabled={isDeleteBackupPending}
-                        >
-                          {confirmLabels.delete}
-                        </Button>
-                      </div>
-                    </div>
+                    <li key={backup.fileName} className="border-b border-[var(--rule)]">
+                      <button
+                        type="button"
+                        onClick={() => setOpenBackup(backup.fileName)}
+                        className="flex min-h-16 w-full items-center gap-3 py-3 text-left transition-colors hover:bg-[var(--surface)]/60"
+                      >
+                        <span className="min-w-0 flex-1">
+                          <span className="block break-all font-mono text-[15px] font-semibold">{backup.fileName}</span>
+                          <span className="tabular mt-0.5 block text-sm text-[var(--muted-foreground)]">
+                            {formatDate(new Date(backup.createdAtIso), locale)} · {formatBytes(backup.sizeBytes, locale)}
+                          </span>
+                        </span>
+                        <ChevronRight size={18} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+                      </button>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="restore" className="mt-0">
-          <Card>
-            <CardHeader>
-              <CardTitle>{labels.restoreTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-[var(--muted-foreground)]">{labels.restoreDescription}</p>
-              <form className="space-y-3" onSubmit={onRestoreSubmit}>
-                <div className="space-y-1">
-                  <Label htmlFor="backupFileName">{labels.restoreBackupLabel}</Label>
-                  <select
-                    id="backupFileName"
-                    name="backupFileName"
-                    required
-                    value={restoreBackupFileName}
-                    onChange={(event) => setRestoreBackupFileName(event.target.value)}
-                    className="ui-select w-full"
-                  >
-                    {backups.length === 0 ? (
-                      <option value="">{labels.restoreBackupPlaceholder}</option>
-                    ) : (
-                      backups.map((backup) => (
-                        <option key={backup.fileName} value={backup.fileName}>
-                          {backup.fileName}
-                        </option>
-                      ))
-                    )}
-                  </select>
+            </SettingsSection>
+            <SettingsSection title={labels.uploadTitle} description={labels.uploadDescription}>
+              <form className="space-y-4" onSubmit={onUploadSubmit}>
+                <div className="space-y-1.5">
+                  <Label htmlFor="backupFile">{labels.uploadFileLabel}</Label>
+                  <Input id="backupFile" name="backupFile" type="file" required accept=".sqlite,.db,.sqlite3" className="h-auto py-1.5 file:mr-3 file:h-9 file:rounded-lg file:border-0 file:bg-[var(--muted)] file:px-3 file:text-[15px] file:font-semibold file:text-[var(--foreground)]" />
                 </div>
-                <div className="space-y-1">
-                  <Label>{labels.restoreOtpLabel}</Label>
-                  <OtpCodeField name="otpCode" value={restoreOtpCode} onChange={setRestoreOtpCode} />
-                </div>
-                <Button type="submit" variant="outline" disabled={!canSubmitRestore}>
-                  {isRestorePending ? labels.restoring : labels.restoreCta}
+                <Button type="submit" variant="outline" disabled={isUploadPending}>
+                  <Upload size={16} aria-hidden="true" />
+                  {isUploadPending ? labels.uploading : labels.uploadCta}
                 </Button>
               </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </SettingsSection>
+          </>
+        ) : null}
 
-        <TabsContent value="reset" className="mt-0">
-          <Card className="border-[var(--danger-hover)]">
-            <CardHeader>
-              <CardTitle>{labels.resetTitle}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="text-sm text-[var(--danger-fg)]">{labels.resetDescription}</p>
-              <form className="space-y-3" onSubmit={onResetSubmit}>
-                <div className="space-y-1">
-                  <Label htmlFor="confirmation">{labels.resetConfirmationLabel}</Label>
-                  <Input
-                    id="confirmation"
-                    name="confirmation"
-                    required
-                    placeholder="RESET"
-                    autoComplete="off"
-                    value={resetConfirmation}
-                    onChange={(event) => setResetConfirmation(event.target.value)}
-                  />
-                  <p className="text-xs text-[var(--muted-foreground)]">{labels.resetConfirmationHint}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label>{labels.resetOtpLabel}</Label>
-                  <OtpCodeField name="otpCode" value={resetOtpCode} onChange={setResetOtpCode} />
-                </div>
-                <Button type="submit" variant="destructive" disabled={!canSubmitReset}>
-                  {isResetPending ? labels.resetting : labels.resetCta}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {activeTab === "restore" ? (
+          <SettingsSection title={labels.restoreTitle} description={labels.restoreDescription}>
+            <form className="space-y-4" onSubmit={onRestoreSubmit}>
+              <div className="space-y-1.5">
+                <Label htmlFor="backupFileName">{labels.restoreBackupLabel}</Label>
+                <select
+                  id="backupFileName"
+                  name="backupFileName"
+                  required
+                  value={restoreBackupFileName}
+                  onChange={(event) => setRestoreBackupFileName(event.target.value)}
+                  className="ui-select w-full"
+                >
+                  {backups.length === 0 ? (
+                    <option value="">{labels.restoreBackupPlaceholder}</option>
+                  ) : (
+                    backups.map((backup) => (
+                      <option key={backup.fileName} value={backup.fileName}>
+                        {backup.fileName}
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{labels.restoreOtpLabel}</Label>
+                <OtpCodeField name="otpCode" value={restoreOtpCode} onChange={setRestoreOtpCode} />
+              </div>
+              <Button type="submit" variant="outline" disabled={!canSubmitRestore}>
+                {isRestorePending ? labels.restoring : labels.restoreCta}
+              </Button>
+            </form>
+          </SettingsSection>
+        ) : null}
+
+        {activeTab === "reset" ? (
+          <SettingsSection title={labels.resetTitle}>
+            <p className="flex gap-2.5 rounded-xl bg-[var(--danger-bg)] px-4 py-3 text-[15px] font-semibold text-[var(--danger-fg)]">
+              <TriangleAlert size={18} aria-hidden="true" className="mt-0.5 shrink-0" />
+              {labels.resetDescription}
+            </p>
+            <form className="space-y-4" onSubmit={onResetSubmit}>
+              <div className="space-y-1.5">
+                <Label htmlFor="confirmation">{labels.resetConfirmationLabel}</Label>
+                <Input
+                  id="confirmation"
+                  name="confirmation"
+                  required
+                  placeholder="RESET"
+                  autoComplete="off"
+                  aria-describedby="confirmation-hint"
+                  className="font-mono sm:max-w-xs"
+                  value={resetConfirmation}
+                  onChange={(event) => setResetConfirmation(event.target.value)}
+                />
+                <p id="confirmation-hint" className="text-sm text-[var(--muted-foreground)]">{labels.resetConfirmationHint}</p>
+              </div>
+              <div className="space-y-1.5">
+                <Label>{labels.resetOtpLabel}</Label>
+                <OtpCodeField name="otpCode" value={resetOtpCode} onChange={setResetOtpCode} />
+              </div>
+              <Button type="submit" variant="destructive" disabled={!canSubmitReset}>
+                {isResetPending ? labels.resetting : labels.resetCta}
+              </Button>
+            </form>
+          </SettingsSection>
+        ) : null}
+      </div>
+
+      <Dialog open={Boolean(openBackup)} onOpenChange={(open) => !open && setOpenBackup(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle><span className="break-all font-mono">{openBackupItem?.fileName}</span></DialogTitle>
+            {openBackupItem ? (
+              <DialogDescription>
+                <span className="tabular">
+                  {labels.backupDateLabel}: {formatDate(new Date(openBackupItem.createdAtIso), locale)} · {labels.backupSizeLabel}:{" "}
+                  {formatBytes(openBackupItem.sizeBytes, locale)}
+                </span>
+              </DialogDescription>
+            ) : null}
+          </DialogHeader>
+          <DialogFooter>
+            {/* Deleting is deliberate: it lives here, away from the list. */}
+            <Button
+              type="button"
+              variant="ghost"
+              className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] sm:mr-auto"
+              disabled={isDeleteBackupPending}
+              onClick={() => {
+                setBackupToDelete(openBackup);
+                setOpenBackup(null);
+              }}
+            >
+              <Trash2 size={18} aria-hidden="true" />
+              {confirmLabels.delete}
+            </Button>
+            {openBackupItem ? (
+              <a
+                href={`/${locale}/settings/danger-zone/download?file=${encodeURIComponent(openBackupItem.fileName)}`}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-[var(--primary)] px-4 text-[15px] font-semibold text-[var(--primary-foreground)] hover:bg-[var(--primary-hover)]"
+              >
+                <Download size={18} aria-hidden="true" />
+                {confirmLabels.download}
+              </a>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={Boolean(pendingConfirm)} onOpenChange={(open) => !open && setPendingConfirm(null)}>
         <AlertDialogContent>
@@ -387,7 +419,7 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="ghost">
                 {confirmLabels.cancel}
               </Button>
             </AlertDialogCancel>
@@ -420,11 +452,11 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
           <AlertDialogHeader>
             <AlertDialogTitle>{confirmLabels.deleteBackupTitle}</AlertDialogTitle>
             <AlertDialogDescription>{confirmLabels.deleteBackupDescription}</AlertDialogDescription>
-            {backupToDelete ? <AlertDialogDescription>{backupToDelete}</AlertDialogDescription> : null}
+            {backupToDelete ? <AlertDialogDescription><span className="break-all font-mono">{backupToDelete}</span></AlertDialogDescription> : null}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="ghost">
                 {confirmLabels.cancel}
               </Button>
             </AlertDialogCancel>
@@ -441,6 +473,6 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }
