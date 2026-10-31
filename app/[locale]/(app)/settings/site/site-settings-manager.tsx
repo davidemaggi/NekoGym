@@ -236,7 +236,7 @@ export function SiteSettingsManager({ locale, labels, initialValues, envValues }
                     name="weeklyResetWeekday"
                     value={formValues.weeklyResetWeekday}
                     onChange={(event) => setField("weeklyResetWeekday", event.target.value as typeof initialValues.weeklyResetWeekday)}
-                    className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                    className="ui-select w-full"
                   >
                     {([
                       "MONDAY",

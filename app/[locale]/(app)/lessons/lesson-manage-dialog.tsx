@@ -504,7 +504,7 @@ export function LessonManageDialog({
                   id={`lessonType-${lesson.id}`}
                   name="lessonTypeId"
                   defaultValue={lesson.lessonTypeId}
-                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                  className="ui-select w-full"
                 >
                   <option value="">- {labels.standaloneLessonType} -</option>
                   {lessonTypeCandidates.map((type) => (
@@ -530,7 +530,7 @@ export function LessonManageDialog({
                   <select
                     id={`trainer-update-${lesson.id}`}
                     defaultValue={lesson.trainerId}
-                    className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                    className="ui-select w-full"
                     onChange={(event) => handleTrainerUpdate(event.target.value)}
                     disabled={isPending}
                   >
@@ -619,7 +619,7 @@ export function LessonManageDialog({
                   <select
                     value={attendeeToAdd}
                     onChange={(event) => setAttendeeToAdd(event.target.value)}
-                    className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                    className="ui-select w-full"
                     disabled={isPending}
                   >
                     <option value="">- {labels.attendeeSelectLabel} -</option>

@@ -236,7 +236,7 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
                 id="notifications-audience"
                 value={audience}
                 onChange={(event) => setAudience(event.target.value as "ALL" | "TRAINERS" | "TRAINEES")}
-                className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                className="ui-select w-full"
               >
                 <option value="ALL">{labels.audienceOptions.ALL}</option>
                 <option value="TRAINERS">{labels.audienceOptions.TRAINERS}</option>
@@ -273,7 +273,7 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
                 id="outbox-status"
                 value={statusFilter}
                 onChange={(event) => setStatusFilter(event.target.value as typeof statusFilter)}
-                className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
+                className="ui-select w-full"
               >
                 <option value="ALL">{labels.outbox.statusOptions.ALL}</option>
                 <option value="PENDING">{labels.outbox.statusOptions.PENDING}</option>
@@ -288,7 +288,7 @@ export function NotificationsManager({ locale, labels, outboxFailed, filters }: 
                 id="outbox-channel"
                 value={channelFilter}
                 onChange={(event) => setChannelFilter(event.target.value as typeof channelFilter)}
-                className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
+                className="ui-select w-full"
               >
                 <option value="ALL">{labels.outbox.channelOptions.ALL}</option>
                 <option value="EMAIL">{labels.outbox.channelOptions.EMAIL}</option>

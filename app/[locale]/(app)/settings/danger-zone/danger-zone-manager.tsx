@@ -313,7 +313,7 @@ export function DangerZoneManager({ locale, backups, labels }: DangerZoneManager
                     required
                     value={restoreBackupFileName}
                     onChange={(event) => setRestoreBackupFileName(event.target.value)}
-                    className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                    className="ui-select w-full"
                   >
                     {backups.length === 0 ? (
                       <option value="">{labels.restoreBackupPlaceholder}</option>

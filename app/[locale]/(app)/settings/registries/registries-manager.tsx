@@ -230,7 +230,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                         required
                         value={createIcon}
                         onChange={(event) => setCreateIcon(event.target.value)}
-                        className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                        className="ui-select w-full"
                       >
                         {iconOptions.map((icon) => (
                           <option key={icon} value={icon}>
@@ -254,7 +254,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                         required
                         value={createColor}
                         onChange={(event) => setCreateColor(event.target.value)}
-                        className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                        className="ui-select w-full"
                       >
                         {colorOptions.map((option) => (
                           <option key={option.value} value={option.value}>
@@ -354,7 +354,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                   required
                   value={editIcon}
                   onChange={(event) => setEditIcon(event.target.value)}
-                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                  className="ui-select w-full"
                 >
                   {[...new Set([editingType.iconSvg, ...iconOptions])].map((icon) => (
                     <option key={icon} value={icon}>
@@ -378,7 +378,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                   required
                   value={editColor}
                   onChange={(event) => setEditColor(event.target.value)}
-                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                  className="ui-select w-full"
                 >
                   {colorOptions.map((option) => (
                     <option key={option.value} value={option.value}>

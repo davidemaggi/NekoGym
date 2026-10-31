@@ -240,7 +240,7 @@ export function StandaloneLessonCreateDialog({
                 name="trainerId"
                 defaultValue={defaultTrainerId ?? ""}
                 disabled={disableTrainerSelection}
-                className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
+                className="ui-select w-full"
               >
                 <option value="">- {labels.trainerLabel} -</option>
                 {trainerCandidates.map((trainer) => (
@@ -256,7 +256,7 @@ export function StandaloneLessonCreateDialog({
                 id={lessonId ? `lessonType-${lessonId}` : "lessonType-create"}
                 name="lessonTypeId"
                 defaultValue={defaultLessonTypeId ?? ""}
-                className="h-9 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 text-xs"
+                className="ui-select w-full"
               >
                 <option value="">- {labels.standaloneLessonType} -</option>
                 {lessonTypeCandidates.map((type) => (

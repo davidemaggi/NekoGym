@@ -61,7 +61,7 @@ export default async function ReportsPage({
           <label htmlFor="days" className="text-sm font-medium">
             {labels.filters.periodLabel}
           </label>
-          <select id="days" name="days" defaultValue={String(days)} className="rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-sm">
+          <select id="days" name="days" defaultValue={String(days)} className="ui-select">
             <option value="7">{labels.filters.last7Days}</option>
             <option value="30">{labels.filters.last30Days}</option>
             <option value="90">{labels.filters.last90Days}</option>
@@ -345,7 +345,7 @@ export default async function ReportsPage({
                 id="reportDigestFrequency"
                 name="reportDigestFrequency"
                 defaultValue={settings?.reportDigestFrequency ?? "NEVER"}
-                className="rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-2 py-1 text-sm"
+                className="ui-select"
               >
                 <option value="NEVER">{labels.settings.frequencyNever}</option>
                 <option value="WEEKLY">{labels.settings.frequencyWeekly}</option>

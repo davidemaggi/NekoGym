@@ -243,6 +243,30 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: saturate(0) brightness(2.6) contrast(1.1);
 }
 
+/* Native select in the system's field style (44px, 16px text, drawn chevron). */
+@layer components {
+  .ui-select {
+    height: 2.75rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--surface-border);
+    background-color: var(--surface);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23555a78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    padding: 0 2.5rem 0 0.875rem;
+    font-size: 1rem;
+    color: var(--foreground);
+    appearance: none;
+    transition: border-color 150ms;
+  }
+  .ui-select:hover { border-color: var(--muted-foreground); }
+  .ui-select:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring); outline-offset: 0; }
+  .ui-select:disabled { cursor: not-allowed; background-color: var(--surface-sunken); opacity: 0.7; }
+  .dark .ui-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23aeb3d0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+}
+
 /* The validator stamp landing on a freshly booked row. */
 @keyframes stamp-land {
   0% { transform: scale(1.12); opacity: 0; }

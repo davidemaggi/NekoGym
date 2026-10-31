@@ -414,7 +414,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
             <select
               value={roleFilter}
               onChange={(event) => setRoleFilter(event.target.value as UserItem["role"] | "ALL")}
-              className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+              className="ui-select"
             >
               <option value="ALL">{labels.filters.allRoles}</option>
               <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
@@ -424,7 +424,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "DISABLED")}
-              className="h-10 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+              className="ui-select"
             >
               <option value="ALL">{localActions.allStatuses}</option>
               <option value="ACTIVE">{localActions.statusActive}</option>
@@ -814,7 +814,7 @@ function UserFormFields({
                     id="role"
                     defaultValue={defaults.role}
                     disabled
-                    className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--muted)] px-3 text-sm"
+                    className="ui-select w-full"
                   >
                     <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
                     <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
@@ -826,7 +826,7 @@ function UserFormFields({
                   id="role"
                   name="role"
                   defaultValue={defaults?.role ?? "TRAINEE"}
-                  className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                  className="ui-select w-full"
                 >
                   <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
                   <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
@@ -856,7 +856,7 @@ function UserFormFields({
               id="membershipStatus"
               name="membershipStatus"
               defaultValue={defaults?.membershipStatus ?? "INACTIVE"}
-              className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+              className="ui-select w-full"
             >
               <option value="ACTIVE">{labels.membershipOptions.ACTIVE}</option>
               <option value="INACTIVE">{labels.membershipOptions.INACTIVE}</option>
@@ -878,7 +878,7 @@ function UserFormFields({
                 name="subscriptionType"
                 defaultValue={defaults?.subscriptionType ?? "NONE"}
                 onChange={(event) => setSubscriptionType(event.target.value as UserItem["subscriptionType"])}
-                className="h-10 w-full rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                className="ui-select w-full"
               >
                 <option value="NONE">{labels.subscriptionOptions.NONE}</option>
                 <option value="WEEKLY">{labels.subscriptionOptions.WEEKLY}</option>
@@ -948,7 +948,7 @@ function UserFormFields({
                   id={`lessonTypeAccess-${lessonType.id}`}
                   name={`lessonTypeAccess:${lessonType.id}`}
                   defaultValue={defaults?.lessonTypeAccesses?.[lessonType.id] ?? "REQUIRES_CONFIRMATION"}
-                  className="h-10 min-w-52 rounded-md border border-[var(--surface-border)] bg-[var(--surface)] px-3 text-sm"
+                  className="ui-select min-w-52"
                 >
                   <option value="REQUIRES_CONFIRMATION">{labels.lessonTypeAccessOptions.REQUIRES_CONFIRMATION}</option>
                   <option value="ALLOWED">{labels.lessonTypeAccessOptions.ALLOWED}</option>
