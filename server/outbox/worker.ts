@@ -107,7 +107,16 @@ export function startOutboxWorker(log: Logger): () => void {
     }, pollMs);
   }
 
-  schedule();
+  // Single-process worker: anything left PROCESSING at startup was interrupted by a crash/restart.
+  void prisma.notificationOutbox
+    .updateMany({ where: { status: "PROCESSING" satisfies OutboxStatus }, data: { status: "PENDING" } })
+    .then(({ count }) => {
+      if (count > 0) log(`Outbox worker requeued ${count} interrupted item(s)`);
+    })
+    .catch((error) => {
+      log(`Outbox worker requeue failed: ${error instanceof Error ? error.message : "unknown error"}`);
+    })
+    .finally(schedule);
   log(`Outbox worker started (poll ${pollMs}ms)`);
 
   return () => {

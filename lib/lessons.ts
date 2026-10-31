@@ -1,5 +1,7 @@
 import type { Prisma, Weekday } from "@prisma/client";
+import { appDateKey, appLocalDateTimeToUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
 import { DEFAULT_OPEN_WEEKDAYS, parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
+import { refundFixedPlanUnitsForCancelledLesson } from "@/lib/booking-rules";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
 const WEEKDAY_INDEX: Record<Weekday, number> = {
@@ -64,28 +66,13 @@ function parseTime(value: string): { hour: number; minute: number } {
   };
 }
 
-function addMonths(base: Date, months: number): Date {
-  const date = new Date(base);
-  date.setMonth(date.getMonth() + months);
-  return date;
-}
-
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
 function toKey(startsAt: Date): string {
   return startsAt.toISOString();
 }
 
-function dateKey(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
 function formatLessonDateForNotification(date: Date): string {
   return new Intl.DateTimeFormat("it-IT", {
+    timeZone: getAppDateTimeConfig().timeZone,
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
@@ -150,9 +137,11 @@ export function isLessonAllowedBySiteSchedule(
 ): boolean {
   const openSet = new Set<Weekday>(openWeekdays.length > 0 ? openWeekdays : DEFAULT_OPEN_WEEKDAYS);
   const closedSet = new Set(closedDates);
-  const weekday = Object.keys(WEEKDAY_INDEX).find((day) => WEEKDAY_INDEX[day as Weekday] === startsAt.getDay()) as Weekday;
+  // Weekday and calendar date are read in the app time zone, never in the server one.
+  const appWeekday = getAppDateParts(startsAt).weekday;
+  const weekday = Object.keys(WEEKDAY_INDEX).find((day) => WEEKDAY_INDEX[day as Weekday] === appWeekday) as Weekday;
   if (!openSet.has(weekday)) return false;
-  if (closedSet.has(dateKey(startsAt))) return false;
+  if (closedSet.has(appDateKey(startsAt))) return false;
   return true;
 }
 
@@ -176,22 +165,20 @@ function parseSiteSchedule(settings: { openWeekdaysCsv: string; closedDatesCsv: 
 export function buildLessonSeeds(course: CourseForGeneration, fromDate = new Date()): LessonSeed[] {
   if (course.scheduleSlots.length === 0) return [];
 
-  const start = startOfDay(fromDate);
-  const until = addMonths(start, course.bookingAdvanceMonths);
+  // Slot times are wall-clock times in the app time zone (APP_DATETIME_TIMEZONE), independent of server TZ.
+  const today = getAppDateParts(fromDate);
+  const until = appLocalDateTimeToUtc(today.year, today.month + course.bookingAdvanceMonths, today.day);
 
   const seeds: LessonSeed[] = [];
 
   for (const slot of course.scheduleSlots) {
     const targetDayIndex = WEEKDAY_INDEX[slot.weekday];
     const { hour, minute } = parseTime(slot.startTime);
+    const deltaDays = (targetDayIndex - today.weekday + 7) % 7;
 
-    const firstDate = new Date(start);
-    const deltaDays = (targetDayIndex - firstDate.getDay() + 7) % 7;
-    firstDate.setDate(firstDate.getDate() + deltaDays);
-    firstDate.setHours(hour, minute, 0, 0);
-
-    for (let current = new Date(firstDate); current <= until; current.setDate(current.getDate() + 7)) {
-      const startsAt = new Date(current);
+    for (let dayOffset = deltaDays; ; dayOffset += 7) {
+      const startsAt = appLocalDateTimeToUtc(today.year, today.month, today.day + dayOffset, hour, minute);
+      if (startsAt > until) break;
       if (startsAt <= fromDate) continue;
 
       const endsAt = new Date(startsAt.getTime() + course.durationMinutes * 60 * 1000);
@@ -277,6 +264,7 @@ export async function reconcileFutureLessonsForCourse(
           where: { id: lesson.id },
           data: { status: "CANCELLED", deletedAt: new Date() },
         });
+        const refundedFixed = await refundFixedPlanUnitsForCancelledLesson(tx, lesson.id);
         await enqueueAutoCancelledLessonNotifications(tx, {
           lessonId: lesson.id,
           startsAt: lesson.startsAt,
@@ -288,7 +276,7 @@ export async function reconcileFutureLessonsForCourse(
         seedByKey.delete(key);
         cancelled += 1;
         log(
-          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=cancelled reason=customized_with_bookings bookings=${lesson._count.bookings}`
+          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=cancelled reason=customized_with_bookings bookings=${lesson._count.bookings} refundedFixed=${refundedFixed}`
         );
       } else {
         await tx.lesson.update({
@@ -310,6 +298,7 @@ export async function reconcileFutureLessonsForCourse(
           where: { id: lesson.id },
           data: { status: "CANCELLED", deletedAt: new Date() },
         });
+        const refundedFixed = await refundFixedPlanUnitsForCancelledLesson(tx, lesson.id);
         await enqueueAutoCancelledLessonNotifications(tx, {
           lessonId: lesson.id,
           startsAt: lesson.startsAt,
@@ -319,7 +308,7 @@ export async function reconcileFutureLessonsForCourse(
         });
         cancelled += 1;
         log(
-          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=cancelled reason=slot_removed_with_bookings bookings=${lesson._count.bookings}`
+          `lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=cancelled reason=slot_removed_with_bookings bookings=${lesson._count.bookings} refundedFixed=${refundedFixed}`
         );
       } else {
         await tx.lesson.update({
@@ -451,6 +440,7 @@ export async function reconcileFutureLessonsForSiteSchedule(tx: Prisma.Transacti
         where: { id: lesson.id },
         data: { status: "CANCELLED", deletedAt: new Date() },
       });
+      await refundFixedPlanUnitsForCancelledLesson(tx, lesson.id);
       await enqueueAutoCancelledLessonNotifications(tx, {
         lessonId: lesson.id,
         startsAt: lesson.startsAt,
@@ -496,6 +486,7 @@ export async function cancelFutureLessonsForDeletedCourse(
         where: { id: lesson.id },
         data: { status: "CANCELLED", deletedAt: new Date() },
       });
+      await refundFixedPlanUnitsForCancelledLesson(tx, lesson.id);
       await enqueueAutoCancelledLessonNotifications(tx, {
         lessonId: lesson.id,
         startsAt: lesson.startsAt,
@@ -512,6 +503,10 @@ export async function cancelFutureLessonsForDeletedCourse(
   }
 }
 
+/**
+ * Lessons still empty when their cancellation window opens are auto-cancelled (trainer notified).
+ * Lessons with at least one booking (confirmed or pending) are never touched here.
+ */
 export async function cancelLessonsEnteringNoticeWindow(tx: Prisma.TransactionClient): Promise<number> {
   const now = new Date();
   const lessons = await tx.lesson.findMany({
@@ -519,6 +514,7 @@ export async function cancelLessonsEnteringNoticeWindow(tx: Prisma.TransactionCl
       status: "SCHEDULED",
       deletedAt: null,
       startsAt: { gt: now },
+      bookings: { none: {} },
     },
     include: {
       course: { select: { name: true } },

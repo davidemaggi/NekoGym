@@ -1,7 +1,11 @@
 <!-- BEGIN:nextjs-agent-rules -->
-# This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 ## Project Structure
@@ -21,11 +25,11 @@ NekoGym is a Next.js 16 project using the App Router pattern. Key directories:
 - **ESLint 9** — Linting with flat config (`eslint.config.mjs`), Next.js rules, and TypeScript support
 - **SQLite** — Lightweight relational database for storing gym data (users, courses, lessons, bookings)
 - **Prisma** — ORM for database access and migrations
-- **NextAuth.js** — Authentication and authorization for user management
+- **Custom auth (`lib/auth.ts`)** — DB sessions, password, email OTP, magic link and TOTP 2FA (NextAuth is NOT used)
 - **Docker** — Containerization for consistent development and deployment environments
 - **Notifications** via email (e.g., using Nodemailer) and/or Telegram Bot for lesson cancellations and rescheduling
 - **PWA Support** — Configured for offline access and mobile-friendly experience
-- **Passwordless Authentication** — Using email or telegram for secure and user-friendly login without passwords leveraging 6 digit codes NextAuth.js providers
+- **Passwordless Authentication** — Using email or telegram for secure and user-friendly login without passwords leveraging 6 digit codes (implemented in `lib/auth.ts`)
 
 
 ## Development Commands
@@ -105,10 +109,21 @@ When editing code around courses/lessons:
 - Do not remove per-lesson server logs from reconcile unless explicitly requested.
 - Keep logs clear enough to debug one single lesson decision (id, startsAt, outcome, reason).
 - Keep notifications for auto-cancelled booked lessons.
+- Auto-cancelled booked lessons refund one FIXED-plan lesson per CONFIRMED booking (`refundFixedPlanUnitsForCancelledLesson` in `lib/booking-rules.ts`); the `cancelled` log line reports `refundedFixed`.
+- Seeds are built in the app time zone (`APP_DATETIME_TIMEZONE`, see `lib/date-time.ts`), never in the server one. The custom server and `next.config.ts` also set `process.env.TZ` to it.
 - Keep constraints:
   - reconcile only future generated lessons
   - customized lessons (`isCustomized=true`) are handled separately from normal generated lessons
-  - site schedule constraints (open weekdays/closed dates) filter generated seeds
+  - site schedule constraints (open weekdays/closed dates) filter generated seeds (weekday/date read in the app time zone)
 - Any change to this flow should update both:
   - `README.md` user-facing explanation
   - this `AGENTS.md` section
+
+## Booking Rules
+
+Booking eligibility lives in `lib/booking-rules.ts` and is shared by trainee booking and waitlist promotion: never duplicate these checks in actions.
+
+- Waitlist promotion applies the same rules as a normal booking; ineligible entries stay queued and the next eligible one gets the seat.
+- FIXED-plan units are consumed only by CONFIRMED bookings and refunded only for CONFIRMED bookings.
+- The notice-window job only auto-cancels lessons with zero bookings.
+- Server actions must call `unstable_rethrow(error)` first in every `catch` so `redirect()`/`notFound()` are not swallowed.

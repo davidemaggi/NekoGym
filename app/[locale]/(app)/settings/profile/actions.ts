@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { requireAuth } from "@/lib/authorization";
 import { changePassword, disableTotp, enableTotp, requestEmailChange, startTotpSetup } from "@/lib/auth";
 import { formatDateTimeForApp } from "@/lib/date-time";
@@ -89,6 +90,7 @@ export async function startTelegramLinkAction(formData: FormData): Promise<Start
       deepLink: buildTelegramStartLink(token),
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.failed,
@@ -110,6 +112,7 @@ export async function requestEmailChangeAction(formData: FormData): Promise<Prof
     await requestEmailChange({ userId: user.id, locale, newEmail });
     return { ok: true, message: t.emailChangeSent };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.emailChangeFailed,
@@ -135,6 +138,7 @@ export async function changePasswordAction(formData: FormData): Promise<ProfileM
 
     return { ok: true, message: t.passwordChanged };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.passwordChangeFailed,
@@ -173,6 +177,7 @@ export async function sendTestWebPushAction(formData: FormData): Promise<Profile
 
     return { ok: true, message: t.webPushTestQueued };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.webPushTestFailed,
@@ -207,6 +212,7 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
 
     return { ok: true, message: t.notificationPrefsSaved };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.notificationPrefsFailed,
@@ -231,6 +237,7 @@ export async function startTotpSetupAction(formData: FormData): Promise<TotpSetu
       otpauthUri: setup.otpauthUri,
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : locale === "it" ? "Impossibile avviare la configurazione 2FA." : "Unable to start 2FA setup.",
@@ -255,6 +262,7 @@ export async function enableTotpAction(formData: FormData): Promise<ProfileMutat
       message: locale === "it" ? "2FA abilitata." : "2FA enabled.",
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : locale === "it" ? "Impossibile abilitare la 2FA." : "Unable to enable 2FA.",
@@ -274,6 +282,7 @@ export async function disableTotpAction(formData: FormData): Promise<ProfileMuta
       message: locale === "it" ? "2FA disabilitata." : "2FA disabled.",
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : locale === "it" ? "Impossibile disabilitare la 2FA." : "Unable to disable 2FA.",

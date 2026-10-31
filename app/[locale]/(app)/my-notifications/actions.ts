@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { requireAuth } from "@/lib/authorization";
@@ -40,6 +41,7 @@ export async function deleteLocalNotificationAction(formData: FormData): Promise
     revalidatePath(`/${locale}/my-notifications`);
     return { ok: true, message: msg.deleted };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.deleteFailed,
@@ -59,6 +61,7 @@ export async function deleteAllLocalNotificationsAction(formData: FormData): Pro
     revalidatePath(`/${locale}/my-notifications`);
     return { ok: true, message: msg.deletedAll };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.deleteFailed,

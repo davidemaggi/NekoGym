@@ -117,6 +117,51 @@ export function getAppDateTimeConfig() {
   };
 }
 
+/** Calendar date of an instant in the app time zone (weekday: Sunday=0 ... Saturday=6). */
+export function getAppDateParts(value: DateValue): { year: number; month: number; day: number; weekday: number } {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: resolvedTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(toDate(value));
+  const read = (type: Intl.DateTimeFormatPartTypes) =>
+    Number.parseInt(parts.find((part) => part.type === type)?.value ?? "", 10);
+  const year = read("year");
+  const month = read("month");
+  const day = read("day");
+  return { year, month, day, weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay() };
+}
+
+/**
+ * Instant of a wall-clock time in the app time zone. Day/month overflow is normalized (e.g. day 32).
+ * A time skipped by DST (spring forward gap) is moved forward to the first valid hour.
+ */
+export function appLocalDateTimeToUtc(year: number, month: number, day: number, hour = 0, minute = 0): Date {
+  const normalized = new Date(Date.UTC(year, month - 1, day));
+  const y = normalized.getUTCFullYear();
+  const m = normalized.getUTCMonth() + 1;
+  const d = normalized.getUTCDate();
+  const timeZone = resolvedTimeZone();
+  for (let shift = 0; shift < 3 && hour + shift < 24; shift += 1) {
+    const candidate = localDateTimeInZoneToUtcDate(y, m, d, hour + shift, minute, 0, 0, timeZone);
+    if (candidate) return candidate;
+  }
+  return new Date(Date.UTC(y, m - 1, d, hour, minute));
+}
+
+/** Instant of local midnight in the app time zone. Day/month overflow is normalized (e.g. day 32). */
+export function appStartOfDayUtc(year: number, month: number, day: number): Date {
+  return appLocalDateTimeToUtc(year, month, day, 0, 0);
+}
+
+/** `YYYY-MM-DD` of an instant in the app time zone (same format as date inputs / closed dates). */
+export function appDateKey(value: DateValue): string {
+  const { year, month, day } = getAppDateParts(value);
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 export function parseDateInputToUtc(value: string): Date | null {
   const match = DATE_INPUT_PATTERN.exec(value.trim());
   if (!match) return null;

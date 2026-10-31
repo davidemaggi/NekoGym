@@ -129,14 +129,17 @@ Regole booking:
 Sezione piani:
 
 - `FIXED`: decremento `subscriptionRemaining` alla conferma, rimborso su disiscrizione valida
-- `WEEKLY`/`MONTHLY`: limite prenotazioni nella finestra corrispondente
+- `WEEKLY`/`MONTHLY`: limite prenotazioni nella finestra corrispondente (la settimana parte dal "giorno reset piano settimanale" delle impostazioni sito, il mese dal giorno 1; entrambe calcolate nella timezone della palestra)
 - trial attivo bypassa membership inattiva
 - subscription scaduta può forzare membership a inattiva
 
 Waitlist:
 
 - se lezione piena, utente va in coda
-- liberando posto, promozione automatica del primo in coda
+- liberando posto (disiscrizione, rimozione da parte dello staff, rifiuto di una richiesta pendente), promozione automatica del primo in coda **che rispetta le stesse regole di una prenotazione normale** (membership/trial, piano, accesso tipo lezione, stesso corso stesso giorno)
+- chi in quel momento non è idoneo resta in coda e il posto passa al successivo idoneo
+- se il tipo lezione richiede conferma, il promosso entra in `PENDING`
+- nessuna promozione su lezioni già iniziate/passate
 - notifiche a utente promosso + staff
 
 Pending approvals:
@@ -277,6 +280,8 @@ Vincoli:
 - `isCustomized=true` trattate separatamente
 - filtri su schedule palestra (giorni aperti/date chiuse)
 - notifiche inviate per cancellazioni automatiche di lezioni con iscritti
+- rimborso automatico della lezione ai piani `FIXED` per ogni iscrizione confermata di una lezione annullata (vale anche per chiusura palestra, eliminazione corso e annullamento da parte dello staff)
+- orari degli slot interpretati nella timezone della palestra (`APP_DATETIME_TIMEZONE`, default `Europe/Rome`), indipendentemente dalla timezone del server/container
 - log server dettagliati per ogni decisione reconcile (id, startsAt, outcome, reason)
 
 ## 4. Automazioni server (background jobs)
@@ -284,7 +289,7 @@ Vincoli:
 Avviate dal custom server nello stesso processo applicativo:
 
 - reconcile giornaliera lezioni future (`LESSON_RECONCILE_*`)
-- auto-cancel notice window (`LESSON_NOTICE_WINDOW_POLL_MS`)
+- auto-cancel notice window (`LESSON_NOTICE_WINDOW_POLL_MS`): annulla solo le lezioni **senza iscritti** quando entrano nella finestra di preavviso
 - auto-conferma presenze a fine giornata (`LESSON_ATTENDANCE_AUTOCONFIRM_INTERVAL_MS`)
 - pulizia notifiche locali in base a retention utente (`LOCAL_NOTIFICATIONS_CLEANUP_INTERVAL_MS`)
 - digest report via email (`REPORT_DIGEST_*`)
@@ -499,6 +504,7 @@ Regole semantic versioning (Conventional Commits):
 Base (vedi `.env.example`):
 
 - `CRON_SECRET`
+- `NEKOGYM_DATA_DIR` (opzionale, default `./data`: cartella di DB e backup, utile per un DB demo/di test separato)
 - `APP_PORT` (solo Docker Compose, default `3000`)
 - `APP_URL`
 - `AUTH_COOKIE_SECURE` (`true` in HTTPS/prod, `false` solo per test HTTP locale)

@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { requireAnyRole } from "@/lib/authorization";
@@ -93,6 +94,7 @@ export async function sendManualNotificationAction(formData: FormData): Promise<
     revalidatePath(`/${locale}/settings/notifications`);
     return { ok: true, message: t.queued };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.failed,
@@ -123,6 +125,7 @@ export async function retryOutboxItemAction(formData: FormData): Promise<RetryOu
     revalidatePath(`/${locale}/settings/notifications`);
     return { ok: true, message: t.retryDone };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.retryFailed,
@@ -157,6 +160,7 @@ export async function retryOutboxItemsBulkAction(formData: FormData): Promise<Re
     revalidatePath(`/${locale}/settings/notifications`);
     return { ok: true, message: t.retryBulkDone };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : t.retryFailed,

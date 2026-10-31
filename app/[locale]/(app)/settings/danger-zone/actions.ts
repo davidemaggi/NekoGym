@@ -1,5 +1,6 @@
 "use server";
 
+import { unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { requireAnyRole } from "@/lib/authorization";
@@ -62,6 +63,7 @@ export async function uploadBackupAction(formData: FormData): Promise<DangerZone
       message: `${messages.uploadDone} (${backup.fileName})`,
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.uploadFailed,
@@ -83,6 +85,7 @@ export async function createBackupAction(formData: FormData): Promise<DangerZone
       message: `${messages.backupDone} (${backup.fileName})`,
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.backupFailed,
@@ -108,6 +111,7 @@ export async function deleteBackupAction(formData: FormData): Promise<DangerZone
       message: `${messages.backupDeleteDone} (${backupFileName})`,
     };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.backupDeleteFailed,
@@ -153,6 +157,7 @@ export async function restoreBackupAction(formData: FormData): Promise<DangerZon
 
     return { ok: true, message: messages.restoreDone };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.restoreFailed,
@@ -198,6 +203,7 @@ export async function hardResetAction(formData: FormData): Promise<DangerZoneAct
 
     return { ok: true, message: messages.resetDone };
   } catch (error) {
+    unstable_rethrow(error);
     return {
       ok: false,
       message: error instanceof Error ? error.message : messages.resetFailed,
