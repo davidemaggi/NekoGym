@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { deleteAllLocalNotificationsAction, deleteLocalNotificationAction } from "@/app/[locale]/(app)/my-notifications/actions";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Pagination, PaginationContent, PaginationItem, PaginationNext, PaginationPrevious } from "@/components/ui/pagination";
 import { formatDateTimeForApp } from "@/lib/date-time";
@@ -34,6 +34,10 @@ type MyNotificationsManagerProps = {
     confirmDeleteAllCancelCta: string;
     pageLabel: string;
     unreadBadge: string;
+    unreadOne: string;
+    unreadMany: string;
+    prevPage: string;
+    nextPage: string;
   };
   items: NotificationItem[];
   page: number;
@@ -125,68 +129,109 @@ export function MyNotificationsManager({ locale, labels, items, page, totalPages
     [liveItems]
   );
 
+  const unreadCount = sortedItems.filter((item) => item.isNew).length;
+
   return (
-    <section className="space-y-4">
-      <header className="flex items-center justify-between gap-2">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-        </div>
-        <Button type="button" variant="outline" onClick={() => setConfirmDeleteAll(true)} disabled={isPending || sortedItems.length === 0}>
-          <Trash2 className="h-4 w-4" />
-          <span>{labels.deleteAllCta}</span>
-        </Button>
-      </header>
+    <div>
+      <div
+        data-page-band
+        className="-mt-4 bg-[var(--stock)] pb-5 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-6 lg:pt-10"
+      >
+        <header className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
+            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">
+              {unreadCount > 0 ? (
+                <>
+                  {unreadCount === 1 ? labels.unreadOne : <>{labels.unreadMany.split("{n}")[0]}<span className="tabular">{unreadCount}</span>{labels.unreadMany.split("{n}")[1]}</>} · {labels.description}
+                </>
+              ) : (
+                labels.description
+              )}
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => setConfirmDeleteAll(true)}
+            disabled={isPending || sortedItems.length === 0}
+            className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
+          >
+            <Trash2 size={18} aria-hidden="true" />
+            <span className="hidden sm:inline">{labels.deleteAllCta}</span>
+            <span className="sr-only sm:hidden">{labels.deleteAllCta}</span>
+          </Button>
+        </header>
+      </div>
 
       {sortedItems.length === 0 ? (
-        <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
+        <p className="pt-6 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
       ) : (
-        <div className="space-y-2">
+        <ul className="-mx-4 max-w-3xl pt-2 sm:mx-0">
           {sortedItems.map((item) => (
-            <div
+            <li
               key={item.id}
-              className={[
-                "rounded-md border p-3",
-                item.isNew ? "border-[var(--success-hover)] bg-[var(--success-bg)]/70 dark:border-emerald-800 dark:bg-emerald-950/20" : "border-[var(--surface-border)]",
-              ].join(" ")}
+              className={cn(
+                "grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 border-b border-[var(--rule)] px-4 py-4 last:border-b-0",
+                // Unread notifications are picked up off the paper.
+                item.isNew ? "my-1 border-b-0 bg-[var(--surface)] shadow-[var(--shadow-lift)] sm:rounded-2xl" : "sm:px-0"
+              )}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">{item.subject ?? "-"}</p>
-                  <p className="text-xs text-[var(--muted-foreground)]">{formatDateTimeForApp(item.createdAt)}</p>
-                  {item.isNew ? <Badge variant="success" className="mt-1">{labels.unreadBadge}</Badge> : null}
-                </div>
-                <Button type="button" size="sm" variant="destructive" onClick={() => deleteOne(item.id)} disabled={isPending}>
-                  {labels.deleteOneCta}
-                </Button>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[17px] font-semibold leading-snug">
+                  {item.isNew ? (
+                    <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--foreground)]">
+                      <span className="sr-only">{labels.unreadBadge}</span>
+                    </span>
+                  ) : null}
+                  <span className="min-w-0 break-words">{item.subject ?? "-"}</span>
+                </p>
+                <p className="tabular mt-0.5 text-sm text-[var(--muted-foreground)]">
+                  {formatDateTimeForApp(item.createdAt, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                </p>
+                <p className="mt-2 max-w-[65ch] whitespace-pre-wrap text-[15px] [overflow-wrap:anywhere]">{item.body}</p>
               </div>
-              <p className="mt-2 text-sm whitespace-pre-wrap">{item.body}</p>
-            </div>
+              <button
+                type="button"
+                onClick={() => deleteOne(item.id)}
+                disabled={isPending}
+                aria-label={`${labels.deleteOneCta}: ${item.subject ?? ""}`}
+                className="inline-flex h-11 w-11 items-center justify-center self-start rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)] disabled:opacity-50"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
+      {totalPages > 1 ? (
+      <div className="pt-6">
       <Pagination>
         <PaginationContent>
           <PaginationItem>
             <PaginationPrevious
+              label={labels.prevPage}
               disabled={page <= 1}
               onClick={() => router.push(`/${locale}/my-notifications?page=${Math.max(1, page - 1)}`)}
             />
           </PaginationItem>
           <PaginationItem>
-            <span className="px-2 text-sm text-[var(--muted-foreground)]">
+            <span className="tabular px-3 text-[15px] text-[var(--muted-foreground)]">
               {labels.pageLabel.replace("{page}", String(page)).replace("{totalPages}", String(totalPages))}
             </span>
           </PaginationItem>
           <PaginationItem>
             <PaginationNext
+              label={labels.nextPage}
               disabled={page >= totalPages}
               onClick={() => router.push(`/${locale}/my-notifications?page=${Math.min(totalPages, page + 1)}`)}
             />
           </PaginationItem>
         </PaginationContent>
       </Pagination>
+      </div>
+      ) : null}
 
       <AlertDialog open={confirmDeleteAll} onOpenChange={setConfirmDeleteAll}>
         <AlertDialogContent>
@@ -196,7 +241,7 @@ export function MyNotificationsManager({ locale, labels, items, page, totalPages
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary">{labels.confirmDeleteAllCancelCta}</Button>
+              <Button variant="outline">{labels.confirmDeleteAllCancelCta}</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button variant="destructive" onClick={deleteAll} disabled={isPending}>
@@ -206,6 +251,6 @@ export function MyNotificationsManager({ locale, labels, items, page, totalPages
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }

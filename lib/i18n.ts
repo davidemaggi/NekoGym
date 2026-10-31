@@ -653,6 +653,10 @@ export type Dictionary = {
       };
     };
     myNotifications: {
+      unreadOne: string;
+      unreadMany: string;
+      prevPage: string;
+      nextPage: string;
       title: string;
       description: string;
       empty: string;
@@ -1488,6 +1492,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
       myNotifications: {
+        unreadOne: "1 non letta",
+        unreadMany: "{n} non lette",
+        prevPage: "Precedente",
+        nextPage: "Successiva",
         title: "Le mie notifiche",
         description: "Storico notifiche locali ricevute su tutti i dispositivi.",
         empty: "Nessuna notifica disponibile.",
@@ -2322,6 +2330,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
       myNotifications: {
+        unreadOne: "1 unread",
+        unreadMany: "{n} unread",
+        prevPage: "Previous",
+        nextPage: "Next",
         title: "My notifications",
         description: "Local notification history across all your devices.",
         empty: "No notifications available.",
