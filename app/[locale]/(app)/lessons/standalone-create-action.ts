@@ -13,7 +13,14 @@ import {
   promoteNextEligibleWaitlistEntry,
   refundFixedPlanUnit,
 } from "@/lib/booking-rules";
-import { formatDateTimeForApp, parseDateTimeLocalInputToUtc } from "@/lib/date-time";
+import {
+  appDateKey,
+  appLocalDateTimeToUtc,
+  formatDateTimeForApp,
+  getAppTimeParts,
+  parseDateTimeLocalInputToUtc,
+} from "@/lib/date-time";
+import { addDaysToKey, parseRecurrenceFromForm, planOccurrences, type Recurrence } from "@/lib/lesson-recurrence";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
@@ -52,6 +59,23 @@ function messages(locale: string) {
     lessonFull: isIt ? "Lezione piena." : "Lesson is full.",
     sameCourseDay: isIt ? "Utente gia iscritto a questo corso nello stesso giorno." : "User already booked this course on the same day.",
     standaloneCreated: isIt ? "Lezione creata." : "Lesson created.",
+    seriesCreated: (count: number) =>
+      isIt ? (count === 1 ? "1 lezione creata." : `${count} lezioni create.`) : count === 1 ? "1 lesson created." : `${count} lessons created.`,
+    seriesSkipped: (parts: { closed: number; existing: number; past: number; truncated: boolean }) => {
+      const notes: string[] = [];
+      if (parts.closed > 0) notes.push(isIt ? `${parts.closed} saltate (palestra chiusa)` : `${parts.closed} skipped (gym closed)`);
+      if (parts.existing > 0) notes.push(isIt ? `${parts.existing} già presenti` : `${parts.existing} already there`);
+      if (parts.past > 0) notes.push(isIt ? `${parts.past} nel passato` : `${parts.past} in the past`);
+      if (parts.truncated) notes.push(isIt ? "serie limitata a 60 lezioni" : "series capped at 60 lessons");
+      return notes.length > 0 ? ` (${notes.join(", ")})` : "";
+    },
+    seriesEmpty: isIt
+      ? "Nessuna lezione da creare con queste opzioni di ripetizione."
+      : "These repeat options produce no lessons.",
+    repeatStandaloneOnly: isIt
+      ? "Puoi ripetere solo lezioni singole (non generate da un corso)."
+      : "Only standalone lessons can be repeated.",
+    repeatFailed: isIt ? "Impossibile ripetere la lezione." : "Unable to repeat the lesson.",
     standaloneUpdated: isIt ? "Lezione aggiornata." : "Lesson updated.",
     lessonMainUpdated: isIt ? "Dettagli lezione aggiornati." : "Lesson details updated.",
     trainerUpdated: isIt ? "Trainer aggiornato." : "Trainer updated.",
@@ -175,6 +199,86 @@ async function validateLessonType(tx: Prisma.TransactionClient, lessonTypeId: st
   if (!lessonType) {
     throw new Error(t.lessonTypeInvalid);
   }
+}
+
+type LessonTemplate = {
+  title: string | null;
+  description: string | null;
+  durationMinutes: number;
+  maxAttendees: number;
+  cancellationWindowHours: number;
+  trainerId: string | null;
+  lessonTypeId: string | null;
+};
+
+/**
+ * Creates one standalone lesson per planned day at the template's wall-clock time (gym time zone).
+ * Closed days never reach here (planOccurrences skips them); past slots and exact duplicates
+ * (same start, trainer, type and title, not deleted) are skipped and counted.
+ */
+async function createLessonSeries(input: {
+  tx: Prisma.TransactionClient;
+  recurrence: Recurrence;
+  firstDay: string;
+  time: { hour: number; minute: number };
+  template: LessonTemplate;
+}) {
+  const settings = await input.tx.siteSettings.findUnique({
+    where: { id: 1 },
+    select: { openWeekdaysCsv: true, closedDatesCsv: true },
+  });
+  const openWeekdays = parseOpenWeekdaysCsv(settings?.openWeekdaysCsv);
+  const closedDates = parseClosedDatesCsv(settings?.closedDatesCsv);
+  const startOf = (day: string) => {
+    const [year, month, date] = day.split("-").map((part) => Number.parseInt(part, 10));
+    return appLocalDateTimeToUtc(year, month, date, input.time.hour, input.time.minute);
+  };
+  const plan = planOccurrences(input.recurrence, input.firstDay, (day) =>
+    isLessonAllowedBySiteSchedule(startOf(day), openWeekdays, closedDates)
+  );
+
+  let created = 0;
+  let existing = 0;
+  let past = 0;
+  for (const day of plan.dates) {
+    const startsAt = startOf(day);
+    if (isPastOrNow(startsAt)) {
+      past += 1;
+      continue;
+    }
+    const duplicate = await input.tx.lesson.findFirst({
+      where: {
+        startsAt,
+        deletedAt: null,
+        trainerId: input.template.trainerId,
+        lessonTypeId: input.template.lessonTypeId,
+        title: input.template.title,
+      },
+      select: { id: true },
+    });
+    if (duplicate) {
+      existing += 1;
+      continue;
+    }
+    await input.tx.lesson.create({
+      data: {
+        title: input.template.title,
+        description: input.template.description,
+        startsAt,
+        endsAt: new Date(startsAt.getTime() + input.template.durationMinutes * 60 * 1000),
+        maxAttendees: input.template.maxAttendees,
+        cancellationWindowHours: input.template.cancellationWindowHours,
+        trainerId: input.template.trainerId,
+        lessonTypeId: input.template.lessonTypeId,
+        status: "SCHEDULED",
+        isGenerated: false,
+        isCustomized: false,
+      },
+    });
+    created += 1;
+  }
+
+  return { created, existing, past, closed: plan.closed.length, truncated: plan.truncated };
 }
 
 function formatDateForNotification(date: Date, locale: string): string {
@@ -347,6 +451,28 @@ export async function createStandaloneLessonMutationAction(formData: FormData): 
       throw new Error(t.numericInvalid);
     }
 
+    const recurrence = parseRecurrenceFromForm(formData);
+    if (recurrence.mode !== "none") {
+      // A repeated lesson: the start field gives the first day and the time of every copy.
+      const outcome = await prisma.$transaction(async (tx) => {
+        await validateTrainer({ tx, locale, trainerId, currentUser: user });
+        await validateLessonType(tx, lessonTypeId, locale);
+        return createLessonSeries({
+          tx,
+          recurrence,
+          firstDay: appDateKey(startsAt),
+          time: getAppTimeParts(startsAt),
+          template: { title, description, durationMinutes, maxAttendees, cancellationWindowHours, trainerId, lessonTypeId },
+        });
+      });
+      if (outcome.created === 0) {
+        return { ok: false, message: t.seriesEmpty + t.seriesSkipped(outcome) };
+      }
+      revalidatePath(`/${locale}/lessons`);
+      revalidatePath(`/${locale}/bookings`);
+      return { ok: true, message: t.seriesCreated(outcome.created) + t.seriesSkipped(outcome) };
+    }
+
     await prisma.$transaction(async (tx) => {
       await validateStartsAtBySiteSchedule({ tx, startsAt, locale });
       await validateTrainer({ tx, locale, trainerId, currentUser: user });
@@ -379,6 +505,53 @@ export async function createStandaloneLessonMutationAction(formData: FormData): 
       ok: false,
       message: error instanceof Error ? error.message : t.failed,
     };
+  }
+}
+
+/** "Ripeti…" on an existing standalone lesson: independent copies (no attendees) on the chosen days after it. */
+export async function repeatLessonMutationAction(formData: FormData): Promise<LessonMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const t = messages(locale);
+
+  try {
+    const user = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+    const lessonId = getField(formData, "lessonId");
+    if (!lessonId) throw new Error(t.lessonRequired);
+    const recurrence = parseRecurrenceFromForm(formData);
+    if (recurrence.mode === "none") throw new Error(t.seriesEmpty);
+
+    const outcome = await prisma.$transaction(async (tx) => {
+      const lesson = await loadManagedLessonOrThrow({ tx, lessonId, locale, currentUser: user });
+      if (lesson.courseId) throw new Error(t.repeatStandaloneOnly);
+      await validateTrainer({ tx, locale, trainerId: lesson.trainerId, currentUser: user });
+      return createLessonSeries({
+        tx,
+        recurrence,
+        // Copies start the day after the original, at its time of day.
+        firstDay: addDaysToKey(appDateKey(lesson.startsAt), 1),
+        time: getAppTimeParts(lesson.startsAt),
+        template: {
+          title: lesson.title,
+          description: lesson.description,
+          durationMinutes: Math.max(1, Math.round((lesson.endsAt.getTime() - lesson.startsAt.getTime()) / 60000)),
+          maxAttendees: lesson.maxAttendees,
+          cancellationWindowHours: lesson.cancellationWindowHours,
+          trainerId: lesson.trainerId,
+          lessonTypeId: lesson.lessonTypeId,
+        },
+      });
+    });
+
+    if (outcome.created === 0) {
+      return { ok: false, message: t.seriesEmpty + t.seriesSkipped(outcome) };
+    }
+    revalidatePath(`/${locale}/lessons`);
+    revalidatePath(`/${locale}/bookings`);
+    revalidatePath(`/${locale}`);
+    return { ok: true, message: t.seriesCreated(outcome.created) + t.seriesSkipped(outcome) };
+  } catch (error) {
+    unstable_rethrow(error);
+    return { ok: false, message: error instanceof Error ? error.message : t.repeatFailed };
   }
 }
 

@@ -1,12 +1,13 @@
 "use client";
 
 import { PlanUsageTag } from "@/components/users/plan-usage-tag";
+import { RepeatLessonDialog } from "@/components/lessons/repeat-lesson-dialog";
 import type { PlanUsage } from "@/lib/plan-usage";
 
 import { getAppDateTimeConfig } from "@/lib/date-time";
 
 import { type ReactNode, useState, useTransition } from "react";
-import { Pencil, Send } from "lucide-react";
+import { Pencil, Repeat, Send } from "lucide-react";
 import { toast } from "sonner";
 
 import { broadcastLessonNotificationMutationAction } from "@/app/[locale]/(app)/lessons/standalone-create-action";
@@ -149,6 +150,9 @@ function formatTime(value: string, locale: string): string {
 export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels, lesson, manage }: LessonDetailsDialogTriggerProps) {
   const [open, setOpen] = useState(false);
   const [manageOpen, setManageOpen] = useState(false);
+  const [repeatOpen, setRepeatOpen] = useState(false);
+  // Only standalone lessons repeat: a course already owns its schedule.
+  const canRepeat = Boolean(manage) && !lesson.isCourseLesson;
   const [detailsTab, setDetailsTab] = useState<"info" | "people">("info");
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -306,6 +310,19 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
             <Button type="button" variant="ghost" onClick={closeDialog}>
               {labels.closeCta}
             </Button>
+            {canRepeat ? (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setOpen(false);
+                  setRepeatOpen(true);
+                }}
+              >
+                <Repeat size={16} aria-hidden="true" />
+                {locale === "it" ? "Ripeti…" : "Repeat…"}
+              </Button>
+            ) : null}
             {manage ? (
               <Button
                 type="button"
@@ -321,6 +338,15 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {canRepeat ? (
+        <RepeatLessonDialog
+          locale={locale}
+          lesson={{ id: lesson.id, title: lesson.title, startsAt: lesson.startsAt }}
+          open={repeatOpen}
+          onOpenChange={setRepeatOpen}
+        />
+      ) : null}
 
       {manage ? (
         <LessonManageDialog

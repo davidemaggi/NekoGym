@@ -6,7 +6,8 @@ import { getAppVersion } from "@/lib/app-version";
 import { getCurrentUser } from "@/lib/auth";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { DEFAULT_SITE_LOGO_SVG } from "@/lib/site-logo";
-import { getSiteSettings } from "@/lib/site-settings";
+import { getSiteSettings, parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
+import { SiteScheduleProvider } from "@/components/lessons/site-schedule-context";
 
 export default async function AppAreaLayout({
   children,
@@ -43,7 +44,14 @@ export default async function AppAreaLayout({
       labels={dictionary.sidebar}
     >
       <WebPushPromptBanner publicKey={webPushPublicKey} labels={dictionary.webPushPrompt} />
-      {children}
+      <SiteScheduleProvider
+        value={{
+          openWeekdays: parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv),
+          closedDates: parseClosedDatesCsv(siteSettings?.closedDatesCsv),
+        }}
+      >
+        {children}
+      </SiteScheduleProvider>
     </AppShell>
   );
 }

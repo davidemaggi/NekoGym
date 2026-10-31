@@ -1,5 +1,7 @@
 "use client";
 
+import { RepeatControls, type RepeatMode } from "@/components/lessons/repeat-controls";
+
 import { appDateTimeLocalValue, weekdayOfDateKey } from "@/lib/date-time";
 
 import { useMemo, useState, useTransition, type ReactNode } from "react";
@@ -92,10 +94,14 @@ export function StandaloneLessonCreateDialog({
     [openWeekdays]
   );
   const closedDateSet = useMemo(() => new Set(closedDates ?? []), [closedDates]);
+  // Creating only: the start field's day seeds the repeat preview.
+  const [firstDay, setFirstDay] = useState(startsAtDefault.slice(0, 10));
+  const [repeatMode, setRepeatMode] = useState<RepeatMode>("none");
 
   function validateScheduleDate(input: HTMLInputElement): boolean {
     const raw = input.value;
-    if (!raw) {
+    // A repeated lesson may start its pattern on a closed day: closed days are skipped server-side.
+    if (!raw || repeatMode !== "none") {
       input.setCustomValidity("");
       return true;
     }
@@ -182,7 +188,10 @@ export function StandaloneLessonCreateDialog({
               name="startsAt"
               required
               defaultValue={startsAtDefault}
-              onChange={(event) => validateScheduleDate(event.currentTarget)}
+              onChange={(event) => {
+                setFirstDay(event.currentTarget.value.slice(0, 10));
+                validateScheduleDate(event.currentTarget);
+              }}
               onInvalid={(event) => validateScheduleDate(event.currentTarget)}
             />
           </div>
@@ -259,6 +268,18 @@ export function StandaloneLessonCreateDialog({
               </select>
             </div>
           </div>
+
+          {!lessonId ? (
+            <RepeatControls
+              locale={locale}
+              idPrefix="create-repeat"
+              firstDay={firstDay}
+              firstDayIsLesson
+              openWeekdays={openWeekdays}
+              closedDates={closedDates}
+              onModeChange={setRepeatMode}
+            />
+          ) : null}
 
           <DialogFooter>
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>

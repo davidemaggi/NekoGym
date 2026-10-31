@@ -80,9 +80,20 @@ Pagine staff:
 Operazioni disponibili:
 
 - creare lezione standalone (non legata a corso)
+- ripetere una lezione standalone senza creare un corso (vedi sotto)
 - modificare/cancellare/ripristinare standalone
 - aprire dettaglio lezione con tab `Informazioni` + `Persone`
 - gestire iscritti, pending approvals, waitlist
+- vedere per ogni persona quante lezioni del piano ha già usato nel periodo della lezione (es. `2/3 sett.`, `5/12 mese`, `7/10 pacchetto`): stesso conteggio usato dal controllo di prenotazione (`lib/plan-usage.ts`); l'elenco utenti mostra il periodo corrente
+
+Ripetizione lezioni standalone:
+
+- in creazione, sezione `Ripeti`: `Ogni giorno`, `Ogni settimana` (giorni scelti) per N volte o fino a una data, oppure `Date scelte` su un calendario
+- su una lezione standalone esistente, `Ripeti…` nel dettaglio crea copie dal giorno successivo
+- le copie sono lezioni standalone indipendenti (nessun collegamento di serie), senza iscritti, alla stessa ora nella timezone della palestra
+- giorni di chiusura (giorni non aperti / date chiuse) saltati, senza consumare il conteggio; slot nel passato e doppioni esatti (stesso inizio, trainer, tipo e titolo) saltati
+- massimo 60 lezioni per richiesta, entro un anno; l'anteprima nel dialog usa la stessa logica del server (`lib/lesson-recurrence.ts`)
+- le lezioni generate dai corsi non si ripetono: il loro calendario è del corso
 - inviare messaggi broadcast agli iscritti della lezione
 
 Regole su lezioni passate:
@@ -512,7 +523,7 @@ Base (vedi `.env.example`):
 - `APP_DATETIME_LOCALE`
 - `APP_DATETIME_TIMEZONE`
 - `NEXT_PUBLIC_APP_DATETIME_LOCALE`
-- `NEXT_PUBLIC_APP_DATETIME_TIMEZONE`
+- `NEXT_PUBLIC_APP_DATETIME_TIMEZONE` (opzionali: il browser riceve locale e timezone dal server a runtime, tramite il root layout; queste servono solo come fallback)
 
 Reconcile / jobs:
 
