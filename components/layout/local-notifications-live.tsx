@@ -1,13 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 
-type LocalNotificationsLiveProps = {
+const UnreadCountContext = createContext(0);
+
+type LocalNotificationsLiveProviderProps = {
+  children: ReactNode;
   pollMs?: number;
 };
 
-export function LocalNotificationsLive({ pollMs = 5000 }: LocalNotificationsLiveProps) {
+/** Polls the local inbox once for the whole shell; badges read the count from context. */
+export function LocalNotificationsLiveProvider({ children, pollMs = 5000 }: LocalNotificationsLiveProviderProps) {
   const [unreadCount, setUnreadCount] = useState(0);
   const sinceRef = useRef(new Date().toISOString());
   const seenIdsRef = useRef(new Set<string>());
@@ -54,11 +58,24 @@ export function LocalNotificationsLive({ pollMs = 5000 }: LocalNotificationsLive
     };
   }, [pollMs]);
 
+  return <UnreadCountContext.Provider value={unreadCount}>{children}</UnreadCountContext.Provider>;
+}
+
+export function useUnreadNotificationsCount() {
+  return useContext(UnreadCountContext);
+}
+
+/** Count bubble; the visible number is paired with a screen-reader phrase. */
+export function LocalNotificationsBadge({ srLabel, className = "" }: { srLabel: string; className?: string }) {
+  const unreadCount = useUnreadNotificationsCount();
   if (unreadCount <= 0) return null;
 
   return (
-    <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--danger-bg)] px-1.5 text-[10px] font-semibold leading-5 text-[var(--danger-fg)]">
-      {unreadCount}
+    <span
+      className={`tabular inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[var(--destructive-bg)] px-1.5 text-[11px] font-bold leading-none text-[var(--destructive-fg)] ${className}`}
+    >
+      {unreadCount > 99 ? "99+" : unreadCount}
+      <span className="sr-only"> {srLabel}</span>
     </span>
   );
 }

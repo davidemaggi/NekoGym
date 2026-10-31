@@ -1,22 +1,43 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import type { Metadata, Viewport } from "next";
+import { Archivo, Geist_Mono } from "next/font/google";
 
-import { ThemeInitializer } from "@/components/layout/theme-initializer";
 import { SwRegister } from "@/components/pwa/sw-register";
 import { AppToaster } from "@/components/ui/toaster";
 import { getSiteSettingsSafe } from "@/lib/site-settings";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+// Variable width axis: condensed cuts set times and counts like a printed ticket.
+const archivo = Archivo({
+  variable: "--font-archivo",
+  subsets: ["latin", "latin-ext"],
+  axes: ["wdth"],
 });
 
+// Only for codes (TOTP secret, chat ids), never as decoration.
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+// Runs before paint: stored choice wins, otherwise follow the system theme. Avoids a light flash in dark mode.
+const themeScript = `(() => {
+  try {
+    const stored = localStorage.getItem("neko-theme");
+    const theme = stored === "dark" || stored === "light"
+      ? stored
+      : (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    document.documentElement.setAttribute("data-theme", theme);
+  } catch {}
+})();`;
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f5f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#12142a" },
+  ],
+};
 
 export async function generateMetadata(): Promise<Metadata> {
   const siteSettings = await getSiteSettingsSafe();
@@ -45,12 +66,14 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="it"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${archivo.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="min-h-full bg-background text-foreground">
-        <ThemeInitializer />
         <SwRegister />
         {children}
         <AppToaster />

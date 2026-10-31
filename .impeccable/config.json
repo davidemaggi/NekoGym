@@ -1,0 +1,35 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/challenger-boarding.html"
+        ],
+        "createdAt": "2026-10-31T10:31:15.844Z",
+        "reason": "Claude: unchosen decision-round sketch, not shipped UI"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/model-pick.html"
+        ],
+        "createdAt": "2026-10-31T10:47:14.951Z",
+        "reason": "Claude: unchosen decision-round sketch, not shipped UI"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          ".impeccable/mocks/decision/canon.html"
+        ],
+        "createdAt": "2026-10-31T10:47:14.981Z",
+        "reason": "Claude: unchosen decision-round sketch, not shipped UI"
+      }
+    ]
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -124,22 +124,31 @@ export function WebPushPromptBanner({ publicKey, labels }: WebPushBannerProps) {
   if (!visible) return null;
 
   return (
-    <div className="mb-4 flex flex-col gap-3 rounded-lg border border-[var(--surface-border)] bg-[var(--surface)] p-3 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex min-w-0 items-start gap-3">
-        <span className="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-[var(--muted)] text-[var(--foreground)]">
-          <Bell size={16} />
+    // Phones: a one-line strip docked above the tab bar. Larger screens: a small card bottom-right.
+    <div
+      role="region"
+      aria-label={labels.title}
+      className="fixed inset-x-3 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-3 rounded-2xl border border-[var(--rule)] bg-[var(--surface)] py-2 pl-4 pr-2 shadow-[var(--shadow-sheet)] sm:inset-x-auto sm:right-6 sm:block sm:w-[24rem] sm:p-4 lg:bottom-6"
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3 sm:items-start">
+        <span aria-hidden="true" className="hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--stock-giallino)] text-[var(--stock-ink)] sm:inline-flex">
+          <Bell size={18} />
         </span>
+        <Bell size={18} aria-hidden="true" className="shrink-0 sm:hidden" />
         <div className="min-w-0">
-          <p className="text-sm font-semibold">{labels.title}</p>
-          <p className="mt-1 text-xs text-[var(--muted-foreground)]">{labels.description}</p>
+          <p className="text-[15px] font-semibold leading-snug">{labels.title}</p>
+          <p className="mt-0.5 hidden text-sm text-[var(--muted-foreground)] sm:block">{labels.description}</p>
         </div>
       </div>
-      <div className="flex shrink-0 gap-2">
-        <Button type="button" size="sm" onClick={handleEnable} disabled={isPending}>
+      <div className="flex shrink-0 items-center gap-1 sm:mt-3 sm:gap-2">
+        <Button type="button" size="sm" className="h-11 px-4 sm:flex-1" onClick={handleEnable} disabled={isPending}>
           {labels.enableCta}
         </Button>
-        <Button type="button" size="sm" variant="secondary" onClick={handleDismiss} disabled={isPending}>
+        <Button type="button" variant="ghost" className="hidden sm:inline-flex sm:flex-1" onClick={handleDismiss} disabled={isPending}>
           {labels.dismissCta}
+        </Button>
+        <Button type="button" variant="ghost" size="icon" className="sm:hidden" onClick={handleDismiss} disabled={isPending} aria-label={labels.dismissCta}>
+          <X size={18} aria-hidden="true" />
         </Button>
       </div>
     </div>

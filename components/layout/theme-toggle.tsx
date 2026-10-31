@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
 
-type Theme = "light" | "dark";
+import { cn } from "@/lib/utils";
 
 type ThemeToggleProps = {
   labels: {
@@ -11,41 +10,32 @@ type ThemeToggleProps = {
     themeToLight: string;
     themeToDark: string;
   };
+  className?: string;
 };
 
-function applyTheme(next: Theme) {
-  document.documentElement.classList.toggle("dark", next === "dark");
-  document.documentElement.setAttribute("data-theme", next);
-}
-
-export function ThemeToggle({ labels }: ThemeToggleProps) {
-  const [theme, setTheme] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "light";
-    return window.localStorage.getItem("neko-theme") === "dark" ? "dark" : "light";
-  });
-
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
+// Stateless on purpose: the server cannot know the theme, so icon and label are chosen by the
+// `.dark` class the inline script set before paint. No hydration mismatch, no flash.
+export function ThemeToggle({ labels, className }: ThemeToggleProps) {
   function toggleTheme() {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    setTheme(next);
+    const next = document.documentElement.classList.contains("dark") ? "light" : "dark";
+    document.documentElement.classList.toggle("dark", next === "dark");
+    document.documentElement.setAttribute("data-theme", next);
     window.localStorage.setItem("neko-theme", next);
   }
-
-  const ariaLabel = theme === "dark" ? labels.themeToLight : labels.themeToDark;
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      aria-label={ariaLabel}
-      title={ariaLabel}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface)] text-[var(--foreground)] hover:bg-[var(--muted)]"
+      className={cn(
+        "inline-flex h-11 w-11 items-center justify-center rounded-xl text-[var(--sidebar-link)] transition-colors hover:bg-[var(--sidebar-link-hover)]",
+        className
+      )}
     >
-      {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+      <Moon size={18} aria-hidden="true" className="dark:hidden" />
+      <Sun size={18} aria-hidden="true" className="hidden dark:block" />
+      <span className="sr-only dark:hidden">{labels.themeToDark}</span>
+      <span className="sr-only hidden dark:inline">{labels.themeToLight}</span>
     </button>
   );
 }
-

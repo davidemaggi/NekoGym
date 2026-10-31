@@ -1,0 +1,870 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-31T10:45:26.829769+00:00",
+  "title": "Design System: NekoGym",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Night-Blue Ink",
+        "canonical": "#1f2340",
+        "tonalRamp": [
+          "#090b13",
+          "#212434",
+          "#3c4058",
+          "#595f7e",
+          "#7a80a1",
+          "#9ea3bf",
+          "#c3c8dd",
+          "#ebeefb"
+        ]
+      },
+      "ink-hover": {
+        "role": "primary",
+        "displayName": "Ink Hover",
+        "canonical": "#2e3360",
+        "tonalRamp": [
+          "#080a16",
+          "#20233a",
+          "#3a3f61",
+          "#565d8a",
+          "#777fae",
+          "#9ba2ca",
+          "#c1c7e6",
+          "#eaedff"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Ground",
+        "canonical": "#f5f6f8",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#252526",
+          "#414243",
+          "#606163",
+          "#818284",
+          "#a4a5a6",
+          "#c8c9ca",
+          "#eeeeef"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "surface-sunken": {
+        "role": "neutral",
+        "displayName": "Surface Sunken",
+        "canonical": "#eef0f4",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#414244",
+          "#606164",
+          "#818286",
+          "#a4a5a8",
+          "#c8c9cb",
+          "#eeeef0"
+        ]
+      },
+      "surface-border": {
+        "role": "neutral",
+        "displayName": "Surface Border",
+        "canonical": "#dde1e9",
+        "tonalRamp": [
+          "#0a0b0d",
+          "#232528",
+          "#404247",
+          "#5e6168",
+          "#7f8289",
+          "#a2a5ab",
+          "#c7c9cd",
+          "#edeef1"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#e6e9ef",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#404246",
+          "#5f6166",
+          "#808287",
+          "#a3a5a9",
+          "#c7c9cc",
+          "#edeef0"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted",
+        "canonical": "#eceef3",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#414245",
+          "#606165",
+          "#818286",
+          "#a3a5a8",
+          "#c8c9cc",
+          "#eeeef0"
+        ]
+      },
+      "muted-ink": {
+        "role": "neutral",
+        "displayName": "Muted Ink",
+        "canonical": "#555a78",
+        "tonalRamp": [
+          "#090b12",
+          "#222432",
+          "#3d4056",
+          "#5a5f7b",
+          "#7b809e",
+          "#9fa3bc",
+          "#c4c8db",
+          "#ebeef9"
+        ]
+      },
+      "sidebar-link": {
+        "role": "neutral",
+        "displayName": "Rail Link Ink",
+        "canonical": "#3c4163",
+        "tonalRamp": [
+          "#090a13",
+          "#212435",
+          "#3c4059",
+          "#595f80",
+          "#7a80a3",
+          "#9ea3c1",
+          "#c3c8df",
+          "#ebeefc"
+        ]
+      },
+      "stock-mint": {
+        "role": "tertiary",
+        "displayName": "Mint Stock",
+        "canonical": "#dcefe3",
+        "tonalRamp": [
+          "#080c0a",
+          "#1f2722",
+          "#3a453e",
+          "#56665c",
+          "#77877d",
+          "#9ca9a0",
+          "#c2ccc6",
+          "#eaf0ec"
+        ]
+      },
+      "stock-azzurro": {
+        "role": "tertiary",
+        "displayName": "Azzurro Stock",
+        "canonical": "#dceaf6",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3b434a",
+          "#58636c",
+          "#78848e",
+          "#9da6af",
+          "#c3cad1",
+          "#ebeff3"
+        ]
+      },
+      "stock-giallino": {
+        "role": "tertiary",
+        "displayName": "Giallino Stock",
+        "canonical": "#f4ecc6",
+        "tonalRamp": [
+          "#0d0b04",
+          "#292515",
+          "#47422b",
+          "#686243",
+          "#8a8363",
+          "#aba68b",
+          "#cecab5",
+          "#f1efe3"
+        ]
+      },
+      "stock-rosa": {
+        "role": "tertiary",
+        "displayName": "Rosa Stock",
+        "canonical": "#f6dfe3",
+        "tonalRamp": [
+          "#0e0a0b",
+          "#2b2224",
+          "#4b3e40",
+          "#6e5c5f",
+          "#907d80",
+          "#b0a0a3",
+          "#d2c5c8",
+          "#f4eced"
+        ]
+      },
+      "stock-lilla": {
+        "role": "tertiary",
+        "displayName": "Lilla Stock",
+        "canonical": "#e5dff3",
+        "tonalRamp": [
+          "#0c0a0e",
+          "#26232c",
+          "#43404c",
+          "#635e6e",
+          "#847f90",
+          "#a7a2b0",
+          "#cac7d2",
+          "#efedf4"
+        ]
+      },
+      "stock-carta": {
+        "role": "tertiary",
+        "displayName": "Carta Stock",
+        "canonical": "#e9ecf2",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#242527",
+          "#404246",
+          "#5f6166",
+          "#808287",
+          "#a3a5a9",
+          "#c7c9cc",
+          "#edeef0"
+        ]
+      },
+      "stamp": {
+        "role": "secondary",
+        "displayName": "Validator Violet",
+        "canonical": "#5b3fa0",
+        "tonalRamp": [
+          "#0c061d",
+          "#271a49",
+          "#453377",
+          "#654ea7",
+          "#8670cd",
+          "#a798e5",
+          "#cac0fb",
+          "#efe9ff"
+        ]
+      },
+      "stamp-soft": {
+        "role": "secondary",
+        "displayName": "Stamp Wash",
+        "canonical": "#ece6f8",
+        "tonalRamp": [
+          "#0c0a0e",
+          "#26242b",
+          "#43404b",
+          "#635e6c",
+          "#847f8e",
+          "#a7a3af",
+          "#cac7d1",
+          "#efedf3"
+        ]
+      },
+      "info-bg": {
+        "role": "neutral",
+        "displayName": "Info Ground",
+        "canonical": "#dceaf6",
+        "tonalRamp": [
+          "#090c0e",
+          "#20262b",
+          "#3b434a",
+          "#58636c",
+          "#78848e",
+          "#9da6af",
+          "#c3cad1",
+          "#ebeff3"
+        ]
+      },
+      "info-fg": {
+        "role": "neutral",
+        "displayName": "Info Ink",
+        "canonical": "#1d4a72",
+        "tonalRamp": [
+          "#030c16",
+          "#11273a",
+          "#254462",
+          "#3c658b",
+          "#5d86af",
+          "#87a9cb",
+          "#b2cce7",
+          "#e1f1ff"
+        ]
+      },
+      "success-bg": {
+        "role": "neutral",
+        "displayName": "Success Ground",
+        "canonical": "#dcefe3",
+        "tonalRamp": [
+          "#080c0a",
+          "#1f2722",
+          "#3a453e",
+          "#56665c",
+          "#77877d",
+          "#9ca9a0",
+          "#c2ccc6",
+          "#eaf0ec"
+        ]
+      },
+      "success-fg": {
+        "role": "neutral",
+        "displayName": "Success Ink",
+        "canonical": "#1f5a3c",
+        "tonalRamp": [
+          "#030e07",
+          "#102b1d",
+          "#244c36",
+          "#3a6e51",
+          "#5c9072",
+          "#86b197",
+          "#b2d2be",
+          "#e1f4e8"
+        ]
+      },
+      "warning-bg": {
+        "role": "neutral",
+        "displayName": "Warning Ground",
+        "canonical": "#f7edc8",
+        "tonalRamp": [
+          "#0d0b04",
+          "#292515",
+          "#48422b",
+          "#696143",
+          "#8b8264",
+          "#aca58b",
+          "#cfc9b6",
+          "#f2efe3"
+        ]
+      },
+      "warning-fg": {
+        "role": "neutral",
+        "displayName": "Warning Ink",
+        "canonical": "#6b4a00",
+        "tonalRamp": [
+          "#120900",
+          "#322204",
+          "#553d12",
+          "#7a5b23",
+          "#9d7d46",
+          "#bca175",
+          "#dbc6a5",
+          "#f9edd9"
+        ]
+      },
+      "danger-bg": {
+        "role": "neutral",
+        "displayName": "Danger Ground",
+        "canonical": "#f8e1e4",
+        "tonalRamp": [
+          "#0e0a0a",
+          "#2b2224",
+          "#4b3e40",
+          "#6e5c5e",
+          "#907d7f",
+          "#b0a0a2",
+          "#d2c6c7",
+          "#f4eced"
+        ]
+      },
+      "danger-fg": {
+        "role": "neutral",
+        "displayName": "Danger Ink",
+        "canonical": "#8c2236",
+        "tonalRamp": [
+          "#1a0306",
+          "#431019",
+          "#6f2530",
+          "#9d3c49",
+          "#c35e69",
+          "#df8990",
+          "#f8b5b9",
+          "#ffe3e5"
+        ]
+      },
+      "destructive": {
+        "role": "neutral",
+        "displayName": "Destructive Red",
+        "canonical": "#a3293f",
+        "tonalRamp": [
+          "#1c0205",
+          "#460c16",
+          "#731f2d",
+          "#a33545",
+          "#ca5865",
+          "#e5858d",
+          "#fdb2b6",
+          "#ffe1e3"
+        ]
+      },
+      "on-ink": {
+        "role": "primary",
+        "displayName": "On Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "ink-dark": {
+        "role": "primary",
+        "displayName": "Night-Blue Ink (dark)",
+        "canonical": "#eceef8",
+        "tonalRamp": [
+          "#0b0b0d",
+          "#242529",
+          "#404247",
+          "#5f6168",
+          "#80828a",
+          "#a3a5ab",
+          "#c8c9ce",
+          "#edeef1"
+        ]
+      },
+      "ground-dark": {
+        "role": "neutral",
+        "displayName": "Ground (dark)",
+        "canonical": "#12142a",
+        "tonalRamp": [
+          "#0a0b11",
+          "#222431",
+          "#3e4153",
+          "#5b5f78",
+          "#7c809b",
+          "#a0a4ba",
+          "#c5c8d9",
+          "#eceef8"
+        ]
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "Surface (dark)",
+        "canonical": "#1b1e37",
+        "tonalRamp": [
+          "#090b12",
+          "#222432",
+          "#3d4055",
+          "#5b5f7a",
+          "#7b809d",
+          "#9fa3bc",
+          "#c4c8db",
+          "#eceef9"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Rule (dark)",
+        "canonical": "#272b4b",
+        "tonalRamp": [
+          "#090a13",
+          "#212435",
+          "#3c4059",
+          "#595f80",
+          "#7a80a3",
+          "#9ea3c1",
+          "#c3c8df",
+          "#ebeefb"
+        ]
+      },
+      "muted-ink-dark": {
+        "role": "neutral",
+        "displayName": "Muted Ink (dark)",
+        "canonical": "#aeb3d0",
+        "tonalRamp": [
+          "#0a0b11",
+          "#222430",
+          "#3e4153",
+          "#5c5f77",
+          "#7c819a",
+          "#a0a4b9",
+          "#c5c8d8",
+          "#eceef8"
+        ]
+      },
+      "stock-mint-dark": {
+        "role": "tertiary",
+        "displayName": "Mint Stock (dark)",
+        "canonical": "#1d3a30",
+        "tonalRamp": [
+          "#060d0a",
+          "#1a2923",
+          "#32473f",
+          "#4d685e",
+          "#6d8a7f",
+          "#94aba2",
+          "#bccec7",
+          "#e7f1ed"
+        ]
+      },
+      "stock-azzurro-dark": {
+        "role": "tertiary",
+        "displayName": "Azzurro Stock (dark)",
+        "canonical": "#1d3048",
+        "tonalRamp": [
+          "#070b12",
+          "#1c2632",
+          "#344356",
+          "#50637b",
+          "#70849e",
+          "#96a7bd",
+          "#bdcadb",
+          "#e7effa"
+        ]
+      },
+      "stock-giallino-dark": {
+        "role": "tertiary",
+        "displayName": "Giallino Stock (dark)",
+        "canonical": "#3a3320",
+        "tonalRamp": [
+          "#0d0b06",
+          "#28251b",
+          "#474233",
+          "#68614e",
+          "#89826e",
+          "#aba594",
+          "#cec9bc",
+          "#f1eee7"
+        ]
+      },
+      "stock-rosa-dark": {
+        "role": "tertiary",
+        "displayName": "Rosa Stock (dark)",
+        "canonical": "#3e2632",
+        "tonalRamp": [
+          "#0f090c",
+          "#2e2127",
+          "#4f3c45",
+          "#725965",
+          "#947a86",
+          "#b59ea8",
+          "#d5c4cc",
+          "#f6ebf0"
+        ]
+      },
+      "stock-lilla-dark": {
+        "role": "tertiary",
+        "displayName": "Lilla Stock (dark)",
+        "canonical": "#2d2749",
+        "tonalRamp": [
+          "#0b0a13",
+          "#252234",
+          "#423e59",
+          "#615c7f",
+          "#827da2",
+          "#a4a1c0",
+          "#c8c6de",
+          "#eeedfb"
+        ]
+      },
+      "stock-carta-dark": {
+        "role": "tertiary",
+        "displayName": "Carta Stock (dark)",
+        "canonical": "#22264a",
+        "tonalRamp": [
+          "#090a14",
+          "#202337",
+          "#3b405c",
+          "#585e84",
+          "#787fa7",
+          "#9da3c4",
+          "#c2c8e1",
+          "#eaeefd"
+        ]
+      },
+      "stamp-dark": {
+        "role": "secondary",
+        "displayName": "Validator Violet (dark)",
+        "canonical": "#bba8f2",
+        "tonalRamp": [
+          "#0c0818",
+          "#281e3e",
+          "#463867",
+          "#665592",
+          "#8776b6",
+          "#a99bd1",
+          "#ccc2ec",
+          "#f0eaff"
+        ]
+      },
+      "destructive-dark": {
+        "role": "neutral",
+        "displayName": "Destructive Red (dark)",
+        "canonical": "#e07a8c",
+        "tonalRamp": [
+          "#190407",
+          "#40131d",
+          "#6a2937",
+          "#974152",
+          "#bd6273",
+          "#d98c98",
+          "#f3b7bf",
+          "#ffe4e8"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Page title in the header band; 1.375rem on phones, 2rem from lg."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Remaining-entries count on the season pass; condensed tabular."
+      },
+      "time": {
+        "displayName": "Time",
+        "purpose": "Lesson start times in the fixed time column (1.375rem phones, 1.625rem from sm); day numbers in the strip at 1.25rem."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Dialog and sheet titles, balanced wrapping."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, pass title, lesson names, day heading, brand name."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Meta lines, descriptions, toasts; long text capped at 65ch."
+      },
+      "input": {
+        "displayName": "Input",
+        "purpose": "Form field text; 16px avoids iOS zoom on focus."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Form labels (14px), nav section captions and avatar sublines (13px)."
+      },
+      "stamp-lettering": {
+        "displayName": "Stamp Lettering",
+        "purpose": "Uppercase lettering inside a stamp face only, always above a 15px condensed date-time detail."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Geist Mono for TOTP secrets and chat ids only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "lift",
+        "value": "0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)",
+        "purpose": "The pass card, the opened lesson row, the active tab trigger. Dark: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 22px -10px rgb(0 0 0 / 0.55)."
+      },
+      {
+        "name": "sheet",
+        "value": "0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3)",
+        "purpose": "Dialogs, bottom sheets, toasts, the Web Push banner. Dark: 0 -4px 24px -8px rgb(0 0 0 / 0.5), 0 20px 50px -16px rgb(0 0 0 / 0.7)."
+      },
+      {
+        "name": "overlay",
+        "value": "rgb(18 20 42 / 0.45)",
+        "purpose": "Scrim behind dialogs and sheets."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Default easing for in-place state changes (120-180ms)."
+      },
+      {
+        "name": "state-change",
+        "value": "150ms",
+        "purpose": "Colour transitions on buttons, rows quieting, chevron rotation."
+      },
+      {
+        "name": "press",
+        "value": "scale(0.98)",
+        "purpose": "Button active state; disabled buttons do not press."
+      },
+      {
+        "name": "stamp-land",
+        "value": "180ms cubic-bezier(0.22, 1, 0.36, 1); scale 1.12 -> 0.98 -> 1, opacity 0 -> 1",
+        "purpose": "The validator stamp landing on a freshly booked row. No bounce; instant under prefers-reduced-motion."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition durations 0.01ms",
+        "purpose": "Global prefers-reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Night-blue ink fill for the main action of a screen or sheet.",
+      "html": "<button class=\"ds-btn-primary\">Salva</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--primary, #1f2340); color: var(--primary-foreground, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-primary:hover { background: var(--primary-hover, #2e3360); } .ds-btn-primary:active { transform: scale(0.98); } .ds-btn-primary:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }"
+    },
+    {
+      "name": "Prenota (Outline Button)",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Surface fill with a 1.5px ink stroke; the row action for booking.",
+      "html": "<button class=\"ds-btn-outline\">Prenota</button>",
+      "css": ".ds-btn-outline { display: inline-flex; align-items: center; justify-content: center; min-width: 108px; height: 44px; padding: 0 16px; border: 1.5px solid var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-outline:hover { background: var(--muted, #eceef3); } .ds-btn-outline:active { transform: scale(0.98); } .ds-btn-outline:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Waitlist Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Same weight as Prenota, marked provisional by the dashed perforation.",
+      "html": "<button class=\"ds-btn-queue\">Metti in coda</button>",
+      "css": ".ds-btn-queue { display: inline-flex; align-items: center; justify-content: center; min-width: 108px; min-height: 44px; padding: 6px 16px; border: 1.5px dashed var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; line-height: 1.25; cursor: pointer; transition: background-color 150ms; } .ds-btn-queue:hover { background: var(--muted, #eceef3); } .ds-btn-queue:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Solid red for confirmed destructive actions, e.g. cancelling a booking.",
+      "html": "<button class=\"ds-btn-destructive\">Annulla prenotazione</button>",
+      "css": ".ds-btn-destructive { display: inline-flex; align-items: center; justify-content: center; height: 44px; padding: 0 16px; border: 0; border-radius: 12px; background: var(--destructive-bg, #a3293f); color: var(--destructive-fg, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 15px; font-weight: 600; cursor: pointer; transition: background-color 150ms, transform 150ms; } .ds-btn-destructive:hover { background: var(--destructive-hover, #8c2236); } .ds-btn-destructive:active { transform: scale(0.98); } .ds-btn-destructive:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "44px field, 16px text, violet focus ring.",
+      "html": "<input class=\"ds-input\" placeholder=\"Nome e cognome\" />",
+      "css": ".ds-input { display: flex; width: 100%; height: 44px; padding: 0 14px; border: 1px solid var(--surface-border, #dde1e9); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 16px; outline: none; caret-color: var(--stamp, #5b3fa0); transition: border-color 150ms; } .ds-input::placeholder { color: var(--muted-foreground, #555a78); } .ds-input:hover { border-color: var(--muted-foreground, #555a78); } .ds-input:focus-visible { border-color: var(--ring, #5b3fa0); outline: 2px solid var(--ring, #5b3fa0); outline-offset: 0; }"
+    },
+    {
+      "name": "Badges",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Pale semantic grounds with deep ink; the stamp variant is reserved for own bookings.",
+      "html": "<span class=\"ds-badge\">Bozza</span> <span class=\"ds-badge ds-badge-success\">Attivo</span> <span class=\"ds-badge ds-badge-warning\">In prova</span> <span class=\"ds-badge ds-badge-danger\">Annullata</span> <span class=\"ds-badge ds-badge-stamp\">Prenotato</span>",
+      "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 600; } .ds-badge-success { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-badge-warning { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); } .ds-badge-danger { background: var(--danger-bg, #f8e1e4); color: var(--danger-fg, #8c2236); } .ds-badge-stamp { background: transparent; border: 1px solid var(--stamp, #5b3fa0); color: var(--stamp, #5b3fa0); }"
+    },
+    {
+      "name": "Validator Stamp",
+      "kind": "custom",
+      "refersTo": "stamp-face",
+      "description": "Booked row action: violet stamp with date and time; dashed when pending approval; muted dashed when queued.",
+      "html": "<span class=\"ds-stamp\"><span class=\"ds-stamp-label\">Prenotato</span><span class=\"ds-stamp-detail\">03/11 · 07:30</span></span> <span class=\"ds-stamp ds-stamp-pending\"><span class=\"ds-stamp-label\">In attesa</span><span class=\"ds-stamp-detail\">05/11 · 12:30</span></span> <span class=\"ds-stamp ds-stamp-queued\"><span class=\"ds-stamp-label\">In coda</span></span>",
+      "css": ".ds-stamp { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; min-width: 108px; padding: 6px 10px; border: 2px solid var(--stamp, #5b3fa0); border-radius: 8px; color: var(--stamp, #5b3fa0); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; line-height: 1.25; text-align: center; animation: ds-stamp-land 180ms cubic-bezier(0.22, 1, 0.36, 1) both; } .ds-stamp-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; } .ds-stamp-detail { font-size: 15px; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-stamp-pending { border-style: dashed; } .ds-stamp-queued { border-style: dashed; border-color: var(--muted-foreground, #555a78); color: var(--muted-foreground, #555a78); } @keyframes ds-stamp-land { 0% { transform: scale(1.12); opacity: 0; } 60% { transform: scale(0.98); opacity: 1; } 100% { transform: scale(1); opacity: 1; } } @media (prefers-reduced-motion: reduce) { .ds-stamp { animation: none; } }"
+    },
+    {
+      "name": "Season Pass Card",
+      "kind": "card",
+      "refersTo": "pass-card",
+      "description": "The member's plan: title, remaining figure, perforation, one round entry slot per entry, validity footer.",
+      "html": "<section class=\"ds-pass\"><div class=\"ds-pass-head\"><h2 class=\"ds-pass-title\"><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z\"/><path d=\"M13 5v2\"/><path d=\"M13 17v2\"/><path d=\"M13 11v2\"/></svg>Abbonamento 10 ingressi</h2><p class=\"ds-pass-figure\"><span>6</span><small>rimasti</small></p></div><div class=\"ds-pass-body\"><ol class=\"ds-pass-slots\"><li class=\"used\"></li><li class=\"used\"></li><li class=\"used\"></li><li class=\"used\"></li><li></li><li></li><li></li><li></li><li></li><li></li></ol><p class=\"ds-pass-foot\">Valido fino al <span class=\"ds-tab\">31/12/2026</span> · 2 prenotazioni in corso</p></div></section>",
+      "css": ".ds-pass { max-width: 560px; border-radius: 16px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); box-shadow: var(--shadow-lift, 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16)); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; overflow: hidden; } .ds-pass-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 20px 20px 16px; } .ds-pass-title { display: flex; gap: 10px; margin: 0; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-pass-title svg { flex-shrink: 0; margin-top: 2px; color: var(--muted-foreground, #555a78); } .ds-pass-figure { margin: 0; text-align: right; line-height: 1; } .ds-pass-figure span { font-size: 2.5rem; font-weight: 700; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-pass-figure small { display: block; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--muted-foreground, #555a78); } .ds-pass-body { border-top: 2px dashed var(--rule, #e6e9ef); padding: 16px 20px 20px; } .ds-pass-slots { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 6px; max-width: 26rem; margin: 0; padding: 0; list-style: none; } .ds-pass-slots li { aspect-ratio: 1; max-height: 28px; border-radius: 9999px; border: 1.5px solid var(--surface-border, #dde1e9); } .ds-pass-slots li.used { border-color: var(--stamp, #5b3fa0); background: radial-gradient(circle, var(--stamp, #5b3fa0) 0 38%, transparent 40%); } .ds-pass-foot { margin: 12px 0 0; font-size: 14px; color: var(--muted-foreground, #555a78); } .ds-tab { font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; }"
+    },
+    {
+      "name": "Fixed-Time Lesson Row",
+      "kind": "custom",
+      "refersTo": "card",
+      "description": "Three-column row on section paper: condensed time, lesson and meta, right action column.",
+      "html": "<ul class=\"ds-rows\"><li class=\"ds-row\"><span class=\"ds-row-time\"><b>07:30</b><small>55 min</small></span><span class=\"ds-row-main\"><b>Pilates Matwork</b><small>Giulia Neri · 3 posti liberi</small></span><span class=\"ds-stamp-mini\">Prenotato<br><b>03/11 · 07:30</b></span></li><li class=\"ds-row\"><span class=\"ds-row-time\"><b>12:30</b><small>45 min</small></span><span class=\"ds-row-main\"><b>Funzionale</b><small>Marco Testa · 2 posti liberi</small></span><button class=\"ds-row-btn\">Prenota</button></li></ul>",
+      "css": ".ds-rows { margin: 0; padding: 0; list-style: none; background: color-mix(in oklab, var(--stock-mint, #dcefe3) 34%, var(--surface, #ffffff)); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; color: var(--foreground, #1f2340); } .ds-row { display: grid; grid-template-columns: 4.25rem minmax(0, 1fr) auto; align-items: center; column-gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--rule, #e6e9ef); transition: background-color 150ms; } .ds-row:last-child { border-bottom: 0; } .ds-row:hover { background: var(--surface, #ffffff); } .ds-row-time b { display: block; font-size: 1.625rem; line-height: 1; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; } .ds-row-time small { display: block; margin-top: 4px; font-size: 13px; font-weight: 500; color: var(--muted-foreground, #555a78); font-variation-settings: 'wdth' 74; } .ds-row-main b { display: block; font-size: 17px; font-weight: 600; line-height: 1.375; } .ds-row-main small { display: block; margin-top: 2px; font-size: 15px; color: var(--muted-foreground, #555a78); } .ds-row-btn { min-width: 108px; height: 44px; padding: 0 16px; border: 1.5px solid var(--foreground, #1f2340); border-radius: 12px; background: var(--surface, #ffffff); color: var(--foreground, #1f2340); font: 600 15px Archivo, ui-sans-serif, sans-serif; cursor: pointer; } .ds-row-btn:hover { background: var(--muted, #eceef3); } .ds-row-btn:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: 2px; } .ds-stamp-mini { min-width: 108px; padding: 6px 10px; border: 2px solid var(--stamp, #5b3fa0); border-radius: 8px; color: var(--stamp, #5b3fa0); text-align: center; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; line-height: 1.25; } .ds-stamp-mini b { font-size: 15px; letter-spacing: 0; text-transform: none; font-variation-settings: 'wdth' 74; font-feature-settings: 'tnum' 1, 'lnum' 1; }"
+    },
+    {
+      "name": "Bottom Tab Bar",
+      "kind": "nav",
+      "refersTo": "bottom-tab-active-pill",
+      "description": "Phones: four role destinations plus Menu; the active icon sits in a pill of its section stock.",
+      "html": "<nav class=\"ds-tabbar\"><a href=\"#\" class=\"ds-tab-item\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8\"/><path d=\"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z\"/></svg></span>Home</a><a href=\"#\" class=\"ds-tab-item is-active\" aria-current=\"page\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2.4\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect width=\"18\" height=\"18\" x=\"3\" y=\"4\" rx=\"2\"/><path d=\"M16 2v4\"/><path d=\"M8 2v4\"/><path d=\"M3 10h18\"/><path d=\"m9 16 2 2 4-4\"/></svg></span>Prenotazioni</a><a href=\"#\" class=\"ds-tab-item\"><span class=\"ds-tab-pill\"><svg width=\"21\" height=\"21\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4 6h16\"/><path d=\"M4 12h16\"/><path d=\"M4 18h16\"/></svg></span>Menu</a></nav>",
+      "css": ".ds-tabbar { display: flex; max-width: 36rem; border-top: 1px solid var(--rule, #e6e9ef); background: var(--surface, #ffffff); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; } .ds-tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; font-size: 12px; font-weight: 600; color: var(--muted-foreground, #555a78); text-decoration: none; } .ds-tab-item:hover { color: var(--foreground, #1f2340); } .ds-tab-item:focus-visible { outline: 2px solid var(--ring, #5b3fa0); outline-offset: -2px; } .ds-tab-pill { display: inline-flex; align-items: center; justify-content: center; width: 56px; height: 32px; border-radius: 9999px; transition: background-color 150ms; } .ds-tab-item.is-active { color: var(--foreground, #1f2340); } .ds-tab-item.is-active .ds-tab-pill { background: var(--stock-mint, #dcefe3); color: var(--stock-ink, #1f2340); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Abbonamento",
+    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: the bookings surface, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui`, the toaster and the Web Push banner are in the world. Dashboard, lessons, courses, users, settings and reports currently only inherit the tokens and primitives; their layouts are pre-redesign and are not part of this system. Do not copy their compositions as precedent.",
+    "keyCharacteristics": [
+      "One paper stock per section; the current stock tints the shell and the page header band.",
+      "Night-blue ink for text and primary actions; never a neutral admin grey ground.",
+      "One reserved violet stamp for the user's own bookings.",
+      "Condensed tabular figures for every time, count and date.",
+      "Dashed perforation as the only ornament, also meaning \"provisional\".",
+      "Flat paper; lift only on the pass card, the opened row, the active tab, and overlays.",
+      "44px touch targets, 16px input text, bottom sheets on phones."
+    ],
+    "rules": [
+      {
+        "name": "The Reserved Stamp Rule",
+        "body": "Violet as a mark belongs only to the current user's own bookings: booked, pending (dashed) and the pass slots they have used. Never use it for brand accents, links, charts, or other people's bookings. The focus ring, caret and control accent are the only non-booking uses.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Stock Per Section Rule",
+        "body": "A section owns exactly one stock, assigned in the shell. A page never mixes stocks as decoration; a stock appears outside its section only as a nav swatch.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper, Not Grey Rule",
+        "body": "The content field is always the section paper derived from the stock, never a neutral grey panel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ticket Figures Rule",
+        "body": "Every time, count, date, duration and version number uses the `.tabular` treatment (condensed width, `tnum` + `lnum`, zero tracking). Running text never does.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is For Codes Rule",
+        "body": "Geist Mono appears only where a machine string must be read character by character.",
+        "section": "typography"
+      },
+      {
+        "name": "The Picked-Up Rule",
+        "body": "Only the pass, the one opened row, and overlays carry shadow. Lists, nav and ordinary cards stay flat with a hairline.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Perforation Rule",
+        "body": "The 2px dashed line is the only ornament: it separates the pass's header from its slots, and as a border it marks anything provisional (pending stamp, queued stamp, waitlist button). Never use dashed borders as decoration.",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "**Do** let the shell assign the stock: add the route to `STOCK_BY_KEY` and let `--stock` and `--paper` follow.",
+      "**Do** set every time, count and date in `.tabular` (condensed `wdth` 74, tabular lining figures).",
+      "**Do** keep row actions in a fixed right column and change state in place, 120–180ms ease-out.",
+      "**Do** state the reason a row is blocked inside the row (full, access denied, started, cancellation closed).",
+      "**Do** use dashed strokes to mean provisional, and only that.",
+      "**Do** keep 44px targets, 16px input text, and bottom sheets for dialogs on phones.",
+      "**Do** design both themes; check muted ink and stamp on every stock in light and dark."
+    ],
+    "donts": [
+      "**Don't** use stamp violet for anything but the user's own bookings (beyond focus ring, caret and control accent).",
+      "**Don't** put content on a neutral grey ground; the field is the section paper.",
+      "**Don't** add gradient washes, glass, or blur. The only gradient in the build is the hard-stop punched centre of a used entry slot.",
+      "**Don't** add shadow to lists, nav or ordinary cards; lift is for the pass, the opened row and overlays.",
+      "**Don't** use uppercase tracked lettering outside a stamp face and the day strip's weekday abbreviations.",
+      "**Don't** reorder rows or animate layout when state changes.",
+      "**Don't** treat the dashboard, lessons, courses, users, settings or reports layouts as precedent until they are redesigned."
+    ]
+  }
+}

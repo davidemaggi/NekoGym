@@ -2,82 +2,149 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/*
+ * NekoGym "Abbonamento" world: Italian transit-pass paper stocks as section grounds,
+ * night-blue ink, and one reserved stamp violet that only ever marks the user's own bookings.
+ * Legacy token names (--surface, --muted, --primary, ...) are kept so every screen inherits the world.
+ */
 :root {
-  --background: #f8f1e7;
-  --foreground: #4a3a33;
-  --surface: #fff7ee;
-  --surface-border: #e8cdb4;
-  --muted: #eddcc9;
-  --muted-foreground: #6b5344;
-  --primary: #d89a73;
-  --primary-foreground: #2f1d14;
-  --primary-hover: #cf8c63;
-  --ring: #cf8c63;
-  --sidebar-link: #5b4436;
-  --sidebar-link-hover: #efddca;
-  --sidebar-link-active-bg: #e8b89a;
-  --sidebar-link-active-fg: #3f2a22;
-  --role-badge-bg: #eddcc9;
-  --role-badge-fg: #4a3a33;
+  color-scheme: light;
 
-  /* Light semantic pastel tokens */
-  --info-bg: #e9dfd2;
-  --info-fg: #5f4a3f;
-  --info-hover: #e2d4c3;
-  --success-bg: #dcecdf;
-  --success-fg: #3f5f46;
-  --success-hover: #d1e6d6;
-  --danger-bg: #f0dedd;
-  --danger-fg: #6d4644;
-  --danger-hover: #ead2d0;
-  --destructive-bg: #c88980;
-  --destructive-fg: #fff7f5;
-  --destructive-hover: #b97a72;
+  /* Paper and ink */
+  --background: #f5f6f8;
+  --foreground: #1f2340;
+  --surface: #ffffff;
+  --surface-sunken: #eef0f4;
+  --surface-border: #dde1e9;
+  --rule: #e6e9ef;
+  --muted: #eceef3;
+  --muted-foreground: #555a78;
+
+  /* Ticket stocks: one per section, the current one tints the shell */
+  --stock-mint: #dcefe3;
+  --stock-azzurro: #dceaf6;
+  --stock-giallino: #f4ecc6;
+  --stock-rosa: #f6dfe3;
+  --stock-lilla: #e5dff3;
+  --stock-carta: #e9ecf2;
+  --stock-ink: #1f2340;
+  --stock-edge: rgb(31 35 64 / 0.1);
+  --stock: var(--stock-carta);
+
+  /* Reserved ink: own bookings only */
+  --stamp: #5b3fa0;
+  --stamp-soft: #ece6f8;
+
+  /* Actions */
+  --primary: #1f2340;
+  --primary-foreground: #ffffff;
+  --primary-hover: #2e3360;
+  --ring: #5b3fa0;
+
+  /* Navigation */
+  --sidebar-link: #3c4163;
+  --sidebar-link-hover: #eceef3;
+  --sidebar-link-active-bg: #1f2340;
+  --sidebar-link-active-fg: #ffffff;
+  --role-badge-bg: #eceef3;
+  --role-badge-fg: #1f2340;
+
+  /* Semantic states (always paired with text or icon) */
+  --info-bg: #dceaf6;
+  --info-fg: #1d4a72;
+  --info-hover: #cde0f0;
+  --success-bg: #dcefe3;
+  --success-fg: #1f5a3c;
+  --success-hover: #cbe6d5;
+  --warning-bg: #f7edc8;
+  --warning-fg: #6b4a00;
+  --danger-bg: #f8e1e4;
+  --danger-fg: #8c2236;
+  --danger-hover: #f2d0d5;
+  --destructive-bg: #a3293f;
+  --destructive-fg: #ffffff;
+  --destructive-hover: #8c2236;
+
+  --shadow-lift: 0 1px 2px rgb(31 35 64 / 0.06), 0 6px 18px -8px rgb(31 35 64 / 0.16);
+  --shadow-sheet: 0 -4px 24px -8px rgb(31 35 64 / 0.18), 0 20px 50px -16px rgb(31 35 64 / 0.3);
+
+  --overlay: rgb(18 20 42 / 0.45);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .dark {
-  --background: #1f1813;
-  --foreground: #f2e4d3;
-  --surface: #2c221b;
-  --surface-border: #5b4738;
-  --muted: #3a2d24;
-  --muted-foreground: #cfb9a2;
-  --primary: #d8a67f;
-  --primary-foreground: #281b13;
-  --primary-hover: #e2b48f;
-  --ring: #d8a67f;
-  --sidebar-link: #f0dfcc;
-  --sidebar-link-hover: #4a382c;
-  --sidebar-link-active-bg: #d8a67f;
-  --sidebar-link-active-fg: #281b13;
-  --role-badge-bg: #4a382c;
-  --role-badge-fg: #f2e4d3;
-  --info-bg: #5b4738;
-  --info-fg: #f2dfca;
-  --info-hover: #6b5546;
-  --success-bg: #294533;
-  --success-fg: #d9efd9;
-  --success-hover: #32553e;
-  --danger-bg: #5c3533;
-  --danger-fg: #f4dcda;
-  --danger-hover: #6a3f3d;
-  --destructive-bg: #be7f75;
-  --destructive-fg: #fff7f5;
-  --destructive-hover: #cd8d82;
+  color-scheme: dark;
+
+  --background: #12142a;
+  --foreground: #eceef8;
+  --surface: #1b1e37;
+  --surface-sunken: #161830;
+  --surface-border: #30355a;
+  --rule: #272b4b;
+  --muted: #252946;
+  --muted-foreground: #aeb3d0;
+
+  --stock-mint: #1d3a30;
+  --stock-azzurro: #1d3048;
+  --stock-giallino: #3a3320;
+  --stock-rosa: #3e2632;
+  --stock-lilla: #2d2749;
+  --stock-carta: #22264a;
+  --stock-ink: #eceef8;
+  --stock-edge: rgb(236 238 248 / 0.08);
+
+  --stamp: #bba8f2;
+  --stamp-soft: #2f2852;
+
+  --primary: #eceef8;
+  --primary-foreground: #12142a;
+  --primary-hover: #d6d9ee;
+  --ring: #bba8f2;
+
+  --sidebar-link: #c9cde6;
+  --sidebar-link-hover: #252946;
+  --sidebar-link-active-bg: #eceef8;
+  --sidebar-link-active-fg: #12142a;
+  --role-badge-bg: #252946;
+  --role-badge-fg: #eceef8;
+
+  --info-bg: #1d3048;
+  --info-fg: #b9d6f2;
+  --info-hover: #233a57;
+  --success-bg: #1d3a30;
+  --success-fg: #b5e3c8;
+  --success-hover: #23463a;
+  --warning-bg: #3a3320;
+  --warning-fg: #f1d98f;
+  --danger-bg: #3e2632;
+  --danger-fg: #f3bcc6;
+  --danger-hover: #4a2d3b;
+  --destructive-bg: #e07a8c;
+  --destructive-fg: #1b0d12;
+  --destructive-hover: #ea93a2;
+
+  --shadow-lift: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 22px -10px rgb(0 0 0 / 0.55);
+  --shadow-sheet: 0 -4px 24px -8px rgb(0 0 0 / 0.5), 0 20px 50px -16px rgb(0 0 0 / 0.7);
+  --overlay: rgb(4 5 14 / 0.62);
 }
 
-html[data-theme="light"] {
-  --primary: #d89a73;
-  --primary-foreground: #2f1d14;
-  --primary-hover: #cf8c63;
-  --ring: #cf8c63;
+/* Section stocks, set by the app shell from the current route */
+[data-stock="mint"] { --stock: var(--stock-mint); }
+[data-stock="azzurro"] { --stock: var(--stock-azzurro); }
+[data-stock="giallino"] { --stock: var(--stock-giallino); }
+[data-stock="rosa"] { --stock: var(--stock-rosa); }
+[data-stock="lilla"] { --stock: var(--stock-lilla); }
+[data-stock="carta"] { --stock: var(--stock-carta); }
+
+/* A page that draws its own stock band hides the shell's generic one. */
+main:has([data-page-band]) [data-shell-band] {
+  display: none;
 }
 
-html[data-theme="dark"] {
-  --primary: #d8a67f;
-  --primary-foreground: #281b13;
-  --primary-hover: #e2b48f;
-  --ring: #d8a67f;
+/* The section's paper: the page field is a light print of the current stock, never a neutral grey. */
+[data-stock] {
+  --paper: color-mix(in oklab, var(--stock) 34%, var(--surface));
 }
 
 @theme inline {
@@ -86,20 +153,65 @@ html[data-theme="dark"] {
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-ring: var(--ring);
-
+  --color-surface: var(--surface);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-stamp: var(--stamp);
+  --color-stock: var(--stock);
+  --font-sans: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-archivo), ui-sans-serif, system-ui, sans-serif;
+  font-variation-settings: "wdth" 100;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Times, counts and dates: condensed, tabular figures, as printed on a ticket. */
+.tabular {
+  font-variation-settings: "wdth" 74;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  letter-spacing: 0;
+}
+
+::selection {
+  background: var(--stamp-soft);
+  color: var(--foreground);
+}
+
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-color: var(--surface-border) transparent;
+}
+
+a {
+  text-underline-offset: 0.2em;
+}
+
+input,
+textarea,
+select {
+  caret-color: var(--stamp);
+  accent-color: var(--stamp);
 }
 
 button,
 [role="button"],
 summary {
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 button:disabled,
@@ -128,14 +240,23 @@ input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   filter: saturate(0) brightness(2.6) contrast(1.1);
 }
 
-input[type="date"],
-input[type="time"],
-input[type="datetime-local"] {
-  color-scheme: light;
+/* The validator stamp landing on a freshly booked row. */
+@keyframes stamp-land {
+  0% { transform: scale(1.12); opacity: 0; }
+  60% { transform: scale(0.98); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
-.dark input[type="date"],
-.dark input[type="time"],
-.dark input[type="datetime-local"] {
-  color-scheme: dark;
+.stamp-land {
+  animation: stamp-land 180ms var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

@@ -8,7 +8,7 @@ export function isLocale(value: string): value is Locale {
   return locales.includes(value as Locale);
 }
 
-type Dictionary = {
+export type Dictionary = {
   appName: string;
   sidebar: {
     title: string;
@@ -19,6 +19,10 @@ type Dictionary = {
     themeToLight: string;
     themeToDark: string;
     settingsSection: string;
+    menu: string;
+    primaryNav: string;
+    skipToContent: string;
+    unreadNotifications: string;
     nav: {
       dashboard: string;
       courses: string;
@@ -173,6 +177,48 @@ type Dictionary = {
     youAreQueued: string;
     queuedLabel: string;
     joinQueueCta: string;
+    prevWeek: string;
+    nextWeek: string;
+    weekNavigationLabel: string;
+    today: string;
+    noLessonsDay: string;
+    closedDay: string;
+    seatsFree: string;
+    seatFreeOne: string;
+    full: string;
+    queueCount: string;
+    stampBooked: string;
+    stampPending: string;
+    stampQueued: string;
+    cancelBy: string;
+    cancelClosed: string;
+    costFixed: string;
+    costPeriod: string;
+    requiresConfirmation: string;
+    lessonEnded: string;
+    manageCta: string;
+    showDetails: string;
+    upcomingTitle: string;
+    upcomingEmpty: string;
+    dayLessons: string;
+    pass: {
+      fixedTitle: string;
+      weeklyTitle: string;
+      monthlyTitle: string;
+      remaining: string;
+      availableWeek: string;
+      availableMonth: string;
+      validUntil: string;
+      trialTitle: string;
+      trialUntil: string;
+      inactiveTitle: string;
+      inactiveBody: string;
+      openPlanTitle: string;
+      openPlanBody: string;
+      activeBookings: string;
+      activeBookingsOne: string;
+      slotsLabel: string;
+    };
   };
   lessonsPage: {
     title: string;
@@ -756,17 +802,21 @@ const dictionaries: Record<Locale, Dictionary> = {
       themeLabel: "Tema",
       themeToLight: "Passa al tema chiaro",
       themeToDark: "Passa al tema scuro",
-      settingsSection: "Settings",
+      settingsSection: "Impostazioni",
+      menu: "Menu",
+      primaryNav: "Navigazione principale",
+      skipToContent: "Vai al contenuto",
+      unreadNotifications: "notifiche non lette",
       nav: {
-        dashboard: "Dashboard",
+        dashboard: "Home",
         courses: "Corsi",
         lessons: "Lezioni",
-        bookings: "Calendario",
+        bookings: "Prenotazioni",
         users: "Utenti",
         reports: "Report",
-        myNotifications: "Le mie notifiche",
+        myNotifications: "Notifiche",
         profileSettings: "Profilo",
-        manualNotifications: "Notifiche",
+        manualNotifications: "Invio notifiche",
         registries: "Registri",
         siteSettings: "Impostazioni sito",
         dangerZone: "Danger zone",
@@ -854,8 +904,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Notifiche Web Push attivate.",
     },
     bookings: {
-      title: "Calendario",
-      description: "Visualizza le lezioni future e prenota i posti disponibili.",
+      title: "Prenotazioni",
+      description: "Scegli il giorno e prenota il tuo posto.",
       calendarTitle: "Lezioni disponibili",
       monthNavigationLabel: "Naviga mese per mese",
       empty: "Nessuna lezione disponibile nel periodo selezionato.",
@@ -874,7 +924,7 @@ const dictionaries: Record<Locale, Dictionary> = {
       closeCta: "Chiudi",
       prevMonth: "Mese precedente",
       nextMonth: "Mese successivo",
-      bookCta: "Iscriviti",
+      bookCta: "Prenota",
       unbookCta: "Disiscriviti",
       confirmUnbookTitle: "Conferma disiscrizione",
       confirmUnbookDescription: "Vuoi davvero cancellare la tua prenotazione per questa lezione?",
@@ -883,7 +933,49 @@ const dictionaries: Record<Locale, Dictionary> = {
       processing: "Elaborazione...",
       youAreQueued: "In coda",
       queuedLabel: "In coda",
-      joinQueueCta: "Mettimi in coda",
+      joinQueueCta: "Mettiti in coda",
+      prevWeek: "Settimana precedente",
+      nextWeek: "Settimana successiva",
+      weekNavigationLabel: "Scegli il giorno",
+      today: "Oggi",
+      noLessonsDay: "Nessuna lezione in programma in questo giorno.",
+      closedDay: "La palestra è chiusa in questo giorno.",
+      seatsFree: "{n} posti liberi",
+      seatFreeOne: "Ultimo posto libero",
+      full: "Al completo",
+      queueCount: "{n} in coda",
+      stampBooked: "Prenotato",
+      stampPending: "In attesa",
+      stampQueued: "In coda",
+      cancelBy: "Puoi disdire fino a {date}",
+      cancelClosed: "Non è più possibile disdire",
+      costFixed: "Usa 1 ingresso del tuo abbonamento",
+      costPeriod: "Conta nel limite del tuo abbonamento",
+      requiresConfirmation: "La prenotazione va confermata dallo staff",
+      lessonEnded: "Conclusa",
+      manageCta: "Gestisci lezione",
+      showDetails: "Mostra dettagli di {name}",
+      upcomingTitle: "Le tue prossime lezioni",
+      upcomingEmpty: "Non hai lezioni prenotate. Scegli un giorno e prenota il tuo posto.",
+      dayLessons: "Lezioni di {day}",
+      pass: {
+        fixedTitle: "Abbonamento {n} ingressi",
+        weeklyTitle: "Settimanale · {n} lezioni",
+        monthlyTitle: "Mensile · {n} lezioni",
+        remaining: "rimasti",
+        availableWeek: "liberi questa settimana",
+        availableMonth: "liberi questo mese",
+        validUntil: "Valido fino al {date}",
+        trialTitle: "Prova gratuita",
+        trialUntil: "Puoi prenotare fino al {date}",
+        inactiveTitle: "Abbonamento non attivo",
+        inactiveBody: "Per prenotare chiedi alla palestra di attivare il tuo abbonamento.",
+        openPlanTitle: "Abbonamento attivo",
+        openPlanBody: "Nessun limite di lezioni",
+        activeBookings: "{n} prenotazioni in corso",
+        activeBookingsOne: "1 prenotazione in corso",
+        slotsLabel: "{used} usati su {total}",
+      },
     },
     lessonsPage: {
       title: "Lezioni",
@@ -1495,16 +1587,20 @@ const dictionaries: Record<Locale, Dictionary> = {
       themeToLight: "Switch to light theme",
       themeToDark: "Switch to dark theme",
       settingsSection: "Settings",
+      menu: "Menu",
+      primaryNav: "Main navigation",
+      skipToContent: "Skip to content",
+      unreadNotifications: "unread notifications",
       nav: {
-        dashboard: "Dashboard",
+        dashboard: "Home",
         courses: "Courses",
         lessons: "Lessons",
-        bookings: "Calendar",
+        bookings: "Bookings",
         users: "Users",
         reports: "Reports",
-        myNotifications: "My notifications",
+        myNotifications: "Notifications",
         profileSettings: "Profile",
-        manualNotifications: "Notifications",
+        manualNotifications: "Send notifications",
         registries: "Registries",
         siteSettings: "Site settings",
         dangerZone: "Danger zone",
@@ -1592,8 +1688,8 @@ const dictionaries: Record<Locale, Dictionary> = {
       enabled: "Web Push notifications enabled.",
     },
     bookings: {
-      title: "Calendar",
-      description: "Browse upcoming lessons and book available seats.",
+      title: "Bookings",
+      description: "Pick a day and book your seat.",
       calendarTitle: "Available lessons",
       monthNavigationLabel: "Browse month by month",
       empty: "No lessons available in the selected range.",
@@ -1622,6 +1718,48 @@ const dictionaries: Record<Locale, Dictionary> = {
       youAreQueued: "Queued",
       queuedLabel: "Queued",
       joinQueueCta: "Join waitlist",
+      prevWeek: "Previous week",
+      nextWeek: "Next week",
+      weekNavigationLabel: "Pick a day",
+      today: "Today",
+      noLessonsDay: "No lessons scheduled on this day.",
+      closedDay: "The gym is closed on this day.",
+      seatsFree: "{n} seats left",
+      seatFreeOne: "Last seat left",
+      full: "Full",
+      queueCount: "{n} waiting",
+      stampBooked: "Booked",
+      stampPending: "Pending",
+      stampQueued: "Waitlisted",
+      cancelBy: "You can cancel until {date}",
+      cancelClosed: "Cancellation is no longer possible",
+      costFixed: "Uses 1 entry of your pass",
+      costPeriod: "Counts toward your plan limit",
+      requiresConfirmation: "Staff must confirm this booking",
+      lessonEnded: "Ended",
+      manageCta: "Manage lesson",
+      showDetails: "Show details for {name}",
+      upcomingTitle: "Your next lessons",
+      upcomingEmpty: "You have no booked lessons. Pick a day and book your seat.",
+      dayLessons: "Lessons on {day}",
+      pass: {
+        fixedTitle: "{n}-entry pass",
+        weeklyTitle: "Weekly · {n} lessons",
+        monthlyTitle: "Monthly · {n} lessons",
+        remaining: "left",
+        availableWeek: "left this week",
+        availableMonth: "left this month",
+        validUntil: "Valid until {date}",
+        trialTitle: "Free trial",
+        trialUntil: "You can book until {date}",
+        inactiveTitle: "Membership inactive",
+        inactiveBody: "To book, ask the gym to activate your membership.",
+        openPlanTitle: "Active membership",
+        openPlanBody: "No lesson limit",
+        activeBookings: "{n} upcoming bookings",
+        activeBookingsOne: "1 upcoming booking",
+        slotsLabel: "{used} of {total} used",
+      },
     },
     lessonsPage: {
       title: "Lessons",

@@ -10,7 +10,10 @@ export const Tabs = TabsPrimitive.Root;
 export function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn("inline-flex items-center rounded-lg bg-[var(--muted)] p-1 text-[var(--muted-foreground)]", className)}
+      className={cn(
+        "inline-flex max-w-full items-center gap-1 overflow-x-auto rounded-xl bg-[var(--muted)] p-1 text-[var(--muted-foreground)]",
+        className
+      )}
       {...props}
     />
   );
@@ -20,10 +23,9 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
   return (
     <TabsPrimitive.Trigger
       className={cn(
-        "inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium transition-all",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]",
-        "disabled:cursor-not-allowed disabled:opacity-50",
-        "data-[state=active]:bg-[var(--surface)] data-[state=active]:text-[var(--foreground)] data-[state=active]:shadow-sm",
+        "inline-flex h-9 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-3 text-sm font-semibold transition-colors",
+        "hover:text-[var(--foreground)] disabled:cursor-not-allowed disabled:opacity-50",
+        "data-[state=active]:bg-[var(--surface)] data-[state=active]:text-[var(--foreground)] data-[state=active]:shadow-[var(--shadow-lift)]",
         className
       )}
       {...props}
@@ -32,6 +34,5 @@ export function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsP
 }
 
 export function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content className={cn("mt-2", className)} {...props} />;
+  return <TabsPrimitive.Content className={cn("mt-4 outline-none", className)} {...props} />;
 }
-

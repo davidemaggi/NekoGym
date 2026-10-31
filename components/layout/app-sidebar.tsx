@@ -1,59 +1,54 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   AlertTriangle,
   BarChart3,
-  BookOpen,
   Bell,
-  CalendarDays,
-  ChevronDown,
+  BookOpen,
+  CalendarCheck,
+  ChevronsUpDown,
   ClipboardList,
-  LayoutDashboard,
+  House,
   LogOut,
   Megaphone,
-  PanelLeftClose,
-  PanelLeftOpen,
-  UserCog,
+  Menu,
   Settings2,
   Table2,
+  UserCog,
   Users,
+  type LucideIcon,
 } from "lucide-react";
 
 import type { CurrentUser } from "@/lib/auth";
 import type { Locale } from "@/lib/i18n";
 import { withLocalePath } from "@/lib/i18n";
-import { getMenuItemsForRole } from "@/lib/navigation";
+import { getMenuItemsForRole, type AppMenuItem } from "@/lib/navigation";
 import { sanitizeSiteLogoSvg } from "@/lib/site-logo";
+import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { LocalNotificationsLive } from "@/components/layout/local-notifications-live";
+import { LocalNotificationsBadge, LocalNotificationsLiveProvider } from "@/components/layout/local-notifications-live";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-} from "@/components/ui/sidebar";
 
-type AppSidebarProps = {
+type MenuKey = AppMenuItem["key"];
+type Stock = "mint" | "azzurro" | "giallino" | "rosa" | "lilla" | "carta";
+
+type AppShellProps = {
   user: CurrentUser;
   locale: Locale;
   siteName: string;
   siteLogoSvg: string;
   appVersion: string;
+  children: ReactNode;
   labels: {
     signedInAs: string;
     logout: string;
@@ -62,354 +57,363 @@ type AppSidebarProps = {
     themeToLight: string;
     themeToDark: string;
     settingsSection: string;
-    nav: Record<
-      | "dashboard"
-      | "courses"
-      | "lessons"
-      | "bookings"
-      | "users"
-      | "reports"
-      | "myNotifications"
-      | "registries"
-      | "siteSettings"
-      | "dangerZone"
-      | "manualNotifications"
-      | "profileSettings",
-      string
-    >;
+    menu: string;
+    primaryNav: string;
+    skipToContent: string;
+    unreadNotifications: string;
+    nav: Record<MenuKey, string>;
   };
 };
 
-export function AppSidebar({ user, locale, siteName, siteLogoSvg, appVersion, labels }: AppSidebarProps) {
-  const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isMobileOpen, setIsMobileOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+const ICONS: Record<MenuKey, LucideIcon> = {
+  dashboard: House,
+  courses: BookOpen,
+  lessons: ClipboardList,
+  bookings: CalendarCheck,
+  users: Users,
+  reports: BarChart3,
+  myNotifications: Bell,
+  profileSettings: UserCog,
+  siteSettings: Settings2,
+  dangerZone: AlertTriangle,
+  manualNotifications: Megaphone,
+  registries: Table2,
+};
 
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 767px)");
-    const update = () => {
-      setIsMobile(media.matches);
-      if (!media.matches) setIsMobileOpen(false);
-    };
+// One ticket stock per section: the current one tints the shell header.
+const STOCK_BY_KEY: Record<MenuKey, Stock> = {
+  dashboard: "carta",
+  bookings: "mint",
+  lessons: "azzurro",
+  courses: "giallino",
+  users: "rosa",
+  reports: "lilla",
+  myNotifications: "giallino",
+  profileSettings: "carta",
+  siteSettings: "carta",
+  dangerZone: "rosa",
+  manualNotifications: "lilla",
+  registries: "giallino",
+};
 
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
-  }, []);
+// Bottom bar: four destinations per role, the rest lives in the menu sheet.
+const PRIMARY_BY_ROLE: Record<CurrentUser["role"], MenuKey[]> = {
+  TRAINEE: ["dashboard", "bookings", "lessons", "myNotifications"],
+  TRAINER: ["dashboard", "bookings", "lessons", "courses"],
+  ADMIN: ["dashboard", "bookings", "lessons", "users"],
+};
 
-  const isDesktopCollapsed = !isMobile && isCollapsed;
-  const sidebarOpen = isMobile ? isMobileOpen : true;
+const ROLE_LABEL: Record<"it" | "en", Record<CurrentUser["role"], string>> = {
+  it: { ADMIN: "Admin", TRAINER: "Trainer", TRAINEE: "Iscritto" },
+  en: { ADMIN: "Admin", TRAINER: "Trainer", TRAINEE: "Member" },
+};
 
-  const iconByKey = {
-    dashboard: LayoutDashboard,
-    courses: BookOpen,
-    lessons: ClipboardList,
-    bookings: CalendarDays,
-    users: Users,
-    reports: BarChart3,
-    myNotifications: Bell,
-    profileSettings: UserCog,
-    siteSettings: Settings2,
-    dangerZone: AlertTriangle,
-    manualNotifications: Megaphone,
-    registries: Table2,
-  };
+function stripLocale(pathname: string, locale: string) {
+  const rest = pathname.slice(`/${locale}`.length);
+  return rest === "" ? "/" : rest;
+}
 
-  function toggleSidebar() {
-    if (isMobile) {
-      setIsMobileOpen((prev) => !prev);
-      return;
-    }
-    setIsCollapsed((prev) => !prev);
+function isItemActive(itemHref: string, path: string) {
+  if (itemHref === "/") return path === "/";
+  return path === itemHref || path.startsWith(`${itemHref}/`);
+}
+
+function stockForPath(path: string, items: AppMenuItem[]): Stock {
+  const match = items
+    .filter((item) => isItemActive(item.href, path))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  return match ? STOCK_BY_KEY[match.key] : "carta";
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
+export function AppShell({ user, locale, siteName, siteLogoSvg, appVersion, children, labels }: AppShellProps) {
+  const pathname = usePathname() ?? `/${locale}`;
+  const path = stripLocale(pathname, locale);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const items = getMenuItemsForRole(user.role);
+  const mainItems = items.filter((item) => !item.href.startsWith("/settings"));
+  const settingsItems = items
+    .filter((item) => item.href.startsWith("/settings"))
+    .sort((a, b) => Number(a.key === "dangerZone") - Number(b.key === "dangerZone"));
+  const primaryKeys = PRIMARY_BY_ROLE[user.role].filter((key) => items.some((item) => item.key === key));
+  const primaryItems = primaryKeys.map((key) => items.find((item) => item.key === key)!);
+  const stock = stockForPath(path, items);
+  const safeLogoSrc = sanitizeSiteLogoSvg(siteLogoSvg);
+  const roleLabel = ROLE_LABEL[locale === "en" ? "en" : "it"][user.role];
+  const otherLocale: Locale = locale === "it" ? "en" : "it";
+  const switchLocaleHref = withLocalePath(otherLocale, path);
+  const notificationsHref = withLocalePath(locale, "/my-notifications");
+
+  function renderNavLink(item: AppMenuItem, onNavigate?: () => void) {
+    const Icon = ICONS[item.key];
+    const active = isItemActive(item.href, path);
+    const danger = item.key === "dangerZone";
+    return (
+      <Link
+        href={withLocalePath(locale, item.href)}
+        aria-current={active ? "page" : undefined}
+        onClick={onNavigate}
+        data-stock={STOCK_BY_KEY[item.key]}
+        className={cn(
+          "group flex min-h-11 items-center gap-3 rounded-xl px-3 text-[15px] font-semibold transition-colors",
+          active
+            ? "bg-[var(--stock)] text-[var(--stock-ink)]"
+            : danger
+              ? "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
+              : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]"
+        )}
+      >
+        <span
+          aria-hidden="true"
+          className={cn(
+            "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
+            active ? "bg-[var(--surface)]/70" : "bg-[var(--stock)]"
+          )}
+        >
+          <Icon size={16} strokeWidth={2.2} />
+        </span>
+        <span className="min-w-0 flex-1 truncate">{labels.nav[item.key]}</span>
+        {item.key === "myNotifications" ? <LocalNotificationsBadge srLabel={labels.unreadNotifications} /> : null}
+      </Link>
+    );
   }
 
-  const menuItems = getMenuItemsForRole(user.role);
-  const mainMenuItems = menuItems.filter((item) => !item.href.startsWith("/settings"));
-  const settingsMenuItems = menuItems.filter((item) => item.href.startsWith("/settings"));
-  const settingsBaseItems = settingsMenuItems.filter((item) => item.key !== "profileSettings");
-  const settingsBaseItemsSorted = [...settingsBaseItems].sort((a, b) => {
-    if (a.key === "dangerZone" && b.key !== "dangerZone") return 1;
-    if (a.key !== "dangerZone" && b.key === "dangerZone") return -1;
-    return 0;
-  });
-  const safeLogoSrc = sanitizeSiteLogoSvg(siteLogoSvg);
-  const settingsPrefix = withLocalePath(locale, "/settings");
-  const profileHref = withLocalePath(locale, "/settings/profile");
-  const logoutHref = withLocalePath(locale, "/logout");
-  const isProfileActive = pathname === profileHref;
-  const isSettingsActive = pathname?.startsWith(settingsPrefix) ?? false;
-  const isSettingsGroupActive = isSettingsActive;
-  const isSettingsExpanded = isSettingsOpen || isSettingsActive;
+  const brand = (
+    <span className="flex min-w-0 items-center gap-2.5">
+      <Image src={safeLogoSrc} alt="" width={32} height={32} className="h-8 w-8 shrink-0 rounded-lg object-contain" />
+      <span className="truncate text-[17px] font-bold">{siteName}</span>
+    </span>
+  );
+
+  const preferences = (
+    <div className="flex items-center justify-between gap-2">
+      <ThemeToggle
+        labels={{ themeLabel: labels.themeLabel, themeToLight: labels.themeToLight, themeToDark: labels.themeToDark }}
+      />
+      <Link
+        href={switchLocaleHref}
+        hrefLang={otherLocale}
+        className="inline-flex h-11 items-center gap-1.5 rounded-xl px-3 text-sm font-semibold text-[var(--sidebar-link)] transition-colors hover:bg-[var(--sidebar-link-hover)]"
+      >
+        <span className="sr-only">{labels.localeLabel}: </span>
+        <span aria-hidden={locale !== "it"} className={locale === "it" ? "text-[var(--foreground)]" : "opacity-60"}>IT</span>
+        <span aria-hidden="true" className="opacity-40">/</span>
+        <span aria-hidden={locale !== "en"} className={locale === "en" ? "text-[var(--foreground)]" : "opacity-60"}>EN</span>
+      </Link>
+    </div>
+  );
 
   return (
-    <>
-
-      <button
-        type="button"
-        onClick={toggleSidebar}
-        className="fixed right-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[80] inline-flex h-11 w-11 touch-manipulation items-center justify-center rounded-md border border-[var(--surface-border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm transition hover:bg-[var(--muted)] md:hidden"
-        aria-label="Toggle sidebar"
+    <LocalNotificationsLiveProvider>
+      <a
+        href="#content"
+        className="sr-only z-[100] rounded-xl bg-[var(--primary)] px-4 py-3 font-semibold text-[var(--primary-foreground)] focus:not-sr-only focus:fixed focus:left-3 focus:top-3"
       >
-        {sidebarOpen ? <PanelLeftClose size={20} /> : <PanelLeftOpen size={20} />}
-      </button>
+        {labels.skipToContent}
+      </a>
 
-      {isMobile && sidebarOpen ? (
-        <button
-          type="button"
-          aria-label="Close sidebar overlay"
-          className="fixed inset-0 z-30 bg-black/40"
-          onClick={() => setIsMobileOpen(false)}
-        />
-      ) : null}
+      <div className="flex min-h-dvh" data-stock={stock}>
+        {/* Desktop rail */}
+        <aside className="sticky top-0 hidden h-dvh w-[17rem] shrink-0 flex-col border-r border-[var(--rule)] bg-[var(--surface)] lg:flex">
+          <div className="flex h-16 items-center px-5">{brand}</div>
 
-    <Sidebar
-      className={[
-        "fixed left-0 top-0 z-40 h-screen overflow-visible transition-all duration-200 md:sticky md:top-0",
-        isMobile ? (sidebarOpen ? "translate-x-0" : "-translate-x-full") : "translate-x-0",
-        isDesktopCollapsed ? "w-72 md:w-16" : "w-72",
-      ].join(" ")}
-    >
-      <button
-        type="button"
-        onClick={toggleSidebar}
-        className="absolute left-full top-20 z-50 hidden h-10 w-8 -translate-x-px items-center justify-center rounded-r-md border border-l-0 border-[var(--surface-border)] bg-[var(--surface)] text-[var(--foreground)] shadow-sm transition hover:bg-[var(--muted)] md:inline-flex"
-        aria-label="Toggle sidebar"
-      >
-        {isCollapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
-      </button>
-
-      <SidebarHeader>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Image src={safeLogoSrc} alt="NekoGym logo" width={30} height={30} />
-            {!isDesktopCollapsed ? <h1 className="text-lg font-semibold text-[var(--foreground)]">{siteName}</h1> : null}
-          </div>
-        </div>
-      </SidebarHeader>
-
-      <SidebarContent>
-        <nav>
-          <SidebarMenu>
-            {mainMenuItems.map((item) => {
-              const href = withLocalePath(locale, item.href);
-              const isActive = pathname === href;
-              const Icon = iconByKey[item.key];
-
-              return (
-                <SidebarMenuItem key={item.href}>
-                  <Link
-                    href={href}
-                    title={labels.nav[item.key]}
-                    aria-current={isActive ? "page" : undefined}
-                    className={[
-                      "flex items-center rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
-                      isDesktopCollapsed ? "justify-center" : "gap-2",
-                      isActive
-                        ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
-                        : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
-                    ].join(" ")}
-                    onClick={() => {
-                      if (isMobile) setIsMobileOpen(false);
-                    }}
-                  >
-                    <Icon size={16} />
-                    {!isDesktopCollapsed ? (
-                      <span className="inline-flex min-w-0 flex-1 items-center gap-2">
-                        <span className="truncate">{labels.nav[item.key]}</span>
-                        {item.key === "myNotifications" ? <LocalNotificationsLive /> : null}
-                      </span>
-                    ) : item.key === "myNotifications" ? (
-                      <LocalNotificationsLive />
-                    ) : null}
-                  </Link>
-                </SidebarMenuItem>
-              );
-            })}
-
-            {settingsMenuItems.length > 0 ? (
-              <SidebarMenuItem className="pt-4">
-                <SidebarMenuButton
-                  onClick={() => {
-                    if (isDesktopCollapsed) {
-                      setIsCollapsed(false);
-                      setIsSettingsOpen(true);
-                      return;
-                    }
-                    setIsSettingsOpen((prev) => !prev);
-                  }}
-                  aria-expanded={isDesktopCollapsed ? false : isSettingsExpanded}
-                  aria-controls="sidebar-settings-submenu"
-                  aria-label={labels.settingsSection}
-                  title={labels.settingsSection}
-                  className={[
-                    isDesktopCollapsed ? "justify-center" : "gap-2",
-                    isSettingsGroupActive
-                      ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
-                      : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
-                  ].join(" ")}
-                >
-                  <Settings2 size={16} />
-                  {!isDesktopCollapsed ? <span className="flex-1 text-left">{labels.settingsSection}</span> : null}
-                  {!isDesktopCollapsed ? (
-                    <ChevronDown
-                      size={16}
-                      className={isSettingsExpanded ? "rotate-180 transition-transform" : "transition-transform"}
-                    />
-                  ) : null}
-                </SidebarMenuButton>
-
-                {!isDesktopCollapsed && isSettingsExpanded ? (
-                  <SidebarMenuSub id="sidebar-settings-submenu">
-                    {settingsBaseItemsSorted.map((item) => {
-                      const href = withLocalePath(locale, item.href);
-                      const isActive = pathname === href;
-                      const isDanger = item.key === "dangerZone";
-                      const ItemIcon = iconByKey[item.key];
-
-                      return (
-                        <SidebarMenuSubItem key={item.href}>
-                          <Link
-                            href={href}
-                            title={labels.nav[item.key]}
-                            aria-current={isActive ? "page" : undefined}
-                            className={[
-                              "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--primary)]",
-                              isDanger
-                                ? isActive
-                                  ? "bg-[var(--danger-bg)] text-[var(--danger-fg)]"
-                                  : "text-[var(--danger-fg)] hover:bg-[var(--danger-bg)]"
-                                : isActive
-                                  ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
-                                  : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
-                            ].join(" ")}
-                            onClick={() => {
-                              if (isMobile) setIsMobileOpen(false);
-                            }}
-                          >
-                            <ItemIcon size={14} />
-                            <span>{labels.nav[item.key]}</span>
-                          </Link>
-                        </SidebarMenuSubItem>
-                      );
-                    })}
-
-                  </SidebarMenuSub>
-                ) : null}
-              </SidebarMenuItem>
+          <nav aria-label={labels.primaryNav} className="flex-1 overflow-y-auto px-3 pb-4">
+            <ul className="space-y-1">
+              {mainItems.map((item) => (
+                <li key={item.key}>
+                  {renderNavLink(item)}
+                </li>
+              ))}
+            </ul>
+            {settingsItems.length > 0 ? (
+              <div className="mt-6">
+                <p className="px-3 pb-2 text-[13px] font-semibold text-[var(--muted-foreground)]">{labels.settingsSection}</p>
+                <ul className="space-y-1">
+                  {settingsItems.map((item) => (
+                    <li key={item.key}>
+                      {renderNavLink(item)}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             ) : null}
-          </SidebarMenu>
-        </nav>
-      </SidebarContent>
+          </nav>
 
-      <SidebarFooter>
-        <div
-          className={[
-            "mb-3 flex items-center gap-2 text-xs text-[var(--muted-foreground)]",
-            isDesktopCollapsed ? "justify-center" : "",
-          ].join(" ")}
-        >
-          {!isDesktopCollapsed ? <span>{labels.localeLabel}</span> : null}
-          <Link href={withLocalePath("it", "/")} className={pathname?.startsWith("/it") ? "font-semibold" : ""}>
-            IT
-          </Link>
-          <span>/</span>
-          <Link href={withLocalePath("en", "/")} className={pathname?.startsWith("/en") ? "font-semibold" : ""}>
-            EN
-          </Link>
-        </div>
+          <div className="space-y-2 border-t border-[var(--rule)] p-3">
+            {preferences}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={`${labels.signedInAs} ${user.name}`}
+                  className="flex w-full items-center gap-3 rounded-xl p-2 text-left transition-colors hover:bg-[var(--sidebar-link-hover)]"
+                >
+                  <span aria-hidden="true" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--stock-lilla)] text-sm font-bold text-[var(--stock-ink)]">
+                    {initials(user.name)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[15px] font-semibold">{user.name}</span>
+                    <span className="block truncate text-[13px] text-[var(--muted-foreground)]">{roleLabel} · {user.email}</span>
+                  </span>
+                  <ChevronsUpDown size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-60">
+                <DropdownMenuItem asChild>
+                  <Link href={withLocalePath(locale, "/settings/profile")}>
+                    <UserCog size={16} aria-hidden="true" />
+                    {labels.nav.profileSettings}
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href={withLocalePath(locale, "/logout")}>
+                    <LogOut size={16} aria-hidden="true" />
+                    {labels.logout}
+                  </a>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <p className="tabular px-2 text-xs text-[var(--muted-foreground)]">NekoGym v{appVersion}</p>
+          </div>
+        </aside>
 
-        <div className={["mb-3 flex items-center gap-2", isDesktopCollapsed ? "justify-center" : ""].join(" ")}>
-          {!isDesktopCollapsed ? <span className="text-xs text-[var(--muted-foreground)]">{labels.themeLabel}</span> : null}
-          <ThemeToggle
-            labels={{
-              themeLabel: labels.themeLabel,
-              themeToLight: labels.themeToLight,
-              themeToDark: labels.themeToDark,
-            }}
-          />
-        </div>
-
-        {!isDesktopCollapsed ? <p className="text-xs text-[var(--muted-foreground)]">{labels.signedInAs}</p> : null}
-        <DropdownMenu open={isUserDropdownOpen} onOpenChange={setIsUserDropdownOpen}>
-          <DropdownMenuTrigger asChild>
-            <SidebarMenuButton
-              aria-label={labels.signedInAs}
-              className={[
-                "mt-1 px-2",
-                isDesktopCollapsed ? "justify-center" : "gap-2",
-                isProfileActive
-                  ? "bg-[var(--sidebar-link-active-bg)] text-[var(--sidebar-link-active-fg)]"
-                  : "text-[var(--sidebar-link)] hover:bg-[var(--sidebar-link-hover)]",
-              ].join(" ")}
-            >
-              <UserCog size={16} />
-              {!isDesktopCollapsed ? (
-                <span className="min-w-0 flex-1 text-left">
-                  <span className="block truncate text-sm font-medium text-[var(--foreground)]">{user.name}</span>
-                  <span className="block truncate text-xs text-[var(--muted-foreground)]">{user.email}</span>
-                </span>
-              ) : null}
-              {!isDesktopCollapsed ? (
-                <ChevronDown size={16} className={isUserDropdownOpen ? "rotate-180 transition-transform" : "transition-transform"} />
-              ) : null}
-            </SidebarMenuButton>
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent
-            side={isMobile ? "bottom" : "right"}
-            align="start"
-            sideOffset={isMobile ? 6 : 10}
-            className="w-56"
-          >
-            <DropdownMenuItem asChild>
-              <Link
-                href={profileHref}
-                aria-current={isProfileActive ? "page" : undefined}
-                className="w-full"
-                onClick={() => {
-                  if (isMobile) setIsMobileOpen(false);
-                }}
-              >
-                <UserCog size={14} />
-                {labels.nav.profileSettings}
+        <div className="flex min-w-0 flex-1 flex-col">
+          {/* Mobile top bar on the section stock */}
+          <header className="sticky top-0 z-30 bg-[var(--stock)] pt-[env(safe-area-inset-top)] lg:hidden">
+            <div className="flex h-14 items-center justify-between gap-2 pl-4 pr-1.5">
+              <Link href={withLocalePath(locale, "/")} className="min-w-0 text-[var(--stock-ink)]">
+                {brand}
               </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild>
-              <a
-                href={logoutHref}
-                className="w-full"
-                onClick={() => {
-                  if (isMobile) setIsMobileOpen(false);
-                }}
+              {/* Only when the tab bar has no Notifiche tab of its own (staff roles). */}
+              {primaryKeys.includes("myNotifications") ? null : (
+              <Link
+                href={notificationsHref}
+                aria-label={labels.nav.myNotifications}
+                className="relative inline-flex h-11 w-11 items-center justify-center rounded-xl text-[var(--stock-ink)] transition-colors hover:bg-[var(--surface)]/60"
               >
-                <LogOut size={14} />
-                {labels.logout}
-              </a>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <p
-          className={[
-            "mt-2 inline-flex rounded-md bg-[var(--role-badge-bg)] px-2 py-1 text-xs font-medium text-[var(--role-badge-fg)]",
-            isDesktopCollapsed ? "mx-auto" : "",
-          ].join(" ")}
-        >
-          {user.role}
-        </p>
-        <p
-          className={[
-            "mt-2 text-[0.7rem] text-[var(--muted-foreground)]",
-            isDesktopCollapsed ? "text-center" : "",
-          ].join(" ")}
-          title={`NekoGym ${appVersion}`}
-        >
-          {isDesktopCollapsed ? `v${appVersion}` : `NekoGym v${appVersion}`}
-        </p>
-      </SidebarFooter>
-    </Sidebar>
-    </>
+                <Bell size={20} aria-hidden="true" />
+                <LocalNotificationsBadge srLabel={labels.unreadNotifications} className="absolute right-1 top-1" />
+              </Link>
+              )}
+            </div>
+          </header>
+
+          <main id="content" tabIndex={-1} className="relative min-w-0 flex-1 overflow-x-clip bg-[var(--paper)] outline-none">
+            <div aria-hidden="true" data-shell-band className="absolute inset-x-0 top-0 h-44 bg-[var(--stock)] lg:h-60" />
+            <div className="relative mx-auto w-full max-w-6xl px-4 pb-32 pt-4 sm:px-6 lg:px-10 lg:pb-14 lg:pt-10">{children}</div>
+          </main>
+        </div>
+      </div>
+
+      {/* Mobile bottom bar */}
+      <nav
+        aria-label={labels.primaryNav}
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--rule)] bg-[var(--surface)] pb-[env(safe-area-inset-bottom)] lg:hidden"
+      >
+        <ul className="mx-auto flex max-w-xl">
+          {primaryItems.map((item) => {
+            const Icon = ICONS[item.key];
+            const active = isItemActive(item.href, path);
+            return (
+              <li key={item.key} className="flex-1">
+                <Link
+                  href={withLocalePath(locale, item.href)}
+                  aria-current={active ? "page" : undefined}
+                  data-stock={STOCK_BY_KEY[item.key]}
+                  className={cn(
+                    "flex min-h-[3.75rem] flex-col items-center justify-center gap-0.5 text-xs font-semibold",
+                    active ? "text-[var(--foreground)]" : "text-[var(--muted-foreground)]"
+                  )}
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "relative inline-flex h-8 w-14 items-center justify-center rounded-full transition-colors",
+                      active ? "bg-[var(--stock)] text-[var(--stock-ink)]" : ""
+                    )}
+                  >
+                    <Icon size={21} strokeWidth={active ? 2.4 : 2} />
+                    {item.key === "myNotifications" ? (
+                      <LocalNotificationsBadge srLabel={labels.unreadNotifications} className="absolute -right-0.5 -top-1" />
+                    ) : null}
+                  </span>
+                  <span className="max-w-full truncate px-1">{labels.nav[item.key]}</span>
+                </Link>
+              </li>
+            );
+          })}
+          <li className="flex-1">
+            <button
+              type="button"
+              onClick={() => setMenuOpen(true)}
+              aria-haspopup="dialog"
+              aria-expanded={menuOpen}
+              className="flex min-h-[3.75rem] w-full flex-col items-center justify-center gap-0.5 text-xs font-semibold text-[var(--muted-foreground)]"
+            >
+              <span aria-hidden="true" className="inline-flex h-8 w-14 items-center justify-center rounded-full">
+                <Menu size={21} />
+              </span>
+              <span>{labels.menu}</span>
+            </button>
+          </li>
+        </ul>
+      </nav>
+
+      <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
+        <DialogContent className="lg:hidden">
+          <DialogTitle>{labels.menu}</DialogTitle>
+          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[var(--surface-sunken)] p-3">
+            <span aria-hidden="true" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--stock-lilla)] font-bold text-[var(--stock-ink)]">
+              {initials(user.name)}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-semibold">{user.name}</span>
+              <span className="block truncate text-sm text-[var(--muted-foreground)]">{roleLabel} · {user.email}</span>
+            </span>
+          </div>
+          <nav aria-label={labels.menu} className="mt-4">
+            <ul className="space-y-1">
+              {mainItems.map((item) => (
+                <li key={item.key}>
+                  {renderNavLink(item, () => setMenuOpen(false))}
+                </li>
+              ))}
+            </ul>
+            {settingsItems.length > 0 ? (
+              <>
+                <p className="px-3 pb-2 pt-5 text-[13px] font-semibold text-[var(--muted-foreground)]">{labels.settingsSection}</p>
+                <ul className="space-y-1">
+                  {settingsItems.map((item) => (
+                    <li key={item.key}>
+                      {renderNavLink(item, () => setMenuOpen(false))}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+          </nav>
+          <div className="mt-5 space-y-2 border-t border-[var(--rule)] pt-4">
+            {preferences}
+            <a
+              href={withLocalePath(locale, "/logout")}
+              className="flex min-h-11 items-center gap-3 rounded-xl px-3 font-semibold text-[var(--danger-fg)] transition-colors hover:bg-[var(--danger-bg)]"
+            >
+              <LogOut size={18} aria-hidden="true" />
+              {labels.logout}
+            </a>
+            <p className="tabular px-3 text-xs text-[var(--muted-foreground)]">NekoGym v{appVersion}</p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </LocalNotificationsLiveProvider>
   );
 }
