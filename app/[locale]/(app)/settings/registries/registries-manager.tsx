@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Pencil, Plus, Trash2 } from "lucide-react";
@@ -92,18 +92,11 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
   const [editIcon, setEditIcon] = useState("");
   const [editColor, setEditColor] = useState(defaultColor);
 
-  useEffect(() => {
-    setCreateIcon(defaultIcon);
-  }, [defaultIcon]);
-
-  useEffect(() => {
-    setCreateColor(defaultColor);
-  }, [defaultColor]);
-
-  useEffect(() => {
-    setEditIcon(editingType?.iconSvg ?? "");
-    setEditColor(editingType?.colorHex ?? defaultColor);
-  }, [defaultColor, editingType]);
+  function openEdit(type: LessonTypeItem) {
+    setEditIcon(type.iconSvg);
+    setEditColor(type.colorHex ?? defaultColor);
+    setEditingType(type);
+  }
 
   function iconFileName(iconPath: string) {
     return iconPath.replace("/icons/lessontypes/", "");
@@ -311,7 +304,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setEditingType(type)}
+                      onClick={() => openEdit(type)}
                       disabled={isPending}
                     >
                       <Pencil className="h-4 w-4" />
