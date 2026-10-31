@@ -83,7 +83,7 @@ function membershipDurationLabel(createdAt: string, locale: string): string {
   const diffDays = Math.max(0, Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24)));
   const it = locale === "it";
   const unit = (n: number, one: [string, string], many: [string, string]) => `${n} ${n === 1 ? one[it ? 0 : 1] : many[it ? 0 : 1]}`;
-  if (diffDays === 0) return it ? "da oggi" : "since today";
+  if (diffDays === 0) return "";
   if (diffDays < 30) return unit(diffDays, ["giorno", "day"], ["giorni", "days"]);
   if (diffDays < 365) return unit(Math.floor(diffDays / 30), ["mese", "month"], ["mesi", "months"]);
   return unit(Math.floor(diffDays / 365), ["anno", "year"], ["anni", "years"]);
@@ -134,11 +134,11 @@ export function UserQuickProfileTooltip({ userId, locale, className, children }:
         <button
           type="button"
           className={cn(
-            "inline-flex min-h-11 max-w-full items-center truncate text-left underline decoration-[var(--muted-foreground)] decoration-dotted underline-offset-4 hover:decoration-solid",
+            "inline-flex min-h-11 max-w-full items-center text-left underline decoration-[var(--muted-foreground)] decoration-dotted underline-offset-4 hover:decoration-solid",
             className
           )}
         >
-          {children}
+          <span className="truncate">{children}</span>
         </button>
       </Popover.Trigger>
       <Popover.Portal>
@@ -158,8 +158,8 @@ export function UserQuickProfileTooltip({ userId, locale, className, children }:
                 <p className="text-[17px] font-semibold leading-tight">{data.user.name}</p>
                 <p className="break-all text-sm text-[var(--muted-foreground)]">{data.user.email}</p>
                 <p className="mt-1 text-sm text-[var(--muted-foreground)]">
-                  {t.memberSince} <span className="tabular">{formatDate(data.user.createdAt, locale)}</span> ·{" "}
-                  {membershipDurationLabel(data.user.createdAt, locale)}
+                  {t.memberSince} <span className="tabular">{formatDate(data.user.createdAt, locale)}</span>
+                  {membershipDurationLabel(data.user.createdAt, locale) ? ` · ${membershipDurationLabel(data.user.createdAt, locale)}` : ""}
                 </p>
               </div>
               <div className="grid gap-3 border-t border-[var(--rule)] pt-3">
