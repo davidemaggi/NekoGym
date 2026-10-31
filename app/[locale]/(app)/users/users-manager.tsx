@@ -3,7 +3,8 @@
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Lock, LockOpen, LogOut, MessageSquare, MoreHorizontal, Pencil, Plus, Trash2 } from "lucide-react";
+import { Lock, LockOpen, LogOut, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import {
   createUserAction,
@@ -24,8 +25,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -214,12 +213,12 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
     confirmDeactivateTitle: locale === "it" ? "Conferma disattivazione" : "Confirm deactivation",
     confirmDeactivateDescription:
       locale === "it"
-        ? "Disattivando {name} verranno terminate tutte le sue sessioni e non potra piu effettuare il login."
+        ? "Disattivando {name} verranno terminate tutte le sue sessioni e non potrà più effettuare il login."
         : "Deactivating {name} will terminate all sessions and block future logins.",
     confirmActivateTitle: locale === "it" ? "Conferma attivazione" : "Confirm activation",
     confirmActivateDescription:
       locale === "it"
-        ? "Vuoi riattivare {name}? L'utente potra nuovamente effettuare il login."
+        ? "Vuoi riattivare {name}? L'utente potrà di nuovo effettuare il login."
         : "Do you want to re-activate {name}? The user will be able to sign in again.",
     confirmTerminateSessionsTitle: locale === "it" ? "Conferma terminazione sessioni" : "Confirm session termination",
     confirmTerminateSessionsDescription:
@@ -363,67 +362,109 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
     });
   }
 
+  const roleFilters: Array<[UserItem["role"] | "ALL", string]> = [
+    ["ALL", labels.filters.allRoles],
+    ["ADMIN", labels.roleOptions.ADMIN],
+    ["TRAINER", labels.roleOptions.TRAINER],
+    ["TRAINEE", labels.roleOptions.TRAINEE],
+  ];
+  // Each role wears its own stock on the avatar, so the list scans by role at a glance.
+  const roleStock: Record<UserItem["role"], string> = {
+    ADMIN: "bg-[var(--stock-lilla)]",
+    TRAINER: "bg-[var(--stock-azzurro)]",
+    TRAINEE: "bg-[var(--stock-mint)]",
+  };
+  const initialsOf = (name: string) =>
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? "")
+      .join("");
+  const planLabel = (user: UserItem) => {
+    if (user.subscriptionType === "NONE") return labels.subscriptionOptions.NONE;
+    const base = labels.subscriptionOptions[user.subscriptionType];
+    if (user.subscriptionType === "FIXED" && user.subscriptionLessons !== null) {
+      return `${base} · ${user.subscriptionRemaining ?? user.subscriptionLessons}/${user.subscriptionLessons}`;
+    }
+    return user.subscriptionLessons !== null ? `${base} · ${user.subscriptionLessons}` : base;
+  };
+
   return (
-    <section className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">{labels.title}</h2>
-          <p className="text-sm text-[var(--muted-foreground)]">{labels.description}</p>
-        </div>
+    <div>
+      <div
+        data-page-band
+        className="-mt-4 bg-[var(--stock)] pb-5 pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pb-6 lg:pt-10"
+      >
+        <header className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
+            <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75">{labels.description}</p>
+          </div>
+          <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+            <DialogTrigger asChild>
+              <Button aria-label={labels.createCta} className="w-11 px-0 sm:w-auto sm:px-4">
+                <Plus size={18} aria-hidden="true" />
+                <span className="hidden sm:inline">{labels.createCta}</span>
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{labels.createTitle}</DialogTitle>
+                <DialogDescription>{labels.createDescription}</DialogDescription>
+              </DialogHeader>
 
-        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4" />
-              <span>{labels.createCta}</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{labels.createTitle}</DialogTitle>
-              <DialogDescription>{labels.createDescription}</DialogDescription>
-            </DialogHeader>
+              <form className="space-y-3" onSubmit={askCreateConfirmation}>
+                <UserFormFields labels={labels} lessonTypes={lessonTypes} />
+                <DialogFooter>
+                  <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
+                    {labels.actions.cancel}
+                  </Button>
+                  <Button type="submit" disabled={isPending}>
+                    <Plus className="h-4 w-4" />
+                    <span>{isPending ? labels.actions.processing : labels.actions.reviewCreate}</span>
+                  </Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </header>
 
-            <form className="space-y-3" onSubmit={askCreateConfirmation}>
-              <UserFormFields labels={labels} lessonTypes={lessonTypes} />
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
-                  {labels.actions.cancel}
-                </Button>
-                <Button type="submit" disabled={isPending}>
-                  <Plus className="h-4 w-4" />
-                  <span>{isPending ? labels.actions.processing : labels.actions.reviewCreate}</span>
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{labels.tableTitle}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="mb-4 flex flex-col gap-3 md:flex-row">
+        <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="relative lg:max-w-sm lg:flex-1">
+            <Search size={18} aria-hidden="true" className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)]" />
             <Input
+              type="search"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={labels.searchPlaceholder}
+              aria-label={labels.searchPlaceholder}
+              className="pl-10"
             />
-            <select
-              value={roleFilter}
-              onChange={(event) => setRoleFilter(event.target.value as UserItem["role"] | "ALL")}
-              className="ui-select"
-            >
-              <option value="ALL">{labels.filters.allRoles}</option>
-              <option value="ADMIN">{labels.roleOptions.ADMIN}</option>
-              <option value="TRAINER">{labels.roleOptions.TRAINER}</option>
-              <option value="TRAINEE">{labels.roleOptions.TRAINEE}</option>
-            </select>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <div role="group" aria-label={labels.columns.role} className="inline-flex max-w-full overflow-x-auto rounded-xl bg-[var(--surface)]/70 p-1">
+              {roleFilters.map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  aria-pressed={roleFilter === value}
+                  onClick={() => setRoleFilter(value)}
+                  className={cn(
+                    "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
+                    roleFilter === value
+                      ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+                      : "text-[var(--stock-ink)]/75 hover:text-[var(--foreground)]"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
             <select
               value={statusFilter}
               onChange={(event) => setStatusFilter(event.target.value as "ALL" | "ACTIVE" | "DISABLED")}
+              aria-label={localActions.allStatuses}
               className="ui-select"
             >
               <option value="ALL">{localActions.allStatuses}</option>
@@ -431,125 +472,129 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
               <option value="DISABLED">{localActions.statusDisabled}</option>
             </select>
           </div>
+        </div>
+      </div>
 
-          {filteredUsers.length === 0 ? (
-            <p className="text-sm text-[var(--muted-foreground)]">{labels.empty}</p>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--surface-border)] text-left">
-                    <th className="py-2 pr-2">{labels.columns.name}</th>
-                    <th className="py-2 pr-2">{labels.columns.email}</th>
-                    <th className="py-2 pr-2">{labels.columns.role}</th>
-                    <th className="py-2 pr-2">{labels.columns.membership}</th>
-                    <th className="py-2 pr-2">{labels.columns.subscription}</th>
-                    <th className="py-2 text-right">{labels.columns.actions}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr
-                      key={user.id}
-                      className={`border-b border-[var(--surface-border)]/70 ${user.isDisabled ? "bg-[var(--muted)]/35 text-[var(--muted-foreground)]" : ""}`}
+      {filteredUsers.length === 0 ? (
+        <p className="pt-6 text-[15px] text-[var(--muted-foreground)]">{labels.empty}</p>
+      ) : (
+        <ul className="-mx-4 pt-2 sm:mx-0">
+          {filteredUsers.map((user) => (
+            <li
+              key={user.id}
+              className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 border-b border-[var(--rule)] px-4 py-4 last:border-b-0 sm:px-0 lg:grid-cols-[2.75rem_minmax(0,1.2fr)_minmax(0,1fr)_auto]"
+            >
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "inline-flex h-11 w-11 items-center justify-center rounded-full text-sm font-bold text-[var(--stock-ink)]",
+                  user.isDisabled ? "bg-[var(--muted)] text-[var(--muted-foreground)]" : roleStock[user.role]
+                )}
+              >
+                {user.isDisabled ? <Lock size={16} /> : initialsOf(user.name)}
+              </span>
+              <div className="min-w-0">
+                <p className={cn("text-[17px] font-semibold leading-snug", user.isDisabled ? "text-[var(--muted-foreground)]" : "")}>
+                  {user.name}
+                </p>
+                <p className="text-[15px] text-[var(--muted-foreground)] [overflow-wrap:anywhere]">{user.email}</p>
+              </div>
+              <div className="col-span-2 col-start-2 row-start-2 flex flex-wrap items-center gap-1.5 lg:col-span-1 lg:col-start-3 lg:row-start-1">
+                <span className="rounded-lg bg-[var(--muted)] px-2 py-0.5 text-[13px] font-semibold">{labels.roleOptions[user.role]}</span>
+                {user.isDisabled ? (
+                  <span className="rounded-lg bg-[var(--warning-bg)] px-2 py-0.5 text-[13px] font-semibold text-[var(--warning-fg)]">
+                    {localActions.disabledBadge}
+                  </span>
+                ) : null}
+                {user.role === "TRAINEE" ? (
+                  <>
+                    <span
+                      className={cn(
+                        "rounded-lg px-2 py-0.5 text-[13px] font-semibold",
+                        user.membershipStatus === "ACTIVE"
+                          ? "bg-[var(--success-bg)] text-[var(--success-fg)]"
+                          : "bg-[var(--warning-bg)] text-[var(--warning-fg)]"
+                      )}
                     >
-                      <td className="py-3 pr-2 font-medium">
-                        <div className="inline-flex items-center gap-2">
-                          {user.isDisabled ? <Lock className="h-4 w-4" /> : null}
-                          <span>{user.name}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 pr-2">{user.email}</td>
-                      <td className="py-3 pr-2">
-                        <div className="inline-flex gap-2">
-                          <Badge variant="info">{labels.roleOptions[user.role]}</Badge>
-                          {user.isDisabled ? <Badge variant="warning">{localActions.disabledBadge}</Badge> : null}
-                        </div>
-                      </td>
-                      <td className="py-3 pr-2">
-                        <Badge variant={user.membershipStatus === "ACTIVE" ? "success" : "warning"}>
-                          {labels.membershipOptions[user.membershipStatus]}
-                        </Badge>
-                      </td>
-                      <td className="py-3 pr-2">
-                        <Badge variant={user.subscriptionType === "NONE" ? "neutral" : "info"}>
-                          {labels.subscriptionOptions[user.subscriptionType]}
-                          {user.subscriptionRemaining !== null ? ` (${user.subscriptionRemaining})` : ""}
-                        </Badge>
-                      </td>
-                      <td className="py-3 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <button
-                              type="button"
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-md p-0 text-[var(--muted-foreground)] hover:bg-[var(--muted)] hover:text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">{labels.columns.actions}</span>
-                            </button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onSelect={() => setEditUser(user)}>
-                              <Pencil className="h-4 w-4" />
-                              <span>{labels.actions.edit}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              disabled={user.id === currentUserId}
-                              onSelect={() =>
-                                setConfirmation({
-                                  kind: "toggleActivation",
-                                  payload: {
-                                    id: user.id,
-                                    name: user.name,
-                                    disable: !user.isDisabled,
-                                  },
-                                })
-                              }
-                            >
-                              {user.isDisabled ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
-                              <span>{user.isDisabled ? localActions.activate : localActions.deactivate}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={() =>
-                                setConfirmation({
-                                  kind: "terminateSessions",
-                                  payload: { id: user.id, name: user.name },
-                                })
-                              }
-                            >
-                              <LogOut className="h-4 w-4" />
-                              <span>{localActions.terminateSessions}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onSelect={() => {
-                                setMessageUser(user);
-                                setMessageBody("");
-                              }}
-                            >
-                              <MessageSquare className="h-4 w-4" />
-                              <span>{labels.actions.message}</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              className="text-red-600 focus:bg-red-100 dark:text-red-400 dark:focus:bg-red-900/40"
-                              onSelect={() => {
-                                setDeleteUser(user);
-                                setConfirmation({ kind: "delete", payload: { id: user.id, name: user.name } });
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              <span>{labels.actions.delete}</span>
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      {labels.membershipOptions[user.membershipStatus]}
+                    </span>
+                    <span className="tabular text-sm text-[var(--muted-foreground)]">{planLabel(user)}</span>
+                  </>
+                ) : null}
+              </div>
+              <div className="col-start-3 row-start-1 flex items-center justify-end gap-1 lg:col-start-4">
+                <Button variant="outline" className="hidden sm:inline-flex" onClick={() => setEditUser(user)}>
+                  <Pencil size={16} aria-hidden="true" />
+                  {labels.actions.edit}
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label={`${labels.columns.actions}: ${user.name}`}
+                      className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)]"
+                    >
+                      <MoreHorizontal size={20} aria-hidden="true" />
+                    </button>
+                  </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setEditUser(user)}>
+                    <Pencil className="h-4 w-4" />
+                    <span>{labels.actions.edit}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={user.id === currentUserId}
+                    onSelect={() =>
+                      setConfirmation({
+                        kind: "toggleActivation",
+                        payload: {
+                          id: user.id,
+                          name: user.name,
+                          disable: !user.isDisabled,
+                        },
+                      })
+                    }
+                  >
+                    {user.isDisabled ? <LockOpen className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
+                    <span>{user.isDisabled ? localActions.activate : localActions.deactivate}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() =>
+                      setConfirmation({
+                        kind: "terminateSessions",
+                        payload: { id: user.id, name: user.name },
+                      })
+                    }
+                  >
+                    <LogOut className="h-4 w-4" />
+                    <span>{localActions.terminateSessions}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setMessageUser(user);
+                      setMessageBody("");
+                    }}
+                  >
+                    <MessageSquare className="h-4 w-4" />
+                    <span>{labels.actions.message}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-[var(--danger-fg)] focus:bg-[var(--danger-bg)]"
+                    onSelect={() => {
+                      setDeleteUser(user);
+                      setConfirmation({ kind: "delete", payload: { id: user.id, name: user.name } });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>{labels.actions.delete}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <Dialog open={Boolean(editUser)} onOpenChange={(open) => !open && setEditUser(null)}>
         <DialogContent>
@@ -693,7 +738,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </div>
   );
 }
 
@@ -728,15 +773,15 @@ function UserFormFields({
 
   return (
     <>
-      <div className="inline-flex rounded-md border border-[var(--surface-border)] p-1">
+      <div role="group" className="flex max-w-full overflow-x-auto rounded-xl bg-[var(--muted)] p-1">
         <button
           type="button"
           onClick={() => setActiveTab("profile")}
           className={[
-            "rounded px-3 py-1.5 text-xs font-medium",
+            "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "profile"
-              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+              ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
           ].join(" ")}
         >
           {labels.tabs.profile}
@@ -745,10 +790,10 @@ function UserFormFields({
           type="button"
           onClick={() => setActiveTab("membership")}
           className={[
-            "rounded px-3 py-1.5 text-xs font-medium",
+            "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "membership"
-              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+              ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
           ].join(" ")}
         >
           {labels.tabs.membership}
@@ -757,10 +802,10 @@ function UserFormFields({
           type="button"
           onClick={() => setActiveTab("subscription")}
           className={[
-            "rounded px-3 py-1.5 text-xs font-medium",
+            "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "subscription"
-              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+              ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
           ].join(" ")}
         >
           {labels.tabs.subscription}
@@ -769,10 +814,10 @@ function UserFormFields({
           type="button"
           onClick={() => setActiveTab("access")}
           className={[
-            "rounded px-3 py-1.5 text-xs font-medium",
+            "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "access"
-              ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-              : "text-[var(--muted-foreground)] hover:bg-[var(--muted)]",
+              ? "bg-[var(--surface)] text-[var(--foreground)] shadow-[var(--shadow-lift)]"
+              : "text-[var(--muted-foreground)] hover:text-[var(--foreground)]",
           ].join(" ")}
         >
           {labels.tabs.access}
@@ -836,16 +881,16 @@ function UserFormFields({
             </div>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="emailVerified">{labels.fields.emailVerified}</Label>
+          <label htmlFor="emailVerified" className="flex min-h-11 cursor-pointer items-center gap-3 text-[15px] font-semibold">
             <input
               id="emailVerified"
               name="emailVerified"
               type="checkbox"
               defaultChecked={defaults?.emailVerified ?? false}
-              className="h-4 w-4 rounded border-[var(--surface-border)]"
+              className="h-5 w-5 rounded"
             />
-          </div>
+            {labels.fields.emailVerified}
+          </label>
       </div>
 
       <div className={panelClass("membership")}>

@@ -586,9 +586,10 @@ export function CoursesManager({
             {currentUser.role === "ADMIN" ? (
               <a
                 href={`/${locale}/courses${includeDeleted ? "" : "?showDeleted=1"}`}
-                aria-current={includeDeleted ? "true" : undefined}
+                role="button"
+                aria-pressed={includeDeleted}
                 className={cn(
-                  "hidden h-11 items-center gap-1.5 rounded-xl border-[1.5px] px-3.5 text-[15px] font-semibold transition-colors sm:inline-flex",
+                  "inline-flex h-11 items-center gap-1.5 rounded-xl border-[1.5px] px-3.5 text-[15px] font-semibold transition-colors",
                   includeDeleted
                     ? "border-[var(--foreground)] bg-[var(--surface)]"
                     : "border-[var(--stock-edge)] text-[var(--stock-ink)]/80 hover:bg-[var(--surface)]/60"
@@ -767,7 +768,7 @@ export function CoursesManager({
                         </p>
                         <div className="mt-1 space-y-1">
                           {times.length === 0 ? (
-                            <span aria-hidden="true" className="block h-7 rounded-md border border-dashed border-[var(--rule)]" />
+                            <span aria-hidden="true" className="block h-7 rounded-md border border-[var(--rule)]" />
                           ) : (
                             times.map((time) => (
                               <span
