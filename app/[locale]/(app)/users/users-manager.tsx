@@ -226,6 +226,9 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
         ? "Terminare tutte le sessioni attive di {name}?"
         : "Terminate all active sessions for {name}?",
     disabledBadge: locale === "it" ? "Disattivato" : "Disabled",
+    remaining: locale === "it" ? "rimaste" : "left",
+    perWeek: locale === "it" ? "a settimana" : "per week",
+    perMonth: locale === "it" ? "al mese" : "per month",
     allStatuses: locale === "it" ? "Tutti gli stati" : "All statuses",
     statusActive: locale === "it" ? "Attivi" : "Active",
     statusDisabled: locale === "it" ? "Disattivati" : "Disabled",
@@ -381,13 +384,25 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("");
+  // Plan as a ticket figure with its unit: "Pacchetto · 4/10 rimaste", "Mensile · 12 al mese".
   const planLabel = (user: UserItem) => {
     if (user.subscriptionType === "NONE") return labels.subscriptionOptions.NONE;
     const base = labels.subscriptionOptions[user.subscriptionType];
-    if (user.subscriptionType === "FIXED" && user.subscriptionLessons !== null) {
-      return `${base} · ${user.subscriptionRemaining ?? user.subscriptionLessons}/${user.subscriptionLessons}`;
+    if (user.subscriptionLessons === null) return base;
+    if (user.subscriptionType === "FIXED") {
+      return (
+        <>
+          {base} · <span className="tabular font-semibold text-[var(--foreground)]">{user.subscriptionRemaining ?? user.subscriptionLessons}/{user.subscriptionLessons}</span>{" "}
+          {localActions.remaining}
+        </>
+      );
     }
-    return user.subscriptionLessons !== null ? `${base} · ${user.subscriptionLessons}` : base;
+    return (
+      <>
+        {base} · <span className="tabular font-semibold text-[var(--foreground)]">{user.subscriptionLessons}</span>{" "}
+        {user.subscriptionType === "WEEKLY" ? localActions.perWeek : localActions.perMonth}
+      </>
+    );
   };
 
   return (
@@ -417,7 +432,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
               <form className="space-y-3" onSubmit={askCreateConfirmation}>
                 <UserFormFields labels={labels} lessonTypes={lessonTypes} />
                 <DialogFooter>
-                  <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
+                  <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
                     {labels.actions.cancel}
                   </Button>
                   <Button type="submit" disabled={isPending}>
@@ -518,7 +533,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                     >
                       {labels.membershipOptions[user.membershipStatus]}
                     </span>
-                    <span className="tabular text-sm text-[var(--muted-foreground)]">{planLabel(user)}</span>
+                    <span className="text-sm text-[var(--muted-foreground)]">{planLabel(user)}</span>
                   </>
                 ) : null}
               </div>
@@ -578,16 +593,6 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                     <MessageSquare className="h-4 w-4" />
                     <span>{labels.actions.message}</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-[var(--danger-fg)] focus:bg-[var(--danger-bg)]"
-                    onSelect={() => {
-                      setDeleteUser(user);
-                      setConfirmation({ kind: "delete", payload: { id: user.id, name: user.name } });
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span>{labels.actions.delete}</span>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -625,7 +630,24 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                 }}
               />
               <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setEditUser(null)}>
+                {/* Deliberate Delete: removing an account lives here, behind its confirmation. */}
+                {editUser.id !== currentUserId ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="text-[var(--danger-fg)] hover:bg-[var(--danger-bg)] sm:mr-auto"
+                    onClick={() => {
+                      const target = editUser;
+                      setEditUser(null);
+                      setDeleteUser(target);
+                      setConfirmation({ kind: "delete", payload: { id: target.id, name: target.name } });
+                    }}
+                  >
+                    <Trash2 size={18} aria-hidden="true" />
+                    {labels.actions.delete}
+                  </Button>
+                ) : null}
+                <Button type="button" variant="ghost" onClick={() => setEditUser(null)}>
                   {labels.actions.cancel}
                 </Button>
                 <Button type="submit" disabled={isPending}>
@@ -666,7 +688,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
           <DialogFooter>
             <Button
               type="button"
-              variant="secondary"
+              variant="ghost"
               onClick={() => {
                 setMessageUser(null);
                 setMessageBody("");
@@ -677,7 +699,6 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
             </Button>
             <Button
               type="button"
-              className="border-[#BEE3F8] bg-[#E6F4FF] text-[#1E5D85] hover:bg-[#D8EEFF] dark:border-[#2B5D86] dark:bg-[#123A56] dark:text-[#BFE6FF] dark:hover:bg-[#184666]"
               onClick={submitUserMessage}
               disabled={isPending || !messageBody.trim()}
             >
@@ -728,10 +749,19 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary">{labels.actions.cancel}</Button>
+              <Button variant="outline">{labels.actions.cancel}</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button onClick={submitConfirmedAction} disabled={isPending}>
+              <Button
+                variant={
+                  confirmation?.kind === "delete" ||
+                  (confirmation?.kind === "toggleActivation" && confirmation.payload.disable)
+                    ? "destructive"
+                    : "default"
+                }
+                onClick={submitConfirmedAction}
+                disabled={isPending}
+              >
                 {isPending ? labels.actions.processing : labels.actions.confirm}
               </Button>
             </AlertDialogAction>
@@ -777,6 +807,7 @@ function UserFormFields({
         <button
           type="button"
           onClick={() => setActiveTab("profile")}
+          aria-pressed={activeTab === "profile"}
           className={[
             "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "profile"
@@ -789,6 +820,7 @@ function UserFormFields({
         <button
           type="button"
           onClick={() => setActiveTab("membership")}
+          aria-pressed={activeTab === "membership"}
           className={[
             "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "membership"
@@ -801,6 +833,7 @@ function UserFormFields({
         <button
           type="button"
           onClick={() => setActiveTab("subscription")}
+          aria-pressed={activeTab === "subscription"}
           className={[
             "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "subscription"
@@ -813,6 +846,7 @@ function UserFormFields({
         <button
           type="button"
           onClick={() => setActiveTab("access")}
+          aria-pressed={activeTab === "access"}
           className={[
             "h-11 shrink-0 rounded-lg px-3.5 text-[15px] font-semibold transition-colors",
             activeTab === "access"
@@ -825,7 +859,7 @@ function UserFormFields({
       </div>
 
       <div className={panelClass("profile")}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="name">{labels.fields.name}</Label>
               <Input id="name" name="name" required defaultValue={defaults?.name ?? ""} />
@@ -836,7 +870,7 @@ function UserFormFields({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="password">{labels.fields.password}</Label>
               <Input
@@ -844,9 +878,9 @@ function UserFormFields({
                 name="password"
                 type="password"
                 required={!defaults}
-                placeholder={defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
+                aria-describedby="password-hint"
               />
-              <p className="text-xs text-[var(--muted-foreground)]">
+              <p id="password-hint" className="text-sm text-[var(--muted-foreground)]">
                 {defaults ? labels.passwordKeepHint : labels.passwordCreateHint}
               </p>
             </div>
@@ -894,7 +928,7 @@ function UserFormFields({
       </div>
 
       <div className={panelClass("membership")}>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="space-y-1">
             <Label htmlFor="membershipStatus">{labels.fields.membershipStatus}</Label>
             <select
@@ -915,7 +949,7 @@ function UserFormFields({
       </div>
 
       <div className={panelClass("subscription")}>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="subscriptionType">{labels.fields.subscriptionType}</Label>
               <select
@@ -944,7 +978,7 @@ function UserFormFields({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1">
               <Label htmlFor="subscriptionRemaining">{labels.fields.subscriptionRemaining}</Label>
               <Input

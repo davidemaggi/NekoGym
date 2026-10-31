@@ -625,6 +625,7 @@ export function CoursesManager({
                 <button
                   type="button"
                   onClick={() => setCreateTab("main")}
+                  aria-pressed={createTab === "main"}
                   className={[
                     "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
                     createTab === "main"
@@ -637,6 +638,7 @@ export function CoursesManager({
                 <button
                   type="button"
                   onClick={() => setCreateTab("schedule")}
+                  aria-pressed={createTab === "schedule"}
                   className={[
                     "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
                     createTab === "schedule"
@@ -665,7 +667,7 @@ export function CoursesManager({
                   onRemoveSlot={(weekday, startTime) => removeScheduleSlot("create", weekday, startTime)}
                 />
                 <DialogFooter>
-                  <Button type="button" variant="secondary" onClick={() => setCreateOpen(false)}>
+                  <Button type="button" variant="ghost" onClick={() => setCreateOpen(false)}>
                     {labels.actions.cancel}
                   </Button>
                   <Button type="submit">
@@ -725,7 +727,7 @@ export function CoursesManager({
             return (
               <li
                 key={course.id}
-                className="grid gap-x-6 gap-y-3 border-b border-[var(--rule)] px-4 py-5 last:border-b-0 sm:px-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_auto] lg:items-center"
+                className="grid gap-x-6 gap-y-3 border-b border-[var(--rule)] px-4 py-5 last:border-b-0 sm:px-0 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_9.5rem] lg:items-center"
               >
                 <div className="min-w-0">
                   <p
@@ -742,8 +744,9 @@ export function CoursesManager({
                   <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
                     {[course.lessonType?.name, trainerName ?? labels.filterWithoutTrainer].filter(Boolean).join(" · ")}
                   </p>
-                  <p className="tabular mt-1 text-sm text-[var(--muted-foreground)]">
-                    {course.durationMinutes} min · {labels.columns.maxAttendees} {course.maxAttendees}
+                  <p className="mt-1 text-sm text-[var(--muted-foreground)]">
+                    <span className="tabular">{course.durationMinutes}</span> min · {labels.columns.maxAttendees}{" "}
+                    <span className="tabular">{course.maxAttendees}</span>
                   </p>
                   {course.deletedAt ? (
                     <span className="mt-2 inline-block rounded-lg bg-[var(--danger-bg)] px-2 py-0.5 text-[13px] font-semibold text-[var(--danger-fg)]">
@@ -785,7 +788,7 @@ export function CoursesManager({
                   })}
                 </div>
 
-                <div className="flex items-center gap-1 lg:justify-end">
+                <div className="flex items-center gap-1 empty:hidden lg:justify-end">
                   {course.deletedAt && course.canManage ? (
                     <Button variant="outline" onClick={() => restoreCourse(course.id)} disabled={isPending}>
                       <RotateCcw size={16} aria-hidden="true" />
@@ -838,6 +841,7 @@ export function CoursesManager({
                 <button
                   type="button"
                   onClick={() => setEditTab("main")}
+                  aria-pressed={editTab === "main"}
                   className={[
                     "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
                     editTab === "main"
@@ -850,6 +854,7 @@ export function CoursesManager({
                 <button
                   type="button"
                   onClick={() => setEditTab("schedule")}
+                  aria-pressed={editTab === "schedule"}
                   className={[
                     "h-11 rounded-lg px-4 text-[15px] font-semibold transition-colors",
                     editTab === "schedule"
@@ -919,12 +924,16 @@ export function CoursesManager({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary" disabled={isPending}>
+              <Button variant="outline" disabled={isPending}>
                 {labels.actions.cancel}
               </Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button onClick={submitConfirmedAction} disabled={isPending}>
+              <Button
+                variant={confirmation?.kind === "delete" ? "destructive" : "default"}
+                onClick={submitConfirmedAction}
+                disabled={isPending}
+              >
                 {isPending ? labels.actions.processing : labels.actions.confirm}
               </Button>
             </AlertDialogAction>
@@ -944,7 +953,7 @@ export function CoursesManager({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel asChild>
-              <Button variant="secondary">{labels.actions.cancel}</Button>
+              <Button variant="outline">{labels.actions.cancel}</Button>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
               <Button
@@ -1040,7 +1049,7 @@ function CourseFields({
         <Textarea id="description" name="description" defaultValue={defaultValues.description} />
       </div>
 
-      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
+      <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="lessonTypeId">{labels.lessonType}</Label>
           <select
@@ -1090,7 +1099,7 @@ function CourseFields({
         </div>
       </div>
 
-      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
+      <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="durationMinutes">{labels.durationMinutes}</Label>
           <Input
@@ -1117,7 +1126,7 @@ function CourseFields({
         </div>
       </div>
 
-      <div className={activeTab === "main" ? "grid grid-cols-2 gap-3" : "hidden"}>
+      <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>
         <div className="space-y-1">
           <Label htmlFor="bookingAdvanceMonths">{labels.bookingAdvanceMonths}</Label>
           <Input
