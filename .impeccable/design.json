@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-31T17:48:35.040046+00:00",
+  "generatedAt": "2026-10-31T18:44:25.854958+00:00",
   "title": "Design System: NekoGym",
   "extensions": {
     "colorMeta": {
@@ -842,6 +842,14 @@
       "css": ".ds-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; } .ds-badge-success { background: var(--success-bg, #dcefe3); color: var(--success-fg, #1f5a3c); } .ds-badge-warning { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); } .ds-badge-danger { background: var(--danger-bg, #f8e1e4); color: var(--danger-fg, #8c2236); }"
     },
     {
+      "name": "Plan Usage Tag",
+      "kind": "chip",
+      "refersTo": "badge-neutral",
+      "description": "Plan spent, never left: '3/12 usate · mese' on the neutral ground with a tabular figure; at the limit the warning ground and '· esaurito' in words. The period is dropped when the plan name is printed beside it.",
+      "html": "<span class=\"ds-usage\"><span class=\"ds-usage-fig\">3/12</span> usate · mese</span> <span class=\"ds-usage ds-usage-full\"><span class=\"ds-usage-fig\">2/2</span> usate · sett. · esaurito</span>",
+      "css": ".ds-usage { display: inline-flex; align-items: baseline; gap: 4px; padding: 2px 8px; border-radius: 8px; background: var(--muted, #eceef3); color: var(--foreground, #1f2340); font-family: Archivo, ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 600; } .ds-usage-fig { font-variant-numeric: tabular-nums lining-nums; font-variation-settings: 'wdth' 74; } .ds-usage-full { background: var(--warning-bg, #f7edc8); color: var(--warning-fg, #6b4a00); }"
+    },
+    {
       "name": "Validator Stamp",
       "kind": "custom",
       "refersTo": "stamp-face",
@@ -971,7 +979,7 @@
   ],
   "narrative": {
     "northStar": "Abbonamento",
-    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: the signed-in app is the world: Bookings, the per-role Home (staff and member), Lessons, Courses, Users, the notifications inbox, the settings pages (profile, site, registries, notifications, danger zone), Reports and the sign-in pages (login, register, forgot and reset password, verify email), together with the shared lesson dialog, the shared page band, the settings building blocks, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui` (including the native select), the home charts, the toaster, the Web Push banner and the PWA install banner.",
+    "overview": "NekoGym is an Italian transit season pass. Every section of the app is printed on its own paper stock (mint, azzurro, giallino, rosa, lilla, carta), the ink is a deep night blue, and the only coloured mark that ever belongs to the member is the violet validator stamp on the lessons they have booked. Booking a lesson is validating a ticket: the member reads how many entries are left on their pass, picks a day, scans times set in a fixed column like a departures board, and taps once to watch the stamp land in the row. Staff open the day the same way: the home is the day's timetable in the same fixed-time rows, with a seat strip per lesson and the desk's to-do pile beside it.\n\nThe system is flat and paper-like. Type carries hierarchy; chrome is removed. Times, counts and dates are set in Archivo's condensed width with tabular figures, as if printed on a ticket; text runs at normal width. A dashed perforation line is the single ornament, and it carries meaning too: dashed means provisional (pending approval, queued, waitlist). State changes happen in place and rows never reorder. The pastel stocks answer the owner's request for \"simple, elegant, pastel\" without becoming childish, because they sit under firm night-blue ink and are only ever grounds, never decoration.\n\nThe world frames each gym's own name and logo (configurable per installation) and renders admin-chosen lesson-type colours and icons faithfully beside its own palette. Light and dark are both first-class: in dark mode the stocks become deep tinted inks on a night ground and the stamp lightens to a pale violet.\n\nStatus of the build: the signed-in app is the world: Bookings, the per-role Home (staff and member), Lessons, Courses, Users, the notifications inbox, the settings pages (profile, site, registries, notifications, danger zone), Reports and the sign-in pages (login, register, forgot and reset password, verify email), together with the shared lesson dialog, the lesson manage dialog, the single lesson form and its repeat controls, the quick-profile popover, the status screens (404, error), the shared page band, the settings building blocks, the app shell (rail, mobile top bar, bottom tab bar, menu sheet), the shared primitives in `components/ui` (including the native select), the home charts, the toaster, the Web Push banner and the PWA install banner.",
     "keyCharacteristics": [
       "One paper stock per section; the current stock tints the shell and the page header band.",
       "Night-blue ink for text and primary actions; never a neutral admin grey ground.",
@@ -1015,7 +1023,7 @@
       },
       {
         "name": "The Picked-Up Rule",
-        "body": "Only the pass, the sign-in ticket, the one opened or in-progress row, the member's next lesson, an unread notification, the active tab or segment, and overlays carry shadow. Lists, nav, inline banners, settings sections and ordinary cards stay flat with a hairline.",
+        "body": "Only the pass, the sign-in ticket, the status ticket, the one opened or in-progress row, the member's next lesson, an unread notification, the active tab or segment, and overlays carry shadow. Lists, nav, inline banners, settings sections and ordinary cards stay flat with a hairline.",
         "section": "elevation"
       },
       {
@@ -1030,7 +1038,7 @@
       },
       {
         "name": "The Deliberate Delete Rule",
-        "body": "Cancelling a lesson and deleting a course, a person, a lesson type or a backup are never row actions. They live in the footer of the object's own dialog as a ghost-danger button and always pass through a confirmation with the solid destructive button, named by its act. Rows carry only the forward action (manage, edit, open) or the undo (restore).",
+        "body": "Cancelling a lesson and deleting a course, a person, a lesson type or a backup are never row actions. They live in the footer of the object's own dialog as a ghost-danger button and always pass through a confirmation with the solid destructive button, named by its act. Rows carry only the forward action (manage, edit, open) or the undo (restore). One exception, scoped to a lesson's own manage dialog: taking a person off the lesson or out of the queue sits behind a 44px overflow menu at the end of that person's row (one item in danger ink), and still passes through an alert dialog whose solid destructive confirm names the act (Rimuovi dalla lezione, Rimuovi dalla coda). Page lists never carry it.",
         "section": "components"
       }
     ],
@@ -1051,19 +1059,22 @@
       "**Do** set status tags at 13px semibold on a semantic ground, and say why a lesson is modified (\"Modificata: orario\").",
       "**Do** draw a page's band with `PageBand` and build settings from `SettingsSection`, `SegmentedTabs`, `CheckRow` and `StatusNote`.",
       "**Do** name a confirm by its act (Elimina, Disattiva), and give deactivation and deletion the solid destructive fill.",
-      "**Do** right-align numeric table columns in `.tabular`, and print every value a meter or bar shows."
+      "**Do** right-align numeric table columns in `.tabular`, and print every value a meter or bar shows.",
+      "**Do** state plan usage as what is spent (\"3/12 usate · mese\") with \"esaurito\" in words at the limit.",
+      "**Do** make a person's name in staff lists a quick-profile trigger that opens on tap or keyboard, not hover."
     ],
     "donts": [
       "**Don't** use stamp violet for anything but the user's own bookings (beyond focus ring, caret and control accent).",
       "**Don't** put content on a neutral grey ground; the field is the section paper.",
       "**Don't** add gradient washes, glass, or blur. The only gradients in the build are hard-stop marks: the punched centre of a used entry slot and the hatch key in the chart legend.",
-      "**Don't** add shadow to lists, nav, inline banners, settings sections or ordinary cards; lift is for the pass, the sign-in ticket, the opened or in-progress row, the next-lesson card, an unread notification, the active tab or segment, and overlays.",
+      "**Don't** add shadow to lists, nav, inline banners, settings sections or ordinary cards; lift is for the pass, the sign-in ticket, the status ticket, the opened or in-progress row, the next-lesson card, an unread notification, the active tab or segment, and overlays.",
       "**Don't** use uppercase lettering outside a stamp face, a stamp chip and weekday abbreviations (the day strip, the course timetable heads); tracking belongs to the stamp alone.",
       "**Don't** use stamp violet or Chart Blue for seats, counts or to-do tiles; seats are ink, tiles are semantic grounds.",
       "**Don't** reorder rows or animate layout when state changes.",
-      "**Don't** put cancel or delete buttons in list rows; they belong in the object's dialog footer behind a confirmation.",
+      "**Don't** put cancel or delete buttons in list rows; they belong in the object's dialog footer behind a confirmation. The one row menu is removing a person, inside that lesson's own manage dialog.",
       "**Don't** box settings groups in cards; separate them with rules.",
-      "**Don't** set dates, sizes or counts in mono; mono is for codes only."
+      "**Don't** set dates, sizes or counts in mono; mono is for codes only.",
+      "**Don't** use \"standalone\" in copy; a lesson outside any course is a \"Lezione singola\"."
     ]
   }
 }

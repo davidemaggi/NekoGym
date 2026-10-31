@@ -384,7 +384,7 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
       .slice(0, 2)
       .map((part) => part[0]?.toUpperCase() ?? "")
       .join("");
-  // Plan as a ticket figure with its unit: "Pacchetto · 4/10 rimaste", "Mensile · 12 al mese".
+  // Plan name plus a usage tag ("Mensile [5/12 usate · mese]"); packs skip the repeated period.
   const planLabel = (user: UserItem) => {
     if (user.subscriptionType === "NONE") return labels.subscriptionOptions.NONE;
     const base = labels.subscriptionOptions[user.subscriptionType];
