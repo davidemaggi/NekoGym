@@ -114,6 +114,7 @@ When editing code around courses/lessons:
 - Keep constraints:
   - reconcile only future generated lessons
   - customized lessons (`isCustomized=true`) are handled separately from normal generated lessons
+  - a generated lesson cancelled by staff is set `isCustomized=true`; reconcile never recreates a seed whose slot holds such a cancelled lesson (logged as `outcome=unchanged reason=cancelled_by_staff_not_recreated`); restoring it resets `isCustomized=false`
   - site schedule constraints (open weekdays/closed dates) filter generated seeds (weekday/date read in the app time zone)
 - Any change to this flow should update both:
   - `README.md` user-facing explanation

@@ -359,6 +359,25 @@ export async function reconcileFutureLessonsForCourse(
     seedByKey.delete(key);
   }
 
+  // Slots whose generated lesson was cancelled by staff stay cancelled: never recreate them.
+  // Only seeds not already matched by an active lesson are checked, so active lessons are unaffected.
+  if (seedByKey.size > 0) {
+    const staffCancelled = await tx.lesson.findMany({
+      where: {
+        courseId,
+        startsAt: { in: Array.from(seedByKey.values()).map((seed) => seed.startsAt) },
+        isGenerated: true,
+        isCustomized: true,
+        deletedAt: { not: null },
+      },
+      select: { id: true, startsAt: true },
+    });
+    for (const lesson of staffCancelled) {
+      seedByKey.delete(toKey(lesson.startsAt));
+      log(`lesson=${lesson.id} startsAt=${lesson.startsAt.toISOString()} outcome=unchanged reason=cancelled_by_staff_not_recreated`);
+    }
+  }
+
   for (const seed of seedByKey.values()) {
     await tx.lesson.create({
       data: {

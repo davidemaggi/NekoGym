@@ -72,6 +72,7 @@ function redirectWithFlash(input: {
   week?: string;
   showDeleted?: string;
   showPast?: string;
+  mine?: string;
   message: string;
   type: "success" | "error";
 }) {
@@ -84,6 +85,7 @@ function redirectWithFlash(input: {
   }
   if (input.showDeleted === "1") params.set("showDeleted", "1");
   if (input.showPast === "1") params.set("showPast", "1");
+  if (input.mine === "0" || input.mine === "1") params.set("mine", input.mine);
   params.set("flash", input.message);
   params.set("flashType", input.type);
   redirect(`/${input.locale}/lessons?${params.toString()}`);
@@ -152,6 +154,7 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
   const { month, week } = readNavigationCursor(formData);
   const showDeleted = getField(formData, "showDeleted");
   const showPast = getField(formData, "showPast");
+  const mine = getField(formData, "mine");
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
   let flashMessage = t.standaloneDeleted;
@@ -183,6 +186,9 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
         data: {
           status: "CANCELLED",
           deletedAt: new Date(),
+          // A generated lesson cancelled by staff is marked customized so the course reconcile
+          // does not recreate it at the same slot (see reconcileFutureLessonsForCourse).
+          ...(lesson.isGenerated && lesson.courseId ? { isCustomized: true } : {}),
         },
       });
 
@@ -217,7 +223,7 @@ export async function deleteStandaloneLessonAction(formData: FormData): Promise<
     flashMessage = error instanceof Error ? error.message : t.failed;
   }
 
-  redirectWithFlash({ locale, month, week, showDeleted, showPast, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, showDeleted, showPast, mine, message: flashMessage, type: flashType });
 }
 
 export async function restoreLessonAction(formData: FormData): Promise<void> {
@@ -225,6 +231,7 @@ export async function restoreLessonAction(formData: FormData): Promise<void> {
   const { month, week } = readNavigationCursor(formData);
   const showDeleted = getField(formData, "showDeleted");
   const showPast = getField(formData, "showPast");
+  const mine = getField(formData, "mine");
   const lessonId = getField(formData, "lessonId");
   const t = messages(locale);
   let flashType: "success" | "error" = "success";
@@ -261,6 +268,8 @@ export async function restoreLessonAction(formData: FormData): Promise<void> {
         data: {
           deletedAt: null,
           status: restoringFuture ? "SCHEDULED" : lesson.status,
+          // Back under the course: the next reconcile realigns it like any generated lesson.
+          ...(lesson.isGenerated && lesson.courseId ? { isCustomized: false } : {}),
         },
       });
       // Mirrors the refund given when the future lesson was cancelled.
@@ -277,6 +286,6 @@ export async function restoreLessonAction(formData: FormData): Promise<void> {
     flashMessage = error instanceof Error ? error.message : t.lessonRestoreFailed;
   }
 
-  redirectWithFlash({ locale, month, week, showDeleted, showPast, message: flashMessage, type: flashType });
+  redirectWithFlash({ locale, month, week, showDeleted, showPast, mine, message: flashMessage, type: flashType });
 }
 

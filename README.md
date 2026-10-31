@@ -278,6 +278,7 @@ Vincoli:
 
 - solo lezioni future `isGenerated=true` e non eliminate
 - `isCustomized=true` trattate separatamente
+- una lezione generata annullata dallo staff viene marcata `isCustomized=true` e il reconcile **non la ricrea** nello stesso slot (log `outcome=unchanged reason=cancelled_by_staff_not_recreated`); se viene ripristinata torna `isCustomized=false` e il reconcile la riallinea al corso
 - filtri su schedule palestra (giorni aperti/date chiuse)
 - notifiche inviate per cancellazioni automatiche di lezioni con iscritti
 - rimborso automatico della lezione ai piani `FIXED` per ogni iscrizione confermata di una lezione annullata (vale anche per chiusura palestra, eliminazione corso e annullamento da parte dello staff)
