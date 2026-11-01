@@ -1,7 +1,9 @@
 "use client";
 
 import type React from "react";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
+
+import { fill } from "@/components/bookings/pass-card";
 
 import { LessonDetailsDialogTrigger, type LessonPerson } from "@/components/lessons/lesson-details-dialog-trigger";
 import type { Dictionary } from "@/lib/i18n";
@@ -54,10 +56,18 @@ type LessonManageButtonProps = {
   lessonTypeCandidates: Array<{ id: string; name: string }>;
   attendeeCandidates: Person[];
   triggerLabel?: string;
+  /** Shorter label below `sm`, where the row shares its width with "Gestisci persone". */
+  triggerShortLabel?: string;
   /** "link" matches the to-do actions on the home (underlined text with chevron). */
   triggerVariant?: "button" | "link";
   /** Extra actions rendered in the dialog footer (e.g. "Annulla lezione"). */
   footerSlot?: React.ReactNode;
+  /** Adds a separate "Gestisci persone" action beside "Gestisci lezione". */
+  peopleAction?: boolean;
+  /** Below `sm` the people action shows only icon and count (tight table rows). */
+  peopleCompactOnPhones?: boolean;
+  /** The trigger opens the people manager directly (attendance, approvals). */
+  opensPeople?: boolean;
 };
 
 /** Opens the shared lesson dialog (info, people, attendance, broadcast) for staff. */
@@ -72,9 +82,21 @@ export function LessonManageButton({
   lessonTypeCandidates,
   attendeeCandidates,
   triggerLabel,
+  triggerShortLabel,
   triggerVariant = "button",
   footerSlot,
+  peopleAction = false,
+  peopleCompactOnPhones = true,
+  opensPeople = false,
 }: LessonManageButtonProps) {
+  const peopleCount = lesson.attendees.length + lesson.pendingApprovals.length + lesson.waitlist.length;
+  const pendingCount = lesson.pendingApprovals.length;
+  const peopleSummary = [
+    fill(lessonCreateLabels.peopleCount, { n: peopleCount }),
+    pendingCount > 0 ? fill(lessonCreateLabels.peopleToConfirm, { n: pendingCount }) : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
   const manageLabels = {
     title: lessonCreateLabels.manageTitle,
     description: lessonCreateLabels.manageDescription,
@@ -113,6 +135,10 @@ export function LessonManageButton({
     processing: lessonCreateLabels.processing,
     closeCta: lessonCreateLabels.closeCta,
     manageTriggerLabel: lessonCreateLabels.manageTriggerLabel,
+    editLessonCta: lessonCreateLabels.editLessonCta,
+    editLessonDescription: lessonCreateLabels.editLessonDescription,
+    managePeopleCta: lessonCreateLabels.managePeopleCta,
+    managePeopleDescription: lessonCreateLabels.managePeopleDescription,
     notifySectionTitle: lessonCreateLabels.notifySectionTitle,
     notifyMessageLabel: lessonCreateLabels.notifyMessageLabel,
     notifyMessagePlaceholder: lessonCreateLabels.notifyMessagePlaceholder,
@@ -183,6 +209,23 @@ export function LessonManageButton({
         canGrantOpenAccess: isAdmin && lesson.canManageLesson,
         labels: manageLabels,
       }}
+      openPeopleDirectly={opensPeople}
+      peopleTrigger={
+        peopleAction ? (
+          // Icon + count on phones, full words from sm; the spoken name always carries both.
+          <span
+            className="relative inline-flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-[var(--foreground)] bg-[var(--surface)] px-3.5 text-[15px] font-semibold transition-colors hover:bg-[var(--muted)]"
+          >
+            <span className="sr-only">{`${lessonCreateLabels.managePeopleCta}: ${peopleSummary}`}</span>
+            <Users size={17} aria-hidden="true" />
+            <span aria-hidden="true" className={peopleCompactOnPhones ? "hidden sm:inline" : undefined}>{lessonCreateLabels.managePeopleCta}</span>
+            <span aria-hidden="true" className="tabular min-w-[2ch] text-left text-[var(--muted-foreground)]">{peopleCount}</span>
+            {pendingCount > 0 ? (
+              <span aria-hidden="true" className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--surface)] bg-[var(--warning-fg)]" />
+            ) : null}
+          </span>
+        ) : undefined
+      }
       trigger={
         triggerVariant === "link" ? (
           <span className={textLinkActionClass}>
@@ -191,7 +234,14 @@ export function LessonManageButton({
           </span>
         ) : (
           <span className="inline-flex h-11 items-center gap-2 rounded-xl border-[1.5px] border-[var(--foreground)] bg-[var(--surface)] px-4 text-[15px] font-semibold transition-colors hover:bg-[var(--muted)]">
-            {triggerLabel ?? labels.manageCta}
+            {triggerShortLabel ? (
+              <>
+                <span className="sm:hidden">{triggerShortLabel}</span>
+                <span className="hidden sm:inline">{triggerLabel ?? labels.manageCta}</span>
+              </>
+            ) : (
+              (triggerLabel ?? labels.manageCta)
+            )}
           </span>
         )
       }

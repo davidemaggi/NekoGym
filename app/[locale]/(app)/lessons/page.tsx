@@ -440,7 +440,9 @@ export default async function LessonsPage({
                           <LessonManageButton
                             {...manageProps}
                             lesson={lesson}
-                            triggerLabel={labels.manageCta}
+                            triggerLabel={labels.manageTitle}
+                            triggerShortLabel={labels.manageCta}
+                            peopleAction
                             footerSlot={
                               lesson.phase === "upcoming" ? (
                                 <AlertDialog>

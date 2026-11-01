@@ -530,7 +530,7 @@ function LessonRow({
             </ul>
           </section>
         ) : null}
-        {manage ? <div className="mt-3 w-fit">{manage}</div> : null}
+        {manage ? <div className="mt-3 flex">{manage}</div> : null}
       </div>
     </li>
   );
@@ -618,6 +618,8 @@ export function BookingsManager({
         trainerCandidates={trainerCandidates}
         lessonTypeCandidates={lessonTypeCandidates}
         attendeeCandidates={attendeeCandidates}
+        peopleAction
+        peopleCompactOnPhones={false}
       />
     );
   }
