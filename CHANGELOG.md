@@ -1,3 +1,12 @@
+# [1.2.0](https://github.com/davidemaggi/NekoGym/compare/v1.1.0...v1.2.0) (2026-11-01)
+
+
+### Features
+
+* **bookings:** day/week/month views, greyed empty days and inline approvals ([6ab5cd1](https://github.com/davidemaggi/NekoGym/commit/6ab5cd16af01c5573c8dedc662fc01433a61b259))
+* **courses:** Markdown descriptions, member catalog and course pages ([8e89490](https://github.com/davidemaggi/NekoGym/commit/8e89490d2b29a9ddef494267e228e2a57055defe))
+* **registries:** pick lesson type icon and colour visually ([3bfdc32](https://github.com/davidemaggi/NekoGym/commit/3bfdc3247e75074b7d3a1cccfd0b8f8b461d4948))
+
 # [1.1.0](https://github.com/davidemaggi/NekoGym/compare/v1.0.12...v1.1.0) (2026-10-31)
 
 
