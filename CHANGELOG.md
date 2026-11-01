@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/davidemaggi/NekoGym/compare/v1.2.0...v1.3.0) (2026-11-01)
+
+
+### Features
+
+* **users:** medical certificate with reminders and approval rule ([f3359bf](https://github.com/davidemaggi/NekoGym/commit/f3359bf3046bdef700a355c7d148a7fc05752b59))
+
 # [1.2.0](https://github.com/davidemaggi/NekoGym/compare/v1.1.0...v1.2.0) (2026-11-01)
 
 
