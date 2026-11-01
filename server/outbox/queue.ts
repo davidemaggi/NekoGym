@@ -19,6 +19,8 @@ export async function enqueueNotificationForUsers(
   input: {
     subject: string;
     body: string;
+    /** "Lite" notice: only the in-app inbox, no email/Telegram/push. */
+    localOnly?: boolean;
   }
 ) {
   if (users.length === 0) return 0;
@@ -33,6 +35,7 @@ export async function enqueueNotificationForUsers(
       body: input.body,
     })),
   });
+  if (input.localOnly) return 0;
 
   const eligibleUsers = await tx.user.findMany({
     where: {

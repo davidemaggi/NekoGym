@@ -6,6 +6,7 @@ import type { Prisma } from "@prisma/client";
 
 import { requireAnyRole, requireAuth } from "@/lib/authorization";
 import {
+  certificateApprovalNote,
   consumeFixedPlanUnits,
   evaluateBookingEligibility,
   formatLessonDateTime,
@@ -193,8 +194,10 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
     const user = await requireAuth(locale);
     userId = user.id;
 
+    // Reason a PENDING booking waits for approval, told to the trainee in the toast (empty when none).
+    let pendingNote = "";
     const outcome = await prisma.$transaction(async (tx) => {
-      const fullUser = await tx.user.findUnique({ where: { id: user.id }, select: { name: true } });
+      const fullUser = await tx.user.findUnique({ where: { id: user.id }, select: { name: true, telegramChatId: true } });
       if (!fullUser) {
         throw new Error(messages.authRequired);
       }
@@ -272,16 +275,32 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
       }
 
       if (requiresConfirmation) {
+        const lessonName = lesson.title ?? lesson.course?.name ?? "-";
+        const when = formatLessonDateTime(lesson.startsAt, locale);
+        const staffNote = certificateApprovalNote(eligibility, locale, "staff", fullUser.name);
         const staffTargets = await getLessonStaffTargets(tx, lessonId);
         if (staffTargets.length > 0) {
+          const body =
+            locale === "it"
+              ? `${fullUser.name} ha richiesto iscrizione alla lezione ${lessonName} del ${when}.`
+              : `${fullUser.name} requested booking for lesson ${lessonName} on ${when}.`;
           await enqueueNotificationForUsers(tx, staffTargets, {
             subject: locale === "it" ? "Nuova richiesta iscrizione da confermare" : "New booking request awaiting confirmation",
-            body:
-              locale === "it"
-                ? `${fullUser.name} ha richiesto iscrizione alla lezione ${lesson.course?.name ?? "-"} del ${formatLessonDateTime(lesson.startsAt, locale)}.`
-                : `${fullUser.name} requested booking for lesson ${lesson.course?.name ?? "-"} on ${formatLessonDateTime(lesson.startsAt, locale)}.`,
+            body: staffNote ? `${body} ${staffNote}` : body,
           });
         }
+        // The certificate is the trainee's to fix: they get the reason in writing too.
+        const traineeNote = certificateApprovalNote(eligibility, locale, "trainee");
+        if (traineeNote) {
+          await enqueueNotificationForUsers(tx, [{ id: user.id, telegramChatId: fullUser.telegramChatId ?? null }], {
+            subject: locale === "it" ? "Prenotazione in attesa di approvazione" : "Booking awaiting approval",
+            body:
+              locale === "it"
+                ? `La tua prenotazione per ${lessonName} del ${when} è in attesa di approvazione. ${traineeNote}`
+                : `Your booking for ${lessonName} on ${when} is awaiting approval. ${traineeNote}`,
+          });
+        }
+        pendingNote = traineeNote;
         return "PENDING" as const;
       }
 
@@ -308,7 +327,9 @@ export async function bookLessonAction(formData: FormData): Promise<BookingActio
         outcome === "QUEUED"
           ? messages.queued
           : outcome === "PENDING"
-            ? messages.pendingRequestNotified
+            ? pendingNote
+              ? `${messages.pendingRequestNotified} ${pendingNote}`
+              : messages.pendingRequestNotified
             : messages.booked,
     };
   } catch (error) {

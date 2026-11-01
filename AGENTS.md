@@ -125,6 +125,7 @@ When editing code around courses/lessons:
 Booking eligibility lives in `lib/booking-rules.ts` and is shared by trainee booking and waitlist promotion: never duplicate these checks in actions.
 
 - Waitlist promotion applies the same rules as a normal booking; ineligible entries stay queued and the next eligible one gets the seat.
+- A trainee's lesson after their medical certificate expiry is still bookable but always PENDING (`approvalReason` from `evaluateBookingEligibility`); notifications to trainee and staff state the reason (`certificateApprovalNote`).
 - FIXED-plan units are consumed only by CONFIRMED bookings and refunded only for CONFIRMED bookings.
 - The notice-window job only auto-cancels lessons with zero bookings.
 - Server actions must call `unstable_rethrow(error)` first in every `catch` so `redirect()`/`notFound()` are not swallowed.

@@ -90,49 +90,52 @@ enum AuthTokenType {
 }
 
 model User {
-  id                         String                 @id @default(cuid())
-  name                       String
-  email                      String                 @unique
-  emailVerifiedAt            DateTime?
-  pendingEmail               String?                @unique
-  passwordHash               String
-  isDisabled                 Boolean                @default(false)
-  role                       UserRole               @default(TRAINEE)
-  telegramChatId             String?                @unique
-  telegramUsername           String?
-  telegramLinkedAt           DateTime?
-  notifyByEmail              Boolean                @default(true)
-  notifyByTelegram           Boolean                @default(true)
-  notifyByWebPush            Boolean                @default(true)
-  notificationsLastSeenAt    DateTime?
-  notificationsRetentionDays Int                    @default(15)
-  reportDigestFrequency      ReportDigestFrequency  @default(NEVER)
-  reportDigestReportsCsv     String                 @default("COURSE_POPULARITY,TIME_CROWDING,TRAINER_PERFORMANCE")
-  reportDigestLastSentAt     DateTime?
-  bookingsView               BookingsView           @default(DAY)
-  totpEnabled                Boolean                @default(false)
-  totpSecret                 String?
-  membershipStatus           MembershipStatus       @default(INACTIVE)
-  trialEndsAt                DateTime?
-  subscriptionType           SubscriptionPlanType   @default(NONE)
-  subscriptionLessons        Int?
-  subscriptionRemaining      Int?
-  subscriptionResetAt        DateTime?
-  subscriptionEndsAt         DateTime?
-  createdAt                  DateTime               @default(now())
-  updatedAt                  DateTime               @updatedAt
-  sessions                   Session[]
-  courses                    Course[]               @relation("CourseTrainer")
-  lessons                    Lesson[]               @relation("LessonTrainer")
-  lessonBookings             LessonBooking[]
-  lessonWaitlistEntries      LessonWaitlistEntry[]
-  telegramLinkTokens         TelegramLinkToken[]
-  notificationOutbox         NotificationOutbox[]
-  authTokens                 AuthToken[]
-  webPushSubscriptions       WebPushSubscription[]
-  lessonTypeAccesses         UserLessonTypeAccess[]
-  confirmedBookings          LessonBooking[]        @relation("LessonBookingConfirmedBy")
-  localNotifications         LocalNotification[]
+  id                               String                 @id @default(cuid())
+  name                             String
+  email                            String                 @unique
+  emailVerifiedAt                  DateTime?
+  pendingEmail                     String?                @unique
+  passwordHash                     String
+  isDisabled                       Boolean                @default(false)
+  role                             UserRole               @default(TRAINEE)
+  telegramChatId                   String?                @unique
+  telegramUsername                 String?
+  telegramLinkedAt                 DateTime?
+  notifyByEmail                    Boolean                @default(true)
+  notifyByTelegram                 Boolean                @default(true)
+  notifyByWebPush                  Boolean                @default(true)
+  notificationsLastSeenAt          DateTime?
+  notificationsRetentionDays       Int                    @default(15)
+  reportDigestFrequency            ReportDigestFrequency  @default(NEVER)
+  reportDigestReportsCsv           String                 @default("COURSE_POPULARITY,TIME_CROWDING,TRAINER_PERFORMANCE")
+  reportDigestLastSentAt           DateTime?
+  bookingsView                     BookingsView           @default(DAY)
+  medicalCertificateSubmittedAt    DateTime?
+  medicalCertificateExpiresAt      DateTime?
+  medicalCertificateLiteNoticeAt   DateTime?
+  medicalCertificateStrongNoticeAt DateTime?
+  totpEnabled                      Boolean                @default(false)
+  totpSecret                       String?
+  membershipStatus                 MembershipStatus       @default(INACTIVE)
+  trialEndsAt                      DateTime?
+  subscriptionType                 SubscriptionPlanType   @default(NONE)
+  subscriptionLessons              Int?
+  subscriptionRemaining            Int?
+  subscriptionEndsAt               DateTime?
+  createdAt                        DateTime               @default(now())
+  updatedAt                        DateTime               @updatedAt
+  sessions                         Session[]
+  courses                          Course[]               @relation("CourseTrainer")
+  lessons                          Lesson[]               @relation("LessonTrainer")
+  lessonBookings                   LessonBooking[]
+  lessonWaitlistEntries            LessonWaitlistEntry[]
+  telegramLinkTokens               TelegramLinkToken[]
+  notificationOutbox               NotificationOutbox[]
+  authTokens                       AuthToken[]
+  webPushSubscriptions             WebPushSubscription[]
+  lessonTypeAccesses               UserLessonTypeAccess[]
+  confirmedBookings                LessonBooking[]        @relation("LessonBookingConfirmedBy")
+  localNotifications               LocalNotification[]
 }
 
 model NotificationOutbox {

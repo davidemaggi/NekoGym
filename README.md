@@ -171,10 +171,18 @@ Waitlist:
 Pending approvals:
 
 - se tipo lezione richiede conferma, booking entra in `PENDING`
+- se la lezione cade **dopo la scadenza del certificato medico** del trainee, la prenotazione (anche da coda) entra sempre in `PENDING`; trainee e staff ricevono il motivo ("certificato in scadenza il …" se oggi è ancora valido, "scaduto il …" altrimenti), mostrato anche accanto alla richiesta e nella riga della lezione prima di prenotare
 - admin/trainer della lezione può confermare/rifiutare
 - solo admin può “confermare con accesso libero” (apre accesso tipo lezione)
 
 ## 2.7 Utenti (solo admin)
+
+Certificato medico (`lib/medical-certificate.ts`):
+
+- "Certificato medico presentato" (menu "…" della riga o finestra di modifica): data di presentazione (oggi, modificabile) e scadenza (presentazione + 365 giorni finché non la si cambia); valido per tutto il giorno di scadenza
+- l'elenco mostra lo stato: verde > 30 giorni, giallo ≤ 30, rosso ≤ 7, nero se scaduto (sempre con icona e testo)
+- promemoria (job `medical-certificate-reminders`, ogni ora) al trainee e a tutti admin e trainer: "lite" (solo in-app) da 30 giorni prima, "strong" (tutti i canali) da 7 giorni prima o se già scaduto; ognuno una volta per certificato, registrare un nuovo certificato li azzera
+- la home del trainee mostra un avviso quando mancano 30 giorni o meno, o se è scaduto
 
 Gestione completa utenti:
 

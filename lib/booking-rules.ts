@@ -1,6 +1,12 @@
 import type { LessonBookingStatus, LessonTypeAccessMode, Prisma, Weekday } from "@prisma/client";
 
 import { appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
+import {
+  certificateApprovalReason,
+  certificateReasonText,
+  formatCertificateDate,
+  type CertificateApprovalReason,
+} from "@/lib/medical-certificate";
 import { planCountedBookingWhere } from "@/lib/plan-usage";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
 
@@ -27,7 +33,13 @@ export type BookingIneligibleReason =
   | "planDenied";
 
 export type BookingEligibility =
-  | { ok: true; accessMode: LessonTypeAccessMode }
+  | {
+      ok: true;
+      accessMode: LessonTypeAccessMode;
+      /** Set when the medical certificate forces staff approval (accessMode is then REQUIRES_CONFIRMATION). */
+      approvalReason: CertificateApprovalReason | null;
+      certificateExpiresAt: Date | null;
+    }
   | { ok: false; reason: BookingIneligibleReason };
 
 type LessonForEligibility = {
@@ -127,6 +139,7 @@ export async function evaluateBookingEligibility(input: {
       subscriptionLessons: true,
       subscriptionRemaining: true,
       subscriptionEndsAt: true,
+      medicalCertificateExpiresAt: true,
     },
   });
   if (!user) return { ok: false, reason: "membershipDenied" };
@@ -187,7 +200,28 @@ export async function evaluateBookingEligibility(input: {
     }
   }
 
-  return { ok: true, accessMode };
+  // A lesson after the certificate's expiry is still bookable, but always waits for staff approval.
+  const approvalReason =
+    user.role === "TRAINEE" ? certificateApprovalReason(user.medicalCertificateExpiresAt, lesson.startsAt, now) : null;
+
+  return {
+    ok: true,
+    accessMode: approvalReason ? "REQUIRES_CONFIRMATION" : accessMode,
+    approvalReason,
+    certificateExpiresAt: user.medicalCertificateExpiresAt,
+  };
+}
+
+/** Sentence for notifications explaining a certificate-driven approval ("" when there is none). */
+export function certificateApprovalNote(
+  eligibility: { approvalReason: CertificateApprovalReason | null; certificateExpiresAt: Date | null },
+  locale: string,
+  audience: "trainee" | "staff",
+  traineeName?: string
+): string {
+  if (!eligibility.approvalReason || !eligibility.certificateExpiresAt) return "";
+  const label = formatCertificateDate(eligibility.certificateExpiresAt, locale, getAppDateTimeConfig().timeZone);
+  return certificateReasonText(eligibility.approvalReason, label, locale, audience, traineeName);
 }
 
 export async function consumeFixedPlanUnits(tx: Prisma.TransactionClient, traineeId: string, units = 1) {
@@ -264,6 +298,8 @@ export type WaitlistPromotion = {
   name: string;
   telegramChatId: string | null;
   status: LessonBookingStatus;
+  approvalReason: CertificateApprovalReason | null;
+  certificateExpiresAt: Date | null;
 };
 
 /**
@@ -320,7 +356,14 @@ export async function promoteNextEligibleWaitlistEntry(input: {
       await consumeFixedPlanUnits(tx, entry.traineeId, 1);
     }
 
-    return { id: entry.trainee.id, name: entry.trainee.name, telegramChatId: entry.trainee.telegramChatId, status };
+    return {
+      id: entry.trainee.id,
+      name: entry.trainee.name,
+      telegramChatId: entry.trainee.telegramChatId,
+      status,
+      approvalReason: eligibility.approvalReason,
+      certificateExpiresAt: eligibility.certificateExpiresAt,
+    };
   }
 
   return null;
@@ -340,6 +383,9 @@ export async function notifyWaitlistPromotion(input: {
   const courseName = input.courseName ?? "-";
   const when = formatLessonDateTime(input.startsAt, input.locale);
   const pending = input.promoted.status === "PENDING";
+  const traineeNote = certificateApprovalNote(input.promoted, input.locale, "trainee");
+  const staffNote = certificateApprovalNote(input.promoted, input.locale, "staff", input.promoted.name);
+  const withNote = (body: string, note: string) => (note ? `${body} ${note}` : body);
 
   await enqueueNotificationForUsers(
     input.tx,
@@ -347,9 +393,12 @@ export async function notifyWaitlistPromotion(input: {
     pending
       ? {
           subject: isIt ? "Posto liberato: richiesta in attesa" : "Seat freed: request pending",
-          body: isIt
-            ? `Si e liberato un posto per la lezione ${courseName} del ${when}. La tua richiesta e ora in attesa di conferma da trainer/admin.`
-            : `A seat is now available for lesson ${courseName} on ${when}. Your request is now awaiting trainer/admin confirmation.`,
+          body: withNote(
+            isIt
+              ? `Si e liberato un posto per la lezione ${courseName} del ${when}. La tua richiesta e ora in attesa di conferma da trainer/admin.`
+              : `A seat is now available for lesson ${courseName} on ${when}. Your request is now awaiting trainer/admin confirmation.`,
+            traineeNote
+          ),
         }
       : {
           subject: isIt ? "Posto confermato dalla coda" : "Seat confirmed from waitlist",
@@ -368,9 +417,12 @@ export async function notifyWaitlistPromotion(input: {
     pending
       ? {
           subject: isIt ? "Nuova richiesta iscrizione da confermare" : "New booking request awaiting confirmation",
-          body: isIt
-            ? `${input.leavingName} ha lasciato la lezione ${courseName} del ${when}. ${input.promoted.name} e salito dalla coda ed e in attesa di conferma.`
-            : `${input.leavingName} left lesson ${courseName} on ${when}. ${input.promoted.name} moved up from the waitlist and is awaiting confirmation.`,
+          body: withNote(
+            isIt
+              ? `${input.leavingName} ha lasciato la lezione ${courseName} del ${when}. ${input.promoted.name} e salito dalla coda ed e in attesa di conferma.`
+              : `${input.leavingName} left lesson ${courseName} on ${when}. ${input.promoted.name} moved up from the waitlist and is awaiting confirmation.`,
+            staffNote
+          ),
         }
       : {
           subject: isIt ? "Sostituzione automatica in lezione" : "Automatic replacement in lesson",

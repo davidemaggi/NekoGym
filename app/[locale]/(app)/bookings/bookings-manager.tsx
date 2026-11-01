@@ -52,7 +52,14 @@ import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
-type Person = { id: string; name: string; email: string; planUsage?: PlanUsage };
+type Person = {
+  id: string;
+  name: string;
+  email: string;
+  planUsage?: PlanUsage;
+  /** Pending requests only: why the certificate made this booking wait for approval. */
+  approvalNote?: string | null;
+};
 
 export type BookingsLesson = {
   id: string;
@@ -78,6 +85,8 @@ export type BookingsLesson = {
   isQueuedByCurrentUser: boolean;
   isAccessDenied: boolean;
   requiresConfirmation: boolean;
+  /** Why the medical certificate makes this booking wait for approval, or null. */
+  certificateNote: string | null;
   canViewWaitlist: boolean;
   queueLength: number;
   pendingApprovalsCount: number;
@@ -114,6 +123,8 @@ export type BookingsDay = {
   inMonth: boolean;
   lessonCount: number;
   hasOwnBooking: boolean;
+  /** Lessons of the day the user is booked on (confirmed or pending). */
+  ownBookingCount: number;
 };
 
 export type { BookingPass };
@@ -464,9 +475,14 @@ function LessonRow({
             </li>
           ) : null}
           {lesson.requiresConfirmation && lesson.canBook ? (
-            <li className="flex items-center gap-2.5">
-              <ShieldCheck size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
-              {labels.requiresConfirmation}
+            <li className="flex items-start gap-2.5">
+              <ShieldCheck size={16} aria-hidden="true" className="mt-[3px] shrink-0 text-[var(--muted-foreground)]" />
+              <span>
+                {labels.requiresConfirmation}
+                {lesson.certificateNote ? (
+                  <span className="block text-[var(--warning-fg)]">{lesson.certificateNote}</span>
+                ) : null}
+              </span>
             </li>
           ) : null}
           {lesson.canViewWaitlist ? (
@@ -498,6 +514,9 @@ function LessonRow({
                       {person.name}
                     </UserQuickProfileTooltip>
                     {person.planUsage ? <PlanUsageTag usage={person.planUsage} locale={locale} /> : null}
+                    {person.approvalNote ? (
+                      <span className="basis-full text-sm font-semibold text-[var(--warning-fg)]">{person.approvalNote}</span>
+                    ) : null}
                   </span>
                   <PendingApprovalActions
                     locale={locale}
@@ -823,7 +842,9 @@ export function BookingsManager({
           const selected = day.key === selectedDay.key;
           const empty = day.lessonCount === 0;
           const locked = isDayLocked(day) && !selected;
+          // Up to three dots: solid violet for the user's own bookings first, pale for the other lessons.
           const dots = Math.min(3, day.lessonCount);
+          const ownDots = Math.min(dots, day.ownBookingCount);
           return (
             <button
               key={day.key}
@@ -859,10 +880,12 @@ export function BookingsManager({
                     className={cn(
                       "h-1.5 w-1.5 rounded-full",
                       selected
-                        ? "bg-[var(--primary-foreground)]"
-                        : index === 0 && day.hasOwnBooking
+                        ? index < ownDots
+                          ? "bg-[var(--primary-foreground)]"
+                          : "bg-[var(--primary-foreground)] opacity-40"
+                        : index < ownDots
                           ? "bg-[var(--stamp)]"
-                          : "bg-[var(--muted-foreground)]"
+                          : "bg-[var(--muted-foreground)] opacity-35"
                     )}
                   />
                 ))}

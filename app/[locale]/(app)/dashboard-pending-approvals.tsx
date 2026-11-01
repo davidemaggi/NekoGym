@@ -18,6 +18,8 @@ type PendingApprovalItem = {
   lessonTitle: string;
   lessonTypeName: string;
   startsAtLabel: string;
+  /** Why the medical certificate made this request wait for approval, or null. */
+  approvalNote?: string | null;
 };
 
 type DashboardPendingApprovalsProps = {
@@ -99,6 +101,9 @@ export function DashboardPendingApprovals({ locale, items, canGrantOpenAccess, l
                   <p className="mt-0.5 text-[15px] text-[var(--muted-foreground)]">
                     {item.lessonTitle} · <span className="tabular">{item.startsAtLabel}</span>
                   </p>
+                  {item.approvalNote ? (
+                    <p className="mt-1 text-sm font-semibold text-[var(--warning-fg)]">{item.approvalNote}</p>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Button size="sm" className="h-11 px-4" disabled={isPending} onClick={() => act({ ...item, kind: "approve" })}>
                       {busy ? "…" : labels.approveCta}

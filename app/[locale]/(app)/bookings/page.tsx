@@ -7,6 +7,12 @@ import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesso
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
 import { loadMemberPass } from "@/lib/member-pass";
+import {
+  certificateApprovalReason,
+  certificateReasonText,
+  formatCertificateDate,
+  staffCertificateNote,
+} from "@/lib/medical-certificate";
 import { type PlanUsage, withLessonPlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
@@ -115,7 +121,7 @@ export default async function BookingsPage({
           status: true,
           attendanceStatus: true,
           trainee: {
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, email: true, medicalCertificateExpiresAt: true },
           },
         },
       },
@@ -161,6 +167,18 @@ export default async function BookingsPage({
           ...lesson.bookings.map((booking) => booking.trainee),
           ...lesson.waitlistEntries.map((entry) => entry.trainee),
         ]);
+  // A lesson after the member's certificate expiry waits for approval: say so, and why, before booking.
+  const certificate =
+    currentUser.role === "TRAINEE"
+      ? (await prisma.user.findUnique({ where: { id: currentUser.id }, select: { medicalCertificateExpiresAt: true } }))
+          ?.medicalCertificateExpiresAt ?? null
+      : null;
+  const certificateNoteFor = (startsAt: Date) => {
+    const reason = certificateApprovalReason(certificate, startsAt, now);
+    return reason && certificate
+      ? certificateReasonText(reason, formatCertificateDate(certificate, safeLocale, timeZone), safeLocale, "trainee")
+      : null;
+  };
   const usageOf = (lessonId: string, traineeId: string) => planUsage.get(lessonId)?.get(traineeId);
   const items: BookingsLesson[] = lessons.map((lesson) => {
     const bookedCount = lesson._count.bookings;
@@ -205,7 +223,8 @@ export default async function BookingsPage({
       isPendingByCurrentUser,
       isQueuedByCurrentUser,
       isAccessDenied,
-      requiresConfirmation: accessMode === "REQUIRES_CONFIRMATION",
+      requiresConfirmation: accessMode === "REQUIRES_CONFIRMATION" || Boolean(certificateNoteFor(lesson.startsAt)),
+      certificateNote: certificateNoteFor(lesson.startsAt),
       canViewWaitlist,
       queueLength: lesson._count.waitlistEntries,
       pendingApprovalsCount,
@@ -243,6 +262,7 @@ export default async function BookingsPage({
               name: booking.trainee.name,
               email: booking.trainee.email,
               planUsage: usageOf(lesson.id, booking.trainee.id),
+              approvalNote: staffCertificateNote(booking.trainee.medicalCertificateExpiresAt, lesson.startsAt, safeLocale, timeZone, now),
             }))
         : [],
       waitlist: canManageLesson
@@ -274,6 +294,7 @@ export default async function BookingsPage({
       inMonth: key.startsWith(monthKeyPrefix),
       lessonCount: dayLessons.length,
       hasOwnBooking: dayLessons.some((lesson) => lesson.isBookedByCurrentUser),
+      ownBookingCount: dayLessons.filter((lesson) => lesson.isBookedByCurrentUser).length,
     };
   });
 

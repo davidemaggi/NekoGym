@@ -5,6 +5,8 @@ import { AlertTriangle, CalendarCheck, ChevronRight } from "lucide-react";
 import { requireAuth } from "@/lib/authorization";
 import { appDayRange } from "@/lib/booking-rules";
 import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
+import { staffCertificateNote } from "@/lib/medical-certificate";
+import { CertificateNotice } from "@/components/users/certificate-notice";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
@@ -153,6 +155,7 @@ export default async function DashboardPage({
       now,
     });
     const [next, ...later] = upcoming;
+    const certificate = await prisma.user.findUnique({ where: { id: currentUser.id }, select: { medicalCertificateExpiresAt: true } });
     const bookingsHref = (dayKey?: string) => `/${safeLocale}/bookings${dayKey ? `?day=${dayKey}` : ""}`;
 
     return (
@@ -165,11 +168,14 @@ export default async function DashboardPage({
             <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{greeting}</h1>
             <p className="mt-1 text-[15px] text-[var(--stock-ink)]/75 first-letter:uppercase">{todayLabel}</p>
           </header>
-          {pass ? (
-            <div className="mt-5">
-              <PassCard pass={pass} labels={dictionary.bookings.pass} />
-            </div>
-          ) : null}
+          <div className="mt-5 space-y-3 empty:hidden">
+            <CertificateNotice
+              expiresAt={certificate?.medicalCertificateExpiresAt ?? null}
+              locale={safeLocale}
+              timeZone={getAppDateTimeConfig().timeZone}
+            />
+            {pass ? <PassCard pass={pass} labels={dictionary.bookings.pass} /> : null}
+          </div>
         </div>
 
         <PwaInstallBanner labels={dictionary.pwaInstall} />
@@ -279,7 +285,7 @@ export default async function DashboardPage({
       trainer: { select: { id: true, name: true } },
       lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: {
-        select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true } } },
+        select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true, medicalCertificateExpiresAt: true } } },
       },
       waitlistEntries: {
         select: { trainee: { select: { id: true, name: true, email: true } } },
@@ -335,7 +341,13 @@ export default async function DashboardPage({
       attendeeAttendance: Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])),
       pendingApprovals: lesson.bookings
         .filter((booking) => booking.status === "PENDING")
-        .map((booking) => withUsage(lesson.id, booking.trainee)),
+        .map((booking) => {
+          const { medicalCertificateExpiresAt, ...trainee } = booking.trainee;
+          return {
+            ...withUsage(lesson.id, trainee),
+            approvalNote: staffCertificateNote(medicalCertificateExpiresAt, lesson.startsAt, safeLocale, getAppDateTimeConfig().timeZone, now),
+          };
+        }),
       waitlist: lesson.waitlistEntries.map((entry) => withUsage(lesson.id, entry.trainee)),
     };
   });
@@ -351,7 +363,7 @@ export default async function DashboardPage({
     select: {
       lessonId: true,
       traineeId: true,
-      trainee: { select: { name: true } },
+      trainee: { select: { name: true, medicalCertificateExpiresAt: true } },
       lesson: { select: { title: true, startsAt: true, course: { select: { name: true } }, lessonType: { select: { name: true } } } },
     },
     orderBy: { createdAt: "asc" },
@@ -543,6 +555,13 @@ export default async function DashboardPage({
                       lessonTitle: entry.lesson.title?.trim() || entry.lesson.course?.name || "-",
                       lessonTypeName: entry.lesson.lessonType?.name ?? "-",
                       startsAtLabel: `${shortWhenFormat.format(entry.lesson.startsAt)}, ${timeFormat.format(entry.lesson.startsAt)}`,
+                      approvalNote: staffCertificateNote(
+                        entry.trainee.medicalCertificateExpiresAt,
+                        entry.lesson.startsAt,
+                        safeLocale,
+                        getAppDateTimeConfig().timeZone,
+                        now
+                      ),
                     }))}
                     labels={{
                       openCta: labels.pending.openCta,
