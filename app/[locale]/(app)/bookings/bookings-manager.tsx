@@ -7,6 +7,7 @@ import { useId, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  BookOpen,
   CalendarX2,
   ChevronDown,
   ChevronLeft,
@@ -45,6 +46,7 @@ import {
 import { PassCard, fill, type BookingPass } from "@/components/bookings/pass-card";
 import { Button } from "@/components/ui/button";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
+import { MarkdownView } from "@/components/ui/markdown-view";
 import { SegmentedTabs } from "@/components/settings/settings-ui";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -85,6 +87,8 @@ export type BookingsLesson = {
   occupancy: string;
   isCourseLesson: boolean;
   courseName: string;
+  courseId: string | null;
+  courseDescription: string | null;
   lessonTypeName: string | null;
   lessonTypeId: string;
   lessonTypeIcon: string | null;
@@ -421,6 +425,24 @@ function LessonRow({
             <span className="tabular">{lesson.timeLabel}–{lesson.endTimeLabel}</span>
             {lesson.lessonTypeName ? <span className="text-[var(--muted-foreground)]">· {lesson.lessonTypeName}</span> : null}
           </li>
+          {lesson.isCourseLesson ? (
+            <li className="flex items-center gap-2.5">
+              <BookOpen size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              <span>
+                {labels.courseTag}{" "}
+                {lesson.courseId ? (
+                  <Link
+                    href={`/${locale}/courses/${lesson.courseId}`}
+                    className="font-semibold underline decoration-[1.5px] underline-offset-4 hover:decoration-2"
+                  >
+                    {lesson.courseName}
+                  </Link>
+                ) : (
+                  <span className="font-semibold">{lesson.courseName}</span>
+                )}
+              </span>
+            </li>
+          ) : null}
           {lesson.trainerName ? (
             <li className="flex items-center gap-2.5">
               <UserRound size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
@@ -461,6 +483,7 @@ function LessonRow({
         {lesson.description ? (
           <p className="mt-3 max-w-[65ch] text-[15px] text-[var(--muted-foreground)]">{lesson.description}</p>
         ) : null}
+        {lesson.courseDescription ? <MarkdownView markdown={lesson.courseDescription} className="mt-3" /> : null}
         {lesson.canManageLesson && lesson.pendingApprovals.length > 0 ? (
           <section className="mt-4 max-w-xl">
             <h3 className="text-[15px] font-semibold">

@@ -5,6 +5,7 @@ import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
 import { prisma } from "@/lib/prisma";
 import { getSiteSettings, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
+import { CourseCatalog } from "@/app/[locale]/(app)/courses/_components/course-catalog";
 import { CoursesManager } from "@/app/[locale]/(app)/courses/_components/courses-manager";
 
 export default async function CoursesPage({
@@ -16,7 +17,46 @@ export default async function CoursesPage({
 }) {
   const { locale } = await params;
   const { showDeleted } = await searchParams;
-  const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+  const currentUser = await requireAnyRole(["ADMIN", "TRAINER", "TRAINEE"], locale);
+
+  // Members browse the catalog; staff get the course manager.
+  if (currentUser.role === "TRAINEE") {
+    const safeLocale = isLocale(locale) ? locale : "it";
+    const dictionary = getDictionary(safeLocale);
+    const iconOptions = await getLessonTypeIconOptions();
+    const catalog = await prisma.course.findMany({
+      where: { deletedAt: null },
+      select: {
+        id: true,
+        name: true,
+        description: true,
+        durationMinutes: true,
+        trainerName: true,
+        trainer: { select: { name: true } },
+        lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
+        scheduleSlots: { select: { weekday: true, startTime: true } },
+      },
+      orderBy: { name: "asc" },
+    });
+    return (
+      <CourseCatalog
+        locale={safeLocale}
+        labels={dictionary.courseCatalog}
+        weekdays={dictionary.courses.schedule.weekdays}
+        courses={catalog.map((course) => ({
+          id: course.id,
+          name: course.name,
+          description: course.description,
+          durationMinutes: course.durationMinutes,
+          trainerName: course.trainer?.name ?? course.trainerName ?? null,
+          lessonTypeName: course.lessonType?.name ?? null,
+          lessonTypeIcon: course.lessonType ? sanitizeLessonTypeIconPath(course.lessonType.iconSvg, iconOptions) : null,
+          lessonTypeColor: course.lessonType ? sanitizeLessonTypeColor(course.lessonType.colorHex) : null,
+          scheduleSlots: course.scheduleSlots,
+        }))}
+      />
+    );
+  }
   const includeDeleted = currentUser.role === "ADMIN" && showDeleted === "1";
 
   const trainerCandidates =

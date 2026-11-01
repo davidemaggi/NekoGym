@@ -98,7 +98,8 @@ const STOCK_BY_KEY: Record<MenuKey, Stock> = {
 
 // Bottom bar: four destinations per role, the rest lives in the menu sheet.
 const PRIMARY_BY_ROLE: Record<CurrentUser["role"], MenuKey[]> = {
-  TRAINEE: ["dashboard", "bookings", "myNotifications", "profileSettings"],
+  // Notifications stay one tap away on the top bar bell.
+  TRAINEE: ["dashboard", "bookings", "courses", "profileSettings"],
   TRAINER: ["dashboard", "bookings", "lessons", "courses"],
   ADMIN: ["dashboard", "bookings", "lessons", "users"],
 };

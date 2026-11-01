@@ -275,7 +275,7 @@ export default async function DashboardPage({
   const todayLessons = await prisma.lesson.findMany({
     where: { status: "SCHEDULED", deletedAt: null, startsAt: { gte: today.start, lt: today.end }, ...trainerScope },
     include: {
-      course: { select: { id: true, name: true } },
+      course: { select: { id: true, name: true, description: true } },
       trainer: { select: { id: true, name: true } },
       lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: {
@@ -322,6 +322,8 @@ export default async function DashboardPage({
       lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
       isCourseLesson: Boolean(lesson.course?.id),
       courseName: lesson.course?.name ?? "-",
+      courseId: lesson.course?.id ?? null,
+      courseDescription: lesson.course?.description?.trim() || null,
       bookedCount: confirmed.length,
       pendingCount: lesson.bookings.length - confirmed.length,
       occupancy: `${confirmed.length}/${lesson.maxAttendees}`,

@@ -106,7 +106,7 @@ export default async function BookingsPage({
       startsAt: { gte: rangeStart, lt: rangeEnd },
     },
     include: {
-      course: { select: { id: true, name: true } },
+      course: { select: { id: true, name: true, description: true } },
       trainer: { select: { id: true, name: true } },
       lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: {
@@ -215,6 +215,8 @@ export default async function BookingsPage({
       occupancy: `${bookedCount}/${lesson.maxAttendees}`,
       isCourseLesson: Boolean(lesson.course?.id),
       courseName: lesson.course?.name ?? "-",
+      courseId: lesson.course?.id ?? null,
+      courseDescription: lesson.course?.description?.trim() || null,
       lessonTypeName: lesson.lessonType?.name ?? null,
       lessonTypeId: lesson.lessonTypeId ?? "",
       lessonTypeIcon: lesson.lessonType ? sanitizeLessonTypeIconPath(lesson.lessonType.iconSvg, iconOptions) : null,

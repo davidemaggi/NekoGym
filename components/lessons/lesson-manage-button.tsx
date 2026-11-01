@@ -29,6 +29,9 @@ export type ManageableLesson = {
   lessonTypeColor: string | null;
   isCourseLesson: boolean;
   courseName: string;
+  courseId: string | null;
+  /** The course's Markdown description, shown in the dialog of its lessons. */
+  courseDescription: string | null;
   occupancy: string;
   queueLength: number;
   canViewWaitlist: boolean;
@@ -131,6 +134,9 @@ export function LessonManageButton({
         queueLength: lesson.queueLength,
         canViewWaitlist: lesson.canViewWaitlist,
         isCourseLesson: lesson.isCourseLesson,
+        courseId: lesson.courseId,
+        courseName: lesson.courseName,
+        courseDescription: lesson.courseDescription,
         lessonTypeName: lesson.lessonTypeName,
         lessonTypeIcon: lesson.lessonTypeIcon,
         lessonTypeColor: lesson.lessonTypeColor,

@@ -502,6 +502,29 @@ export type Dictionary = {
       };
     };
   };
+  courseCatalog: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    openCta: string;
+    noDescription: string;
+    durationLabel: string;
+    capacityLabel: string;
+    trainerLabel: string;
+    noTrainer: string;
+    scheduleTitle: string;
+    scheduleEmpty: string;
+    nextLessonsTitle: string;
+    nextLessonsEmpty: string;
+    seatsFree: string;
+    seatFreeOne: string;
+    full: string;
+    bookCta: string;
+    allCourses: string;
+    aboutTitle: string;
+    courseLabel: string;
+    courseSheetCta: string;
+  };
   appPages: {
     dashboard: {
       title: string;
@@ -1362,6 +1385,29 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
     },
+    courseCatalog: {
+      title: "Corsi",
+      subtitle: "Scopri i corsi della palestra e quando si tengono.",
+      empty: "Non ci sono ancora corsi.",
+      openCta: "Scopri il corso",
+      noDescription: "Nessuna descrizione per questo corso.",
+      durationLabel: "{n} min",
+      capacityLabel: "Fino a {n} persone",
+      trainerLabel: "Trainer",
+      noTrainer: "Trainer da definire",
+      scheduleTitle: "Quando si tiene",
+      scheduleEmpty: "Nessun orario fisso.",
+      nextLessonsTitle: "Prossime lezioni",
+      nextLessonsEmpty: "Nessuna lezione in programma.",
+      seatsFree: "{n} posti liberi",
+      seatFreeOne: "Ultimo posto libero",
+      full: "Al completo",
+      bookCta: "Prenota",
+      allCourses: "Tutti i corsi",
+      aboutTitle: "Il corso",
+      courseLabel: "Corso",
+      courseSheetCta: "Scheda del corso",
+    },
     appPages: {
       dashboard: {
         title: "Dashboard",
@@ -2220,6 +2266,29 @@ const dictionaries: Record<Locale, Dictionary> = {
           SUNDAY: "Sunday",
         },
       },
+    },
+    courseCatalog: {
+      title: "Courses",
+      subtitle: "Discover the gym's courses and when they run.",
+      empty: "No courses yet.",
+      openCta: "Discover the course",
+      noDescription: "No description for this course.",
+      durationLabel: "{n} min",
+      capacityLabel: "Up to {n} people",
+      trainerLabel: "Trainer",
+      noTrainer: "Trainer to be confirmed",
+      scheduleTitle: "When it runs",
+      scheduleEmpty: "No fixed schedule.",
+      nextLessonsTitle: "Next lessons",
+      nextLessonsEmpty: "No lessons scheduled.",
+      seatsFree: "{n} seats free",
+      seatFreeOne: "Last seat free",
+      full: "Full",
+      bookCta: "Book",
+      allCourses: "All courses",
+      aboutTitle: "About the course",
+      courseLabel: "Course",
+      courseSheetCta: "Course page",
     },
     appPages: {
       dashboard: {

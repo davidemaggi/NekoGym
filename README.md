@@ -16,7 +16,7 @@ Menu per ruolo:
 
 - `ADMIN`: dashboard, corsi, lezioni, prenotazioni, utenti, report, notifiche personali, impostazioni profilo, impostazioni sito, registri (tipi lezione), notifiche manuali, danger zone.
 - `TRAINER`: dashboard, corsi (solo propri), lezioni (solo proprie), prenotazioni, notifiche personali, impostazioni profilo, registri.
-- `TRAINEE`: dashboard, prenotazioni, notifiche personali, impostazioni profilo.
+- `TRAINEE`: dashboard, prenotazioni, corsi (catalogo in sola lettura), notifiche personali, impostazioni profilo.
 
 ## 2. Flussi principali per l’utente
 
@@ -50,9 +50,15 @@ La dashboard mostra:
 
 ## 2.3 Corsi
 
+Catalogo e scheda (`/courses`, `/courses/[id]`):
+
+- i trainee vedono una scheda per corso (icona del tipo lezione, trainer, inizio della descrizione, orari); admin/trainer vedono il gestore corsi
+- la scheda del corso (per tutti) mostra descrizione completa, orario settimanale con fine calcolata e le prossime lezioni, ognuna collegata al suo giorno in Prenotazioni
+- le lezioni generate da un corso lo dichiarano con un'icona "Corso" nel dettaglio lezione e nella riga di Prenotazioni, mostrano la descrizione del corso e il link alla sua scheda
+
 Un corso contiene:
 
-- nome, descrizione, icona
+- nome, descrizione in Markdown (scritta con un editor visuale: grassetto, corsivo, titoli, elenchi, citazioni; l'HTML non viene mai interpretato), icona
 - tipo lezione
 - trainer assegnato
 - durata, max partecipanti
