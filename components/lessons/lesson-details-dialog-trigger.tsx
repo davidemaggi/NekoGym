@@ -9,7 +9,7 @@ import type { PlanUsage } from "@/lib/plan-usage";
 import { getAppDateTimeConfig } from "@/lib/date-time";
 
 import { type ReactNode, useState, useTransition } from "react";
-import { BookOpen, ChevronRight, Pencil, Repeat, Send } from "lucide-react";
+import { BookOpen, ChevronRight, Pencil, Repeat, Send, Users } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 
@@ -37,6 +37,10 @@ export type LessonPerson = {
 type LessonDetailsDialogTriggerProps = {
   locale: string;
   trigger: ReactNode;
+  /** Second trigger beside the first, opening the people manager directly ("Gestisci persone"). */
+  peopleTrigger?: ReactNode;
+  /** The (only) trigger opens the people manager instead of the lesson dialog (e.g. "Presenze"). */
+  openPeopleDirectly?: boolean;
   footerSlot?: ReactNode;
   labels: {
     detailsTitle: string;
@@ -133,6 +137,10 @@ type LessonDetailsDialogTriggerProps = {
       processing: string;
       closeCta: string;
       manageTriggerLabel: string;
+      editLessonCta: string;
+      editLessonDescription: string;
+      managePeopleCta: string;
+      managePeopleDescription: string;
       notifySectionTitle: string;
       notifyMessageLabel: string;
       notifyMessagePlaceholder: string;
@@ -162,9 +170,19 @@ function formatTime(value: string, locale: string): string {
   }).format(new Date(value));
 }
 
-export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels, lesson, manage }: LessonDetailsDialogTriggerProps) {
+export function LessonDetailsDialogTrigger({
+  locale,
+  trigger,
+  peopleTrigger,
+  openPeopleDirectly = false,
+  footerSlot,
+  labels,
+  lesson,
+  manage,
+}: LessonDetailsDialogTriggerProps) {
   const [open, setOpen] = useState(false);
-  const [manageOpen, setManageOpen] = useState(false);
+  // Which manager is open: the lesson's own data, or its people.
+  const [manageView, setManageView] = useState<"main" | "people" | null>(null);
   const [repeatOpen, setRepeatOpen] = useState(false);
   // Only standalone lessons repeat: a course already owns its schedule.
   const canRepeat = Boolean(manage) && !lesson.isCourseLesson;
@@ -305,9 +323,24 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
 
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="w-full cursor-pointer text-left">
-        {trigger}
-      </button>
+      {peopleTrigger && manage ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setOpen(true)} className="cursor-pointer text-left">
+            {trigger}
+          </button>
+          <button type="button" onClick={() => setManageView("people")} className="cursor-pointer text-left">
+            {peopleTrigger}
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => (openPeopleDirectly && manage ? setManageView("people") : setOpen(true))}
+          className="w-full cursor-pointer text-left"
+        >
+          {trigger}
+        </button>
+      )}
       <Dialog open={open} onOpenChange={(next) => (!next ? closeDialog() : setOpen(next))}>
         <DialogContent>
           <DialogHeader>
@@ -364,6 +397,17 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
                 {peopleList(manage.labels.attendeesLabel, manage.labels.noAttendees, manage.lesson.attendees, "attendee")}
                 {peopleList(manage.labels.pendingApprovalsLabel, manage.labels.noPendingApprovals, manage.lesson.pendingApprovals, "pending")}
                 {peopleList(manage.labels.waitlistLabel, manage.labels.noWaitlist, manage.lesson.waitlist, "waitlist")}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setOpen(false);
+                    setManageView("people");
+                  }}
+                >
+                  <Users size={16} aria-hidden="true" />
+                  {manage.labels.managePeopleCta}
+                </Button>
               </TabsContent>
             </Tabs>
           ) : (
@@ -388,16 +432,17 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
                 {locale === "it" ? "Ripeti…" : "Repeat…"}
               </Button>
             ) : null}
-            {manage ? (
+            {/* Course lessons take their data from the course: only their people are managed here. */}
+            {manage && manage.lesson.canEditMain ? (
               <Button
                 type="button"
                 onClick={() => {
                   setOpen(false);
-                  setManageOpen(true);
+                  setManageView("main");
                 }}
               >
                 <Pencil size={16} aria-hidden="true" />
-                {manage.labels.manageTriggerLabel}
+                {manage.labels.editLessonCta}
               </Button>
             ) : null}
           </DialogFooter>
@@ -415,9 +460,12 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
 
       {manage ? (
         <LessonManageDialog
-          open={manageOpen}
+          open={manageView !== null}
           showDefaultTrigger={false}
-          onOpenChangeAction={(next) => setManageOpen(next)}
+          onOpenChangeAction={(next) => !next && setManageView(null)}
+          view={manageView ?? "people"}
+          viewTitle={manageView === "main" ? manage.labels.editLessonCta : manage.labels.managePeopleCta}
+          viewDescription={manageView === "main" ? manage.labels.editLessonDescription : manage.labels.managePeopleDescription}
           locale={locale}
           lesson={manage.lesson}
           trainerCandidates={manage.trainerCandidates}

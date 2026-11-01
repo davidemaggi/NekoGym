@@ -62,6 +62,14 @@ type LessonManageDialogProps = {
   trigger?: ReactNode;
   open?: boolean;
   onOpenChangeAction?: (open: boolean) => void;
+  /**
+   * Opens on one view only, without tabs: "main" edits the lesson (time, title, seats),
+   * "people" manages attendees, requests, queue, trainer and the broadcast.
+   */
+  view?: "main" | "people";
+  /** Title/description for the single-view dialog (defaults to labels.title/description). */
+  viewTitle?: string;
+  viewDescription?: string;
   labels: {
     title: string;
     description: string;
@@ -147,6 +155,9 @@ export function LessonManageDialog({
   trigger,
   open,
   onOpenChangeAction,
+  view,
+  viewTitle,
+  viewDescription,
   labels,
   lesson,
   trainerCandidates,
@@ -169,7 +180,8 @@ export function LessonManageDialog({
   const router = useRouter();
   const isControlled = typeof open === "boolean";
   const resolvedOpen = isControlled ? open : internalOpen;
-  const resolvedTab: ActiveTab = lesson.canEditMain ? activeTab : "people";
+  const resolvedTab: ActiveTab = view ?? (lesson.canEditMain ? activeTab : "people");
+  const showTabs = !view && lesson.canEditMain;
   const openWeekdaySet = new Set<Weekday>((openWeekdays && openWeekdays.length > 0) ? openWeekdays : DEFAULT_OPEN_WEEKDAYS);
   const closedDateSet = new Set(closedDates ?? []);
 
@@ -492,11 +504,11 @@ export function LessonManageDialog({
       ) : null}
       <DialogContent className="max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{labels.title}</DialogTitle>
-          <DialogDescription>{labels.description}</DialogDescription>
+          <DialogTitle>{viewTitle ?? labels.title}</DialogTitle>
+          <DialogDescription>{viewDescription ?? labels.description}</DialogDescription>
         </DialogHeader>
 
-        {lesson.canEditMain ? (
+        {showTabs ? (
           <SegmentedTabs
             className="grid w-full grid-cols-2"
             value={resolvedTab}

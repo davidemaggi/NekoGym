@@ -295,6 +295,12 @@ export type Dictionary = {
     detailsTriggerLabel: string;
     manageTitle: string;
     manageDescription: string;
+    editLessonCta: string;
+    editLessonDescription: string;
+    managePeopleCta: string;
+    managePeopleDescription: string;
+    peopleCount: string;
+    peopleToConfirm: string;
     manageTriggerLabel: string;
     manageTabMain: string;
     manageTabPeople: string;
@@ -1147,6 +1153,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       detailsTriggerLabel: "Dettagli",
       manageTitle: "Gestisci lezione",
       manageDescription: "Dettagli, trainer e persone della lezione.",
+      editLessonCta: "Modifica lezione",
+      editLessonDescription: "Orario, titolo, tipo, posti e limite di disdetta.",
+      managePeopleCta: "Gestisci persone",
+      managePeopleDescription: "Iscritti, richieste, coda, presenze, trainer e messaggio agli iscritti.",
+      peopleCount: "{n} persone",
+      peopleToConfirm: "{n} da confermare",
       manageTriggerLabel: "Gestisci lezione",
       manageTabMain: "Informazioni",
       manageTabPeople: "Persone",
@@ -2030,6 +2042,12 @@ const dictionaries: Record<Locale, Dictionary> = {
       detailsTriggerLabel: "Details",
       manageTitle: "Manage lesson",
       manageDescription: "Details, trainer and people of the lesson.",
+      editLessonCta: "Edit lesson",
+      editLessonDescription: "Time, title, type, seats and cancellation limit.",
+      managePeopleCta: "Manage people",
+      managePeopleDescription: "Attendees, requests, queue, attendance, trainer and a message to attendees.",
+      peopleCount: "{n} people",
+      peopleToConfirm: "{n} to confirm",
       manageTriggerLabel: "Manage lesson",
       manageTabMain: "Information",
       manageTabPeople: "People",

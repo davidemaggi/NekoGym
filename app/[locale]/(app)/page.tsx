@@ -515,6 +515,7 @@ export default async function DashboardPage({
                           {...manageProps}
                           lesson={lesson}
                           triggerLabel={needsAttendance ? home.attendeesCta : home.manageCta}
+                          opensPeople={needsAttendance}
                         />
                       ) : null}
                     </div>
@@ -586,7 +587,7 @@ export default async function DashboardPage({
                       n: <span className="tabular">{lesson.attendees.length}</span>,
                     })}
                   </p>
-                  <LessonManageButton {...manageProps} lesson={lesson} triggerLabel={home.todoAttendanceCta} triggerVariant="link" />
+                  <LessonManageButton {...manageProps} lesson={lesson} triggerLabel={home.todoAttendanceCta} triggerVariant="link" opensPeople />
                 </TodoItem>
               ))}
 
