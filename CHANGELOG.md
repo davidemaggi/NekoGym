@@ -1,3 +1,10 @@
+# [1.4.0](https://github.com/davidemaggi/NekoGym/compare/v1.3.0...v1.4.0) (2026-11-01)
+
+
+### Features
+
+* **lessons:** separate "Gestisci lezione" and "Gestisci persone" actions ([98f5df9](https://github.com/davidemaggi/NekoGym/commit/98f5df9e85f003a7366a0a906b2881bf77c95f2a))
+
 # [1.3.0](https://github.com/davidemaggi/NekoGym/compare/v1.2.0...v1.3.0) (2026-11-01)
 
 
