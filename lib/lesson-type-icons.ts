@@ -1,29 +1,31 @@
 export type LessonTypeColorOption = {
   value: string;
   label: string;
+  /** Italian name, for the colour picker's accessible labels. */
+  labelIt: string;
 };
 
 export const LESSON_TYPE_COLOR_PALETTE: LessonTypeColorOption[] = [
-  { value: "#2563EB", label: "Ocean Blue" },
-  { value: "#4F46E5", label: "Indigo" },
-  { value: "#7C3AED", label: "Violet" },
-  { value: "#9333EA", label: "Purple" },
-  { value: "#C026D3", label: "Fuchsia" },
-  { value: "#DB2777", label: "Magenta" },
-  { value: "#E11D48", label: "Rose" },
-  { value: "#DC2626", label: "Ruby" },
-  { value: "#EA580C", label: "Amber Red" },
-  { value: "#D97706", label: "Amber" },
-  { value: "#CA8A04", label: "Gold" },
-  { value: "#65A30D", label: "Lime" },
-  { value: "#16A34A", label: "Green" },
-  { value: "#059669", label: "Emerald" },
-  { value: "#0D9488", label: "Teal" },
-  { value: "#0891B2", label: "Cyan" },
-  { value: "#0284C7", label: "Sky" },
-  { value: "#1D4ED8", label: "Royal Blue" },
-  { value: "#475569", label: "Slate" },
-  { value: "#6B7280", label: "Stone" },
+  { value: "#2563EB", label: "Ocean Blue", labelIt: "Blu oceano" },
+  { value: "#4F46E5", label: "Indigo", labelIt: "Indaco" },
+  { value: "#7C3AED", label: "Violet", labelIt: "Viola" },
+  { value: "#9333EA", label: "Purple", labelIt: "Porpora" },
+  { value: "#C026D3", label: "Fuchsia", labelIt: "Fucsia" },
+  { value: "#DB2777", label: "Magenta", labelIt: "Magenta" },
+  { value: "#E11D48", label: "Rose", labelIt: "Rosa" },
+  { value: "#DC2626", label: "Ruby", labelIt: "Rubino" },
+  { value: "#EA580C", label: "Amber Red", labelIt: "Arancio" },
+  { value: "#D97706", label: "Amber", labelIt: "Ambra" },
+  { value: "#CA8A04", label: "Gold", labelIt: "Oro" },
+  { value: "#65A30D", label: "Lime", labelIt: "Lime" },
+  { value: "#16A34A", label: "Green", labelIt: "Verde" },
+  { value: "#059669", label: "Emerald", labelIt: "Smeraldo" },
+  { value: "#0D9488", label: "Teal", labelIt: "Verde acqua" },
+  { value: "#0891B2", label: "Cyan", labelIt: "Ciano" },
+  { value: "#0284C7", label: "Sky", labelIt: "Azzurro" },
+  { value: "#1D4ED8", label: "Royal Blue", labelIt: "Blu reale" },
+  { value: "#475569", label: "Slate", labelIt: "Ardesia" },
+  { value: "#6B7280", label: "Stone", labelIt: "Grigio pietra" },
 ];
 
 const LESSON_TYPE_COLOR_SET = new Set(LESSON_TYPE_COLOR_PALETTE.map((item) => item.value));

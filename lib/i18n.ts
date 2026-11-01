@@ -728,6 +728,8 @@ export type Dictionary = {
       descriptionLabel: string;
       iconSvgLabel: string;
       colorLabel: string;
+      previewLabel: string;
+      previewPlaceholder: string;
       createCta: string;
       editCta: string;
       updateTitle: string;
@@ -1609,8 +1611,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         description: "Definisci nome, descrizione e icona SVG da riutilizzare in corsi e lezioni.",
         nameLabel: "Nome",
         descriptionLabel: "Descrizione",
-        iconSvgLabel: "Icona SVG",
+        iconSvgLabel: "Icona",
         colorLabel: "Colore",
+        previewLabel: "Anteprima",
+        previewPlaceholder: "Nome del tipo",
         createCta: "Crea tipo",
         editCta: "Modifica",
         updateTitle: "Modifica tipo di lezione",
@@ -2491,8 +2495,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         description: "Define name, description and SVG icon reused by courses and lessons.",
         nameLabel: "Name",
         descriptionLabel: "Description",
-        iconSvgLabel: "SVG icon",
+        iconSvgLabel: "Icon",
         colorLabel: "Color",
+        previewLabel: "Preview",
+        previewPlaceholder: "Type name",
         createCta: "Create type",
         editCta: "Edit",
         updateTitle: "Edit lesson type",

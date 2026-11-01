@@ -34,6 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { LessonTypeAppearancePicker } from "@/components/lesson-types/lesson-type-appearance-picker";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import type { LessonTypeColorOption } from "@/lib/lesson-type-icons";
 import { hexToRgba } from "@/lib/lesson-type-icons";
@@ -64,6 +65,8 @@ type RegistriesManagerProps = {
       descriptionLabel: string;
       iconSvgLabel: string;
       colorLabel: string;
+      previewLabel: string;
+      previewPlaceholder: string;
       createCta: string;
       editCta: string;
       updateTitle: string;
@@ -90,15 +93,14 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
   const [createColor, setCreateColor] = useState(defaultColor);
   const [editIcon, setEditIcon] = useState("");
   const [editColor, setEditColor] = useState(defaultColor);
+  // The name typed in whichever type form is open, for the live preview.
+  const [previewName, setPreviewName] = useState("");
 
   function openEdit(type: LessonTypeItem) {
+    setPreviewName(type.name);
     setEditIcon(type.iconSvg);
     setEditColor(type.colorHex ?? defaultColor);
     setEditingType(type);
-  }
-
-  function iconFileName(iconPath: string) {
-    return iconPath.replace("/icons/lessontypes/", "");
   }
 
   function onCreateLessonType(event: React.FormEvent<HTMLFormElement>) {
@@ -164,56 +166,35 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
       <>
         <div className="space-y-1.5">
           <Label htmlFor={`${prefix}-name`}>{labels.lessonTypes.nameLabel}</Label>
-          <Input id={`${prefix}-name`} name="name" required defaultValue={defaults?.name} />
+          <Input
+            id={`${prefix}-name`}
+            name="name"
+            required
+            defaultValue={defaults?.name}
+            onChange={(event) => setPreviewName(event.target.value)}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor={`${prefix}-description`}>{labels.lessonTypes.descriptionLabel}</Label>
           <Textarea id={`${prefix}-description`} name="description" defaultValue={defaults?.description ?? ""} />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor={`${prefix}-icon`}>{labels.lessonTypes.iconSvgLabel}</Label>
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: hexToRgba(color, 0.16) }}>
-                {icon ? <LessonTypeIcon iconPath={icon} colorHex={color} size={24} /> : null}
-              </span>
-              <select
-                id={`${prefix}-icon`}
-                name="iconSvg"
-                required
-                value={icon}
-                onChange={(event) => setIcon(event.target.value)}
-                className="ui-select w-full min-w-0"
-              >
-                {icons.map((option) => (
-                  <option key={option} value={option}>
-                    {iconFileName(option)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor={`${prefix}-color`}>{labels.lessonTypes.colorLabel}</Label>
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="h-11 w-11 shrink-0 rounded-xl" style={{ backgroundColor: color }} />
-              <select
-                id={`${prefix}-color`}
-                name="colorHex"
-                required
-                value={color}
-                onChange={(event) => setColor(event.target.value)}
-                className="ui-select w-full min-w-0"
-              >
-                {colorOptions.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
+        <LessonTypeAppearancePicker
+          prefix={prefix}
+          locale={locale}
+          name={previewName}
+          icon={icon}
+          onIconChange={setIcon}
+          color={color}
+          onColorChange={setColor}
+          icons={icons}
+          colors={colorOptions}
+          labels={{
+            icon: labels.lessonTypes.iconSvgLabel,
+            color: labels.lessonTypes.colorLabel,
+            preview: labels.lessonTypes.previewLabel,
+            previewPlaceholder: labels.lessonTypes.previewPlaceholder,
+          }}
+        />
       </>
     );
   }
@@ -231,6 +212,7 @@ export function RegistriesManager({ locale, lessonTypes, labels, iconOptions, co
               if (!nextOpen) {
                 setCreateIcon(defaultIcon);
                 setCreateColor(defaultColor);
+                setPreviewName("");
               }
             }}
           >
