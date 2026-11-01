@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { SearchSelect } from "@/components/ui/search-select";
 
 type CandidateOption = {
   id: string;
@@ -239,24 +240,21 @@ export function StandaloneLessonCreateDialog({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor={lessonId ? `trainer-${lessonId}` : "trainer-create"}>{labels.trainerLabel}</Label>
+              <Label id={lessonId ? `trainer-label-${lessonId}` : "trainer-create-label"}>{labels.trainerLabel}</Label>
               {disableTrainerSelection ? (
                 <input type="hidden" name="trainerId" value={defaultTrainerId ?? ""} />
               ) : null}
-              <select
-                id={lessonId ? `trainer-${lessonId}` : "trainer-create"}
-                name="trainerId"
+              <SearchSelect
+                aria-labelledby={lessonId ? `trainer-label-${lessonId}` : "trainer-create-label"}
+                name={disableTrainerSelection ? undefined : "trainerId"}
                 defaultValue={defaultTrainerId ?? ""}
                 disabled={disableTrainerSelection}
-                className="ui-select w-full"
-              >
-                <option value="">— {labels.trainerLabel} —</option>
-                {trainerCandidates.map((trainer) => (
-                  <option key={`create-dialog-${trainer.id}`} value={trainer.id}>
-                    {trainer.name}
-                  </option>
-                ))}
-              </select>
+                options={trainerCandidates.map((trainer) => ({ value: trainer.id, label: trainer.name }))}
+                placeholder={locale === "it" ? "Nessun trainer" : "No trainer"}
+                clearLabel={locale === "it" ? "Nessun trainer" : "No trainer"}
+                searchPlaceholder={locale === "it" ? "Cerca un trainer" : "Search a trainer"}
+                emptyText={locale === "it" ? "Nessun trainer trovato" : "No trainer found"}
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor={lessonId ? `lessonType-${lessonId}` : "lessonType-create"}>{labels.standaloneLessonType}</Label>

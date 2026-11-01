@@ -9,11 +9,13 @@ import {
   addLessonAttendeeMutationAction,
   broadcastLessonNotificationMutationAction,
   confirmLessonWaitlistEntryMutationAction,
+  loadAttendeeCandidatesAction,
   removeLessonWaitlistEntryMutationAction,
   removeLessonAttendeeMutationAction,
   setLessonAttendeeAttendanceMutationAction,
   updateLessonMainMutationAction,
   updateLessonTrainerMutationAction,
+  type AttendeeCandidate,
 } from "./standalone-create-action";
 import { confirmLessonBookingAction, rejectLessonBookingAction } from "@/app/[locale]/(app)/bookings/actions";
 import { SegmentedTabs, StatusNote } from "@/components/settings/settings-ui";
@@ -33,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SearchSelect, type SearchSelectOption } from "@/components/ui/search-select";
 import { Textarea } from "@/components/ui/textarea";
 import { PlanUsageTag } from "@/components/users/plan-usage-tag";
 import { UserQuickProfileTooltip } from "@/components/users/user-quick-profile-tooltip";
@@ -173,6 +176,40 @@ export function LessonManageDialog({
   const [isPending, startTransition] = useTransition();
   const [confirmRemove, setConfirmRemove] = useState<{ kind: "attendee" | "queue"; id: string; name: string } | null>(null);
   const [attendeeToAdd, setAttendeeToAdd] = useState("");
+  const isIt = locale === "it";
+  const picker = {
+    noTrainer: isIt ? "Nessun trainer" : "No trainer",
+    searchTrainer: isIt ? "Cerca un trainer" : "Search a trainer",
+    emptyTrainer: isIt ? "Nessun trainer trovato" : "No trainer found",
+    searchPerson: isIt ? "Cerca per nome o email" : "Search by name or email",
+    emptyPerson: isIt ? "Nessuna persona trovata" : "Nobody found",
+    loading: isIt ? "Carico piani e iscrizioni…" : "Loading plans and bookings…",
+  };
+
+  // One picker entry per person: plan usage in this lesson's period, plus what to know before adding.
+  function candidateOption(candidate: AttendeeCandidate): SearchSelectOption {
+    const exhausted = candidate.planUsage ? candidate.planUsage.used >= candidate.planUsage.limit : false;
+    const notes = [
+      candidate.onLesson === "booked" ? (isIt ? "Già nella lezione" : "Already on the lesson") : null,
+      candidate.onLesson === "queued" ? (isIt ? "Già in coda" : "Already queued") : null,
+      candidate.inactive ? (isIt ? "Iscrizione non attiva" : "Membership inactive") : null,
+      candidate.certificateNote,
+    ].filter(Boolean);
+    const remaining = candidate.planUsage ? Math.max(0, candidate.planUsage.limit - candidate.planUsage.used) : null;
+    return {
+      value: candidate.id,
+      label: candidate.name,
+      description:
+        candidate.role === "TRAINEE"
+          ? remaining !== null && !exhausted
+            ? `${candidate.email} · ${isIt ? (remaining === 1 ? "1 rimasta" : `${remaining} rimaste`) : `${remaining} left`}`
+            : candidate.email
+          : `${candidate.email} · ${candidate.role === "ADMIN" ? "Admin" : "Trainer"}`,
+      meta: candidate.planUsage ? <PlanUsageTag usage={candidate.planUsage} locale={locale} /> : null,
+      note: notes.length > 0 ? notes.join(" · ") : undefined,
+      disabled: candidate.onLesson !== null,
+    };
+  }
   const [trainerDraft, setTrainerDraft] = useState(lesson.trainerId);
   const [broadcastMessage, setBroadcastMessage] = useState("");
   const [activeTab, setActiveTab] = useState<ActiveTab>("main");
@@ -424,7 +461,6 @@ export function LessonManageDialog({
     });
   }
 
-  const isIt = locale === "it";
   const local = {
     moreFor: (name: string) => (isIt ? `Altre azioni per ${name}` : `More actions for ${name}`),
     removeAttendeeTitle: isIt ? "Rimuovere dalla lezione?" : "Remove from the lesson?",
@@ -587,23 +623,20 @@ export function LessonManageDialog({
           <div className={lesson.canEditMain ? "pt-2" : undefined}>
             {lesson.canManageTrainer && allowPeopleActions ? (
               <section className="space-y-1.5 pb-5">
-                <Label htmlFor={`trainer-update-${lesson.id}`}>{labels.trainerLabel}</Label>
+                <Label id={`trainer-update-label-${lesson.id}`}>{labels.trainerLabel}</Label>
                 {/* An explicit save: changing the trainer notifies people, so a stray pick must not send it. */}
                 <div className="flex flex-col gap-2 sm:flex-row">
-                <select
-                  id={`trainer-update-${lesson.id}`}
+                <SearchSelect
+                  aria-labelledby={`trainer-update-label-${lesson.id}`}
                   value={trainerDraft}
-                  className="ui-select w-full min-w-0"
-                  onChange={(event) => setTrainerDraft(event.target.value)}
+                  onChange={setTrainerDraft}
                   disabled={isPending}
-                >
-                  <option value="">— {labels.trainerLabel} —</option>
-                  {trainerCandidates.map((trainer) => (
-                    <option key={`manage-trainer-${trainer.id}`} value={trainer.id}>
-                      {trainer.name}
-                    </option>
-                  ))}
-                </select>
+                  options={trainerCandidates.map((trainer) => ({ value: trainer.id, label: trainer.name }))}
+                  placeholder={picker.noTrainer}
+                  clearLabel={picker.noTrainer}
+                  searchPlaceholder={picker.searchTrainer}
+                  emptyText={picker.emptyTrainer}
+                />
                 <Button
                   type="button"
                   variant="outline"
@@ -672,24 +705,23 @@ export function LessonManageDialog({
 
               {allowPeopleActions ? (
                 <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-                  <label htmlFor={`add-attendee-${lesson.id}`} className="sr-only">
+                  <span id={`add-attendee-label-${lesson.id}`} className="sr-only">
                     {labels.attendeeSelectLabel}
-                  </label>
-                  <select
-                    id={`add-attendee-${lesson.id}`}
+                  </span>
+                  {/* Searchable, and loaded per lesson: plan usage is measured in this lesson's week/month. */}
+                  <SearchSelect
+                    key={`add-attendee-${lesson.id}-${lesson.attendees.length}-${lesson.waitlist.length}`}
+                    aria-labelledby={`add-attendee-label-${lesson.id}`}
                     value={attendeeToAdd}
-                    onChange={(event) => setAttendeeToAdd(event.target.value)}
-                    className="ui-select w-full min-w-0"
+                    onChange={setAttendeeToAdd}
                     disabled={isPending}
-                  >
-                    <option value="">— {labels.attendeeSelectLabel} —</option>
-                    {attendeeCandidates.map((candidate) => (
-                      <option key={`candidate-${lesson.id}-${candidate.id}`} value={candidate.id}>
-                        {candidate.name}
-                        {candidate.email ? ` (${candidate.email})` : ""}
-                      </option>
-                    ))}
-                  </select>
+                    options={attendeeCandidates.map((candidate) => ({ value: candidate.id, label: candidate.name, description: candidate.email }))}
+                    loadOptions={async () => (await loadAttendeeCandidatesAction(lesson.id, locale)).map(candidateOption)}
+                    placeholder={labels.attendeeSelectLabel}
+                    searchPlaceholder={picker.searchPerson}
+                    emptyText={picker.emptyPerson}
+                    loadingText={picker.loading}
+                  />
                   <Button type="button" variant="outline" className="shrink-0" onClick={handleAddAttendee} disabled={isPending || !attendeeToAdd}>
                     <UserPlus size={16} aria-hidden="true" />
                     {labels.addAttendeeCta}

@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { Label } from "@/components/ui/label";
 import { MarkdownEditor } from "@/components/ui/markdown-editor";
+import { SearchSelect } from "@/components/ui/search-select";
 
 type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
 type CourseFormTab = "main" | "schedule";
@@ -1029,6 +1030,7 @@ function CourseFields({
   onRemoveSlot: (weekday: Weekday, startTime: string) => void;
 }) {
   const descriptionLabelId = useId();
+  const trainerLabelId = useId();
   const [dayToAdd, setDayToAdd] = useState<Weekday>(() => weekdays[0]?.value ?? "MONDAY");
   const [timeToAdd, setTimeToAdd] = useState("08:00");
   const [durationInput, setDurationInput] = useState(defaultValues.durationMinutes);
@@ -1086,22 +1088,19 @@ function CourseFields({
           ) : null}
         </div>
         <div className="space-y-1">
-          <Label htmlFor="trainerId">{labels.trainer}</Label>
+          <Label id={trainerLabelId}>{labels.trainer}</Label>
           {disableTrainerSelection ? <input type="hidden" name="trainerId" value={fixedTrainerId ?? defaultValues.trainerId} /> : null}
-          <select
-            id="trainerId"
-            name="trainerId"
+          <SearchSelect
+            aria-labelledby={trainerLabelId}
+            name={disableTrainerSelection ? undefined : "trainerId"}
             defaultValue={defaultValues.trainerId}
             disabled={disableTrainerSelection}
-            className="ui-select w-full"
-          >
-            <option value="">-</option>
-            {trainerCandidates.map((trainer) => (
-              <option key={trainer.id} value={trainer.id}>
-                {trainer.name}
-              </option>
-            ))}
-          </select>
+            options={trainerCandidates.map((trainer) => ({ value: trainer.id, label: trainer.name, description: trainer.email }))}
+            placeholder={locale === "it" ? "Nessun trainer" : "No trainer"}
+            clearLabel={locale === "it" ? "Nessun trainer" : "No trainer"}
+            searchPlaceholder={locale === "it" ? "Cerca un trainer" : "Search a trainer"}
+            emptyText={locale === "it" ? "Nessun trainer trovato" : "No trainer found"}
+          />
         </div>
       </div>
 

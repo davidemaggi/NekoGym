@@ -131,7 +131,7 @@ export function MarkdownEditor({
   return (
     <div
       className={cn(
-        "overflow-hidden rounded-xl border border-[var(--input)] bg-[var(--surface)] focus-within:ring-2 focus-within:ring-[var(--ring)]",
+        "overflow-hidden rounded-xl border border-[var(--surface-border)] bg-[var(--surface)] focus-within:ring-2 focus-within:ring-[var(--ring)]",
         className
       )}
     >
