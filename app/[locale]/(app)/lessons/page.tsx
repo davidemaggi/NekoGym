@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { requireAuth } from "@/lib/authorization";
 import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateParts, getAppDateTimeConfig } from "@/lib/date-time";
+import { staffCertificateNote } from "@/lib/medical-certificate";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
@@ -95,7 +96,7 @@ export default async function LessonsPage({
       course: { select: { id: true, name: true, description: true, trainerId: true, durationMinutes: true } },
       trainer: { select: { id: true, name: true } },
       lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
-      bookings: { select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true } } } },
+      bookings: { select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true, medicalCertificateExpiresAt: true } } } },
       waitlistEntries: { select: { trainee: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: "asc" } },
     },
     orderBy: { startsAt: "asc" },
@@ -173,7 +174,13 @@ export default async function LessonsPage({
       attendeeAttendance: Object.fromEntries(confirmed.map((booking) => [booking.trainee.id, booking.attendanceStatus ?? null])),
       pendingApprovals: lesson.bookings
         .filter((booking) => booking.status === "PENDING")
-        .map((booking) => withUsage(lesson.id, booking.trainee)),
+        .map((booking) => {
+          const { medicalCertificateExpiresAt, ...trainee } = booking.trainee;
+          return {
+            ...withUsage(lesson.id, trainee),
+            approvalNote: staffCertificateNote(medicalCertificateExpiresAt, lesson.startsAt, safeLocale, getAppDateTimeConfig().timeZone, now),
+          };
+        }),
       waitlist: lesson.waitlistEntries.map((entry) => withUsage(lesson.id, entry.trainee)),
       isDeleted,
       modifiedReasons: Array.from(modifiedReasons),

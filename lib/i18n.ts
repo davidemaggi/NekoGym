@@ -358,7 +358,6 @@ export type Dictionary = {
       subscriptionType: string;
       subscriptionLessons: string;
       subscriptionRemaining: string;
-      subscriptionResetAt: string;
       subscriptionEndsAt: string;
       lessonTypeAccess: string;
     };
@@ -1211,7 +1210,6 @@ const dictionaries: Record<Locale, Dictionary> = {
         subscriptionType: "Tipo piano",
         subscriptionLessons: "Lezioni piano",
         subscriptionRemaining: "Lezioni residue",
-        subscriptionResetAt: "Reset piano",
         subscriptionEndsAt: "Fine piano",
         lessonTypeAccess: "Accesso per tipo lezione",
       },
@@ -2095,7 +2093,6 @@ const dictionaries: Record<Locale, Dictionary> = {
         subscriptionType: "Plan type",
         subscriptionLessons: "Plan lessons",
         subscriptionRemaining: "Remaining lessons",
-        subscriptionResetAt: "Plan reset",
         subscriptionEndsAt: "Subscription end",
         lessonTypeAccess: "Lesson type access",
       },

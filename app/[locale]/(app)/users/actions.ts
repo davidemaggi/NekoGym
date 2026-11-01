@@ -8,10 +8,11 @@ import { requireAnyRole } from "@/lib/authorization";
 import { sendEmailVerification } from "@/lib/auth";
 import { refundFixedPlanUnit } from "@/lib/booking-rules";
 import {
+  appStartOfDayUtc,
   parseDateInputEndOfDayToUtc,
   parseDateInputToUtc,
-  parseDateTimeLocalInputToUtc,
 } from "@/lib/date-time";
+import { isDateKey } from "@/lib/lesson-recurrence";
 import { hashPassword } from "@/lib/password";
 import { prisma } from "@/lib/prisma";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
@@ -95,12 +96,6 @@ function parseNullableDateInput(value: string): Date | null {
   return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
 }
 
-function parseNullableDateTimeInput(value: string): Date | null {
-  if (!value) return null;
-  const parsed = parseDateTimeLocalInputToUtc(value);
-  return parsed && !Number.isNaN(parsed.getTime()) ? parsed : null;
-}
-
 function parseEndOfDayDateInput(value: string): Date | null {
   if (!value) return null;
   const parsed = parseDateInputEndOfDayToUtc(value);
@@ -111,14 +106,12 @@ function normalizeSubscription(input: {
   subscriptionType: SubscriptionPlanType;
   subscriptionLessons: number | null;
   subscriptionRemaining: number | null;
-  subscriptionResetAt: Date | null;
   subscriptionEndsAt: Date | null;
 }) {
   if (input.subscriptionType === "NONE") {
     return {
       subscriptionLessons: null,
       subscriptionRemaining: null,
-      subscriptionResetAt: null,
       subscriptionEndsAt: null,
     };
   }
@@ -126,7 +119,6 @@ function normalizeSubscription(input: {
   return {
     subscriptionLessons: input.subscriptionLessons,
     subscriptionRemaining: input.subscriptionRemaining,
-    subscriptionResetAt: input.subscriptionResetAt,
     subscriptionEndsAt: input.subscriptionEndsAt,
   };
 }
@@ -159,7 +151,6 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
     const subscriptionType = getField(formData, "subscriptionType") as SubscriptionPlanType;
     const subscriptionLessons = parseNullableInt(getField(formData, "subscriptionLessons"));
     const subscriptionRemaining = parseNullableInt(getField(formData, "subscriptionRemaining"));
-    const subscriptionResetAt = parseNullableDateTimeInput(getField(formData, "subscriptionResetAt"));
     const subscriptionEndsAt = parseEndOfDayDateInput(getField(formData, "subscriptionEndsAt"));
     const emailVerified = getBooleanField(formData, "emailVerified");
     const lessonTypeAccesses = parseLessonTypeAccesses(formData);
@@ -183,7 +174,6 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
       subscriptionType,
       subscriptionLessons,
       subscriptionRemaining,
-      subscriptionResetAt,
       subscriptionEndsAt,
     });
 
@@ -208,7 +198,6 @@ export async function createUserAction(formData: FormData): Promise<UserMutation
           subscriptionType,
           subscriptionLessons: normalized.subscriptionLessons,
           subscriptionRemaining: normalized.subscriptionRemaining,
-          subscriptionResetAt: normalized.subscriptionResetAt,
           subscriptionEndsAt: normalized.subscriptionEndsAt,
         },
       });
@@ -257,7 +246,6 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
     const subscriptionType = getField(formData, "subscriptionType") as SubscriptionPlanType;
     const subscriptionLessons = parseNullableInt(getField(formData, "subscriptionLessons"));
     const subscriptionRemaining = parseNullableInt(getField(formData, "subscriptionRemaining"));
-    const subscriptionResetAt = parseNullableDateTimeInput(getField(formData, "subscriptionResetAt"));
     const subscriptionEndsAt = parseEndOfDayDateInput(getField(formData, "subscriptionEndsAt"));
     const emailVerified = getBooleanField(formData, "emailVerified");
     const lessonTypeAccesses = parseLessonTypeAccesses(formData);
@@ -283,7 +271,6 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
       subscriptionType,
       subscriptionLessons,
       subscriptionRemaining,
-      subscriptionResetAt,
       subscriptionEndsAt,
     });
 
@@ -317,7 +304,6 @@ export async function updateUserAction(formData: FormData): Promise<UserMutation
           subscriptionType,
           subscriptionLessons: normalized.subscriptionLessons,
           subscriptionRemaining: normalized.subscriptionRemaining,
-          subscriptionResetAt: normalized.subscriptionResetAt,
           subscriptionEndsAt: normalized.subscriptionEndsAt,
           ...(password ? { passwordHash: hashPassword(password) } : {}),
         },
@@ -555,6 +541,80 @@ export async function sendUserMessageAction(formData: FormData): Promise<UserMut
     return {
       ok: false,
       message: error instanceof Error ? error.message : msg.messageFailed,
+    };
+  }
+}
+
+function dateKeyToAppDay(key: string): Date | null {
+  if (!isDateKey(key)) return null;
+  return appStartOfDayUtc(Number(key.slice(0, 4)), Number(key.slice(5, 7)), Number(key.slice(8, 10)));
+}
+
+/**
+ * "Certificato medico presentato": records the day it was handed in and its expiry day.
+ * A new certificate clears the reminder marks, so its own 30-day and 7-day notices go out.
+ */
+export async function recordMedicalCertificateAction(formData: FormData): Promise<UserMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const isIt = locale === "it";
+
+  try {
+    await requireAnyRole(["ADMIN"], locale);
+    const id = getField(formData, "id");
+    const submittedAt = dateKeyToAppDay(getField(formData, "submittedOn"));
+    const expiresAt = dateKeyToAppDay(getField(formData, "expiresOn"));
+    if (!id) throw new Error(t(locale).idRequired);
+    if (!submittedAt || !expiresAt) throw new Error(isIt ? "Indica entrambe le date." : "Enter both dates.");
+    if (expiresAt < submittedAt) {
+      throw new Error(isIt ? "La scadenza non può essere prima della presentazione." : "The expiry cannot be before the submission date.");
+    }
+
+    await prisma.user.update({
+      where: { id },
+      data: {
+        medicalCertificateSubmittedAt: submittedAt,
+        medicalCertificateExpiresAt: expiresAt,
+        medicalCertificateLiteNoticeAt: null,
+        medicalCertificateStrongNoticeAt: null,
+      },
+    });
+
+    revalidatePath(`/${locale}/users`);
+    return { ok: true, message: isIt ? "Certificato medico registrato." : "Medical certificate recorded." };
+  } catch (error) {
+    unstable_rethrow(error);
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : isIt ? "Impossibile salvare il certificato." : "Unable to save the certificate.",
+    };
+  }
+}
+
+/** Forgets the recorded certificate (e.g. entered on the wrong person). */
+export async function clearMedicalCertificateAction(formData: FormData): Promise<UserMutationResult> {
+  const locale = getField(formData, "locale") || "it";
+  const isIt = locale === "it";
+
+  try {
+    await requireAnyRole(["ADMIN"], locale);
+    const id = getField(formData, "id");
+    if (!id) throw new Error(t(locale).idRequired);
+    await prisma.user.update({
+      where: { id },
+      data: {
+        medicalCertificateSubmittedAt: null,
+        medicalCertificateExpiresAt: null,
+        medicalCertificateLiteNoticeAt: null,
+        medicalCertificateStrongNoticeAt: null,
+      },
+    });
+    revalidatePath(`/${locale}/users`);
+    return { ok: true, message: isIt ? "Certificato medico rimosso." : "Medical certificate removed." };
+  } catch (error) {
+    unstable_rethrow(error);
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : isIt ? "Impossibile rimuovere il certificato." : "Unable to remove the certificate.",
     };
   }
 }

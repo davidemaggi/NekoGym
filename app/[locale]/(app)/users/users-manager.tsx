@@ -1,13 +1,13 @@
 "use client";
 
-import { appDateTimeLocalValue } from "@/lib/date-time";
 import type { PlanUsage } from "@/lib/plan-usage";
 import { PlanUsageTag } from "@/components/users/plan-usage-tag";
+import { MedicalCertificateBadge, MedicalCertificateDialog } from "@/components/users/medical-certificate";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Lock, LockOpen, LogOut, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { HeartPulse, Lock, LockOpen, LogOut, MessageSquare, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 import {
@@ -50,8 +50,9 @@ type UserItem = {
   subscriptionRemaining: number | null;
   /** Current week/month (or pack) usage; null without a plan. */
   planUsage: PlanUsage | null;
-  subscriptionResetAt: string | null;
   subscriptionEndsAt: string | null;
+  medicalCertificateSubmittedAt: string | null;
+  medicalCertificateExpiresAt: string | null;
   lessonTypeAccesses: Array<{ lessonTypeId: string; mode: "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED" }>;
 };
 
@@ -68,7 +69,6 @@ type FormPayload = {
   subscriptionType: UserItem["subscriptionType"];
   subscriptionLessons: string;
   subscriptionRemaining: string;
-  subscriptionResetAt: string;
   subscriptionEndsAt: string;
   lessonTypeAccesses: Record<string, "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED">;
 };
@@ -111,7 +111,6 @@ type UsersManagerProps = {
       subscriptionType: string;
       subscriptionLessons: string;
       subscriptionRemaining: string;
-      subscriptionResetAt: string;
       subscriptionEndsAt: string;
       lessonTypeAccess: string;
     };
@@ -176,7 +175,6 @@ function toFormData(payload: FormPayload): FormData {
   formData.set("subscriptionType", payload.subscriptionType);
   formData.set("subscriptionLessons", payload.subscriptionLessons);
   formData.set("subscriptionRemaining", payload.subscriptionRemaining);
-  formData.set("subscriptionResetAt", payload.subscriptionResetAt);
   formData.set("subscriptionEndsAt", payload.subscriptionEndsAt);
   for (const [lessonTypeId, mode] of Object.entries(payload.lessonTypeAccesses)) {
     formData.set(`lessonTypeAccess:${lessonTypeId}`, mode);
@@ -189,14 +187,6 @@ function dateInputValue(value: string | null): string {
   return value.slice(0, 10);
 }
 
-function dateTimeInputValue(value: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  // Same wall clock the server parses the field with (gym time zone).
-  return appDateTimeLocalValue(date);
-}
-
 export function UsersManager({ locale, currentUserId, users, lessonTypes, labels }: UsersManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -204,6 +194,8 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
   const [editUser, setEditUser] = useState<UserItem | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserItem | null>(null);
   const [messageUser, setMessageUser] = useState<UserItem | null>(null);
+  const [certificateUser, setCertificateUser] = useState<UserItem | null>(null);
+  const certificateCta = locale === "en" ? "Medical certificate submitted" : "Certificato medico presentato";
   const [messageBody, setMessageBody] = useState("");
   const [confirmation, setConfirmation] = useState<ConfirmationState | null>(null);
   const [search, setSearch] = useState("");
@@ -261,7 +253,6 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
       subscriptionType: String(formData.get("subscriptionType") ?? "NONE") as UserItem["subscriptionType"],
       subscriptionLessons: String(formData.get("subscriptionLessons") ?? ""),
       subscriptionRemaining: String(formData.get("subscriptionRemaining") ?? ""),
-      subscriptionResetAt: String(formData.get("subscriptionResetAt") ?? ""),
       subscriptionEndsAt: String(formData.get("subscriptionEndsAt") ?? ""),
       lessonTypeAccesses: Object.fromEntries(
         lessonTypes.map((lessonType) => [
@@ -291,7 +282,6 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
       subscriptionType: String(formData.get("subscriptionType") ?? "NONE") as UserItem["subscriptionType"],
       subscriptionLessons: String(formData.get("subscriptionLessons") ?? ""),
       subscriptionRemaining: String(formData.get("subscriptionRemaining") ?? ""),
-      subscriptionResetAt: String(formData.get("subscriptionResetAt") ?? ""),
       subscriptionEndsAt: String(formData.get("subscriptionEndsAt") ?? ""),
       lessonTypeAccesses: Object.fromEntries(
         lessonTypes.map((lessonType) => [
@@ -524,6 +514,10 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                     <span className="text-sm text-[var(--muted-foreground)]">{planLabel(user)}</span>
                   </>
                 ) : null}
+                {/* Members always show their certificate state; staff only once one is recorded. */}
+                {user.role === "TRAINEE" || user.medicalCertificateExpiresAt ? (
+                  <MedicalCertificateBadge expiresAt={user.medicalCertificateExpiresAt} locale={locale} />
+                ) : null}
               </div>
               <div className="col-start-3 row-start-1 flex items-center justify-end gap-1 lg:col-start-4">
                 <Button variant="outline" className="hidden sm:inline-flex" onClick={() => setEditUser(user)}>
@@ -544,6 +538,10 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                   <DropdownMenuItem onSelect={() => setEditUser(user)}>
                     <Pencil className="h-4 w-4" />
                     <span>{labels.actions.edit}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setCertificateUser(user)}>
+                    <HeartPulse className="h-4 w-4" />
+                    <span>{certificateCta}</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     disabled={user.id === currentUserId}
@@ -589,12 +587,46 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
         </ul>
       )}
 
+      <MedicalCertificateDialog
+        open={Boolean(certificateUser)}
+        onOpenChange={(open) => !open && setCertificateUser(null)}
+        locale={locale}
+        user={
+          certificateUser
+            ? {
+                id: certificateUser.id,
+                name: certificateUser.name,
+                submittedAt: certificateUser.medicalCertificateSubmittedAt,
+                expiresAt: certificateUser.medicalCertificateExpiresAt,
+              }
+            : null
+        }
+      />
+
       <Dialog open={Boolean(editUser)} onOpenChange={(open) => !open && setEditUser(null)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{labels.editTitle}</DialogTitle>
             <DialogDescription>{labels.editDescription}</DialogDescription>
           </DialogHeader>
+
+          {editUser ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--rule)] pb-4">
+              <MedicalCertificateBadge expiresAt={editUser.medicalCertificateExpiresAt} locale={locale} />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  const target = editUser;
+                  setEditUser(null);
+                  setCertificateUser(target);
+                }}
+              >
+                <HeartPulse size={16} aria-hidden="true" />
+                {certificateCta}
+              </Button>
+            </div>
+          ) : null}
 
           {editUser ? (
             <form className="space-y-3" onSubmit={(event) => askUpdateConfirmation(event, editUser.id)}>
@@ -612,7 +644,6 @@ export function UsersManager({ locale, currentUserId, users, lessonTypes, labels
                   subscriptionType: editUser.subscriptionType,
                   subscriptionLessons: editUser.subscriptionLessons ? String(editUser.subscriptionLessons) : "",
                   subscriptionRemaining: editUser.subscriptionRemaining ? String(editUser.subscriptionRemaining) : "",
-                  subscriptionResetAt: dateTimeInputValue(editUser.subscriptionResetAt),
                   subscriptionEndsAt: dateInputValue(editUser.subscriptionEndsAt),
                   lessonTypeAccesses: Object.fromEntries(editUser.lessonTypeAccesses.map((entry) => [entry.lessonTypeId, entry.mode])),
                 }}
@@ -787,7 +818,6 @@ function UserFormFields({
     subscriptionType: UserItem["subscriptionType"];
     subscriptionLessons: string;
     subscriptionRemaining: string;
-    subscriptionResetAt: string;
     subscriptionEndsAt: string;
     lessonTypeAccesses: Record<string, "DENIED" | "REQUIRES_CONFIRMATION" | "ALLOWED">;
   };
@@ -983,16 +1013,6 @@ function UserFormFields({
                 type="number"
                 min={0}
                 defaultValue={defaults?.subscriptionRemaining ?? ""}
-                disabled={subscriptionType === "NONE"}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="subscriptionResetAt">{labels.fields.subscriptionResetAt}</Label>
-              <Input
-                id="subscriptionResetAt"
-                name="subscriptionResetAt"
-                type="datetime-local"
-                defaultValue={defaults?.subscriptionResetAt ?? ""}
                 disabled={subscriptionType === "NONE"}
               />
             </div>

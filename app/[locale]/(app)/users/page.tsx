@@ -29,8 +29,9 @@ export default async function UsersPage({
       subscriptionType: true,
       subscriptionLessons: true,
       subscriptionRemaining: true,
-      subscriptionResetAt: true,
       subscriptionEndsAt: true,
+      medicalCertificateSubmittedAt: true,
+      medicalCertificateExpiresAt: true,
       lessonTypeAccesses: {
         select: {
           lessonTypeId: true,
@@ -60,8 +61,9 @@ export default async function UsersPage({
         ...user,
         emailVerifiedAt: user.emailVerifiedAt ? user.emailVerifiedAt.toISOString() : null,
         trialEndsAt: user.trialEndsAt ? user.trialEndsAt.toISOString() : null,
-        subscriptionResetAt: user.subscriptionResetAt ? user.subscriptionResetAt.toISOString() : null,
         subscriptionEndsAt: user.subscriptionEndsAt ? user.subscriptionEndsAt.toISOString() : null,
+        medicalCertificateSubmittedAt: user.medicalCertificateSubmittedAt?.toISOString() ?? null,
+        medicalCertificateExpiresAt: user.medicalCertificateExpiresAt?.toISOString() ?? null,
         lessonTypeAccesses: user.lessonTypeAccesses,
         planUsage: planUsage.get(user.id) ?? null,
       }))}

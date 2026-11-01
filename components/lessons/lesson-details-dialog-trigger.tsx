@@ -25,7 +25,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { hexToRgba } from "@/lib/lesson-type-icons";
 
 /** A person in the lesson; staff views carry their plan usage for the lesson's period. */
-export type LessonPerson = { id: string; name: string; email?: string; planUsage?: PlanUsage };
+export type LessonPerson = {
+  id: string;
+  name: string;
+  email?: string;
+  planUsage?: PlanUsage;
+  /** Pending requests only: why the medical certificate made the booking wait for approval. */
+  approvalNote?: string | null;
+};
 
 type LessonDetailsDialogTriggerProps = {
   locale: string;
@@ -275,6 +282,9 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
                 </UserQuickProfileTooltip>
                 {/* Plan spent in this lesson's week/month: decides approvals and queue promotions at a glance. */}
                 {person.planUsage ? <PlanUsageTag usage={person.planUsage} locale={locale} /> : null}
+                {prefix === "pending" && person.approvalNote ? (
+                  <span className="basis-full text-sm font-semibold text-[var(--warning-fg)]">{person.approvalNote}</span>
+                ) : null}
                 {prefix === "pending" && manage ? (
                   <PendingApprovalActions
                     locale={locale}

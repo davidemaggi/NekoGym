@@ -6,6 +6,7 @@ import { startAuthCleanupJob } from "@/server/jobs/auth-cleanup";
 import { startOutboxWorker } from "@/server/outbox/worker";
 import { startTelegramBot } from "@/server/telegram/bootstrap";
 import { startReportsDigestJob } from "@/server/jobs/reports-digest";
+import { startMedicalCertificateRemindersJob } from "@/server/jobs/medical-certificate-reminders";
 
 type StopFn = () => void;
 
@@ -20,6 +21,7 @@ export function startBackgroundServices(log: Logger): StopFn {
   stops.push(startAuthCleanupJob(log));
   stops.push(startLocalNotificationsRetentionJob(log));
   stops.push(startReportsDigestJob(log));
+  stops.push(startMedicalCertificateRemindersJob(log));
   stops.push(startOutboxWorker(log));
   stops.push(startTelegramBot(log));
 
