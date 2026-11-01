@@ -9,6 +9,7 @@ import {
   appDayRange,
   consumeFixedPlanUnits,
   formatLessonDateTime,
+  isTrialActive,
   notifyWaitlistPromotion,
   promoteNextEligibleWaitlistEntry,
   refundFixedPlanUnit,
@@ -17,11 +18,14 @@ import {
   appDateKey,
   appLocalDateTimeToUtc,
   formatDateTimeForApp,
+  getAppDateTimeConfig,
   getAppTimeParts,
   parseDateTimeLocalInputToUtc,
 } from "@/lib/date-time";
 import { addDaysToKey, parseRecurrenceFromForm, planOccurrences, type Recurrence } from "@/lib/lesson-recurrence";
 import { isLessonAllowedBySiteSchedule } from "@/lib/lessons";
+import { staffCertificateNote } from "@/lib/medical-certificate";
+import { computePlanUsages, type PlanUsage } from "@/lib/plan-usage";
 import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 import { enqueueNotificationForUsers } from "@/server/outbox/queue";
@@ -1248,4 +1252,60 @@ export async function broadcastLessonNotificationMutationAction(formData: FormDa
       message: error instanceof Error ? error.message : t.broadcastFailed,
     };
   }
+}
+
+export type AttendeeCandidate = {
+  id: string;
+  name: string;
+  email: string;
+  role: "ADMIN" | "TRAINER" | "TRAINEE";
+  /** Plan spent in this lesson's week/month (or of the pack); null without a plan. */
+  planUsage: PlanUsage | null;
+  /** Already on the lesson (booked or pending) or in its queue: not addable again. */
+  onLesson: "booked" | "queued" | null;
+  /** Trainee without an active membership or trial. */
+  inactive: boolean;
+  /** The medical certificate expires before this lesson. */
+  certificateNote: string | null;
+};
+
+/**
+ * People to add to a lesson, with what the staff needs to decide: plan usage in the lesson's own
+ * period, whether they are already on it, membership and certificate. Loaded when the picker opens.
+ */
+export async function loadAttendeeCandidatesAction(lessonId: string, locale: string): Promise<AttendeeCandidate[]> {
+  const currentUser = await requireAnyRole(["ADMIN", "TRAINER"], locale);
+  const lesson = await prisma.$transaction((tx) => loadManagedLessonOrThrow({ tx, lessonId, locale, currentUser }));
+  const now = new Date();
+
+  const [users, onLesson] = await Promise.all([
+    prisma.user.findMany({
+      where: { isDisabled: false },
+      select: { id: true, name: true, email: true, role: true, membershipStatus: true, trialEndsAt: true, medicalCertificateExpiresAt: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.lesson.findUnique({
+      where: { id: lessonId },
+      select: { bookings: { select: { traineeId: true } }, waitlistEntries: { select: { traineeId: true } } },
+    }),
+  ]);
+  const booked = new Set(onLesson?.bookings.map((booking) => booking.traineeId));
+  const queued = new Set(onLesson?.waitlistEntries.map((entry) => entry.traineeId));
+  const usage = await computePlanUsages(
+    prisma,
+    users.filter((user) => user.role === "TRAINEE").map((user) => ({ key: user.id, traineeId: user.id, at: lesson.startsAt }))
+  );
+  const { timeZone } = getAppDateTimeConfig();
+
+  return users.map((user) => ({
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+    planUsage: usage.get(user.id) ?? null,
+    onLesson: booked.has(user.id) ? "booked" : queued.has(user.id) ? "queued" : null,
+    inactive: user.role === "TRAINEE" && user.membershipStatus !== "ACTIVE" && !isTrialActive(user.trialEndsAt, now),
+    certificateNote:
+      user.role === "TRAINEE" ? staffCertificateNote(user.medicalCertificateExpiresAt, lesson.startsAt, locale, timeZone, now) : null,
+  }));
 }
