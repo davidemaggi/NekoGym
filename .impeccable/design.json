@@ -502,7 +502,7 @@
       "stock-mint-dark": {
         "role": "tertiary",
         "displayName": "Mint Stock (dark)",
-        "canonical": "#1d3a30",
+        "canonical": "#154f3a",
         "tonalRamp": [
           "#060d0a",
           "#1a2923",
@@ -517,7 +517,7 @@
       "stock-azzurro-dark": {
         "role": "tertiary",
         "displayName": "Azzurro Stock (dark)",
-        "canonical": "#1d3048",
+        "canonical": "#1b4769",
         "tonalRamp": [
           "#070b12",
           "#1c2632",
@@ -532,7 +532,7 @@
       "stock-giallino-dark": {
         "role": "tertiary",
         "displayName": "Giallino Stock (dark)",
-        "canonical": "#3a3320",
+        "canonical": "#524115",
         "tonalRamp": [
           "#0d0b06",
           "#28251b",
@@ -547,7 +547,7 @@
       "stock-rosa-dark": {
         "role": "tertiary",
         "displayName": "Rosa Stock (dark)",
-        "canonical": "#3e2632",
+        "canonical": "#64313e",
         "tonalRamp": [
           "#0f090c",
           "#2e2127",
@@ -562,7 +562,7 @@
       "stock-lilla-dark": {
         "role": "tertiary",
         "displayName": "Lilla Stock (dark)",
-        "canonical": "#2d2749",
+        "canonical": "#46386a",
         "tonalRamp": [
           "#0b0a13",
           "#252234",
@@ -577,7 +577,7 @@
       "stock-carta-dark": {
         "role": "tertiary",
         "displayName": "Carta Stock (dark)",
-        "canonical": "#22264a",
+        "canonical": "#343952",
         "tonalRamp": [
           "#090a14",
           "#202337",

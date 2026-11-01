@@ -35,12 +35,12 @@ colors:
   surface-dark: "#1b1e37"
   rule-dark: "#272b4b"
   muted-ink-dark: "#aeb3d0"
-  stock-mint-dark: "#1d3a30"
-  stock-azzurro-dark: "#1d3048"
-  stock-giallino-dark: "#3a3320"
-  stock-rosa-dark: "#3e2632"
-  stock-lilla-dark: "#2d2749"
-  stock-carta-dark: "#22264a"
+  stock-mint-dark: "#154f3a"
+  stock-azzurro-dark: "#1b4769"
+  stock-giallino-dark: "#524115"
+  stock-rosa-dark: "#64313e"
+  stock-lilla-dark: "#46386a"
+  stock-carta-dark: "#343952"
   stamp-dark: "#bba8f2"
   destructive-dark: "#e07a8c"
   chart-1: "#3b5fc4"
@@ -453,7 +453,7 @@ A cool paper-and-ink palette: pale transit-pass stocks as grounds, night-blue in
 - **Lilla** (`stock-lilla`): Report, manual notifications, the sign-in pages; also the user-initials avatar in the shell and the admin avatar in the users list.
 - **Carta** (`stock-carta`): Home (dashboard), profile, site settings, and the fallback.
 
-The shell resolves the current section to one stock (`STOCK_BY_KEY` in the app shell) and sets `data-stock` on the layout root; `--stock` then resolves to that stock. Each nav link carries its own section's `data-stock`, so its icon tile shows its stock as a swatch. Text on any stock uses `--stock-ink` (night blue light, pale ink dark).
+The shell resolves the current section to one stock (`STOCK_BY_KEY` in the app shell) and sets `data-stock` on the layout root; `--stock` then resolves to that stock. Each nav link carries its own section's `data-stock`, so its icon tile shows its stock as a swatch. Text on any stock uses `--stock-ink` (night blue light, pale ink dark). Night stocks sit at OKLCH L 0.38 with chroma 0.07–0.085 (carta 0.35 / 0.045): bright enough that each section reads as its own colour against the night paper, dark enough that pale ink stays at 8:1 or more, ink at 75% at 5.4:1 and muted ink at 4.5:1 on every one.
 
 ### Neutral
 - **Ground** (`ground`): the document background and the browser theme colour.
