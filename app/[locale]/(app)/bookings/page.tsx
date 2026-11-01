@@ -1,5 +1,7 @@
+import type { BookingsView } from "@prisma/client";
+
 import { requireAuth } from "@/lib/authorization";
-import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, getAppDateTimeConfig } from "@/lib/date-time";
+import { appDateKey, appDateTimeLocalValue, appStartOfDayUtc, formatDayRange, getAppDateTimeConfig } from "@/lib/date-time";
 import { getDictionary, isLocale } from "@/lib/i18n";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { getLessonTypeIconOptions } from "@/lib/lesson-type-icons.server";
@@ -10,6 +12,10 @@ import { prisma } from "@/lib/prisma";
 import { parseClosedDatesCsv, parseOpenWeekdaysCsv } from "@/lib/site-settings";
 
 import { BookingsManager, type BookingsDay, type BookingsLesson } from "@/app/[locale]/(app)/bookings/bookings-manager";
+
+const BOOKINGS_VIEWS: BookingsView[] = ["DAY", "WEEK", "MONTH"];
+const isBookingsView = (value: string | undefined): value is BookingsView =>
+  BOOKINGS_VIEWS.includes(value as BookingsView);
 
 const DAY_KEY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 
@@ -29,10 +35,10 @@ export default async function BookingsPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ day?: string }>;
+  searchParams: Promise<{ day?: string; view?: string }>;
 }) {
   const { locale } = await params;
-  const { day } = await searchParams;
+  const { day, view: viewParam } = await searchParams;
   const currentUser = await requireAuth(locale);
   const safeLocale = isLocale(locale) ? locale : "it";
   const dictionary = getDictionary(safeLocale);
@@ -49,15 +55,34 @@ export default async function BookingsPage({
   const openWeekdays = parseOpenWeekdaysCsv(siteSettings?.openWeekdaysCsv);
   const closedDates = parseClosedDatesCsv(siteSettings?.closedDatesCsv);
 
-  // The week (Monday to Sunday, gym time zone) containing the selected day.
+  // An explicit ?view= wins (and is saved by the client); otherwise the user's saved layout.
+  const view: BookingsView = isBookingsView(viewParam?.toUpperCase())
+    ? (viewParam!.toUpperCase() as BookingsView)
+    : ((await prisma.user.findUnique({ where: { id: currentUser.id }, select: { bookingsView: true } }))?.bookingsView ?? "DAY");
+
+  // Day and week views load the week (Monday to Sunday, gym time zone) containing the selected day;
+  // the month view loads the whole Monday-first grid around the selected day's month.
   const todayKey = appDateKey(now);
   const selected = parseDayKey(day, todayKey);
   const mondayOffset = (selected.weekday + 6) % 7;
-  const weekStart = appStartOfDayUtc(selected.year, selected.month, selected.day - mondayOffset);
-  const weekEnd = appStartOfDayUtc(selected.year, selected.month, selected.day - mondayOffset + 7);
+  const firstOfMonthWeekday = new Date(Date.UTC(selected.year, selected.month - 1, 1)).getUTCDay();
+  const daysInMonth = new Date(Date.UTC(selected.year, selected.month, 0)).getUTCDate();
+  const gridLead = (firstOfMonthWeekday + 6) % 7;
+  const range =
+    view === "MONTH"
+      ? { startDay: 1 - gridLead, length: Math.ceil((gridLead + daysInMonth) / 7) * 7, month: selected.month }
+      : { startDay: selected.day - mondayOffset, length: 7, month: selected.month };
+  const rangeStart = appStartOfDayUtc(selected.year, range.month, range.startDay);
+  const rangeEnd = appStartOfDayUtc(selected.year, range.month, range.startDay + range.length);
   const selectedKey = appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day));
-  const previousWeekKey = appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day - 7));
-  const nextWeekKey = appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day + 7));
+  const previousKey =
+    view === "MONTH"
+      ? appDateKey(appStartOfDayUtc(selected.year, selected.month - 1, 1))
+      : appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day - 7));
+  const nextKey =
+    view === "MONTH"
+      ? appDateKey(appStartOfDayUtc(selected.year, selected.month + 1, 1))
+      : appDateKey(appStartOfDayUtc(selected.year, selected.month, selected.day + 7));
 
   const timeFormat = new Intl.DateTimeFormat(intlLocale, { timeZone, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   const deadlineFormat = new Intl.DateTimeFormat(intlLocale, {
@@ -78,7 +103,7 @@ export default async function BookingsPage({
     where: {
       status: "SCHEDULED",
       deletedAt: null,
-      startsAt: { gte: weekStart, lt: weekEnd },
+      startsAt: { gte: rangeStart, lt: rangeEnd },
     },
     include: {
       course: { select: { id: true, name: true } },
@@ -229,8 +254,9 @@ export default async function BookingsPage({
     };
   });
 
-  const days: BookingsDay[] = Array.from({ length: 7 }, (_, index) => {
-    const start = appStartOfDayUtc(selected.year, selected.month, selected.day - mondayOffset + index);
+  const monthKeyPrefix = selectedKey.slice(0, 7);
+  const days: BookingsDay[] = Array.from({ length: range.length }, (_, index) => {
+    const start = appStartOfDayUtc(selected.year, range.month, range.startDay + index);
     const key = appDateKey(start);
     const dayLessons = items.filter((lesson) => lesson.dayKey === key);
     // Probe at midday so the weekday check never straddles midnight.
@@ -243,10 +269,22 @@ export default async function BookingsPage({
       isToday: key === todayKey,
       isPast: key < todayKey,
       isClosed: !isLessonAllowedBySiteSchedule(midday, openWeekdays, closedDates),
+      inMonth: key.startsWith(monthKeyPrefix),
       lessonCount: dayLessons.length,
       hasOwnBooking: dayLessons.some((lesson) => lesson.isBookedByCurrentUser),
     };
   });
+
+  const monthTitleFormat = new Intl.DateTimeFormat(intlLocale, { timeZone: "UTC", month: "long", year: "numeric" });
+  const periodLabel =
+    view === "MONTH"
+      ? monthTitleFormat.format(new Date(Date.UTC(selected.year, selected.month - 1, 15)))
+      : formatDayRange(
+          intlLocale,
+          new Date(Date.UTC(selected.year, selected.month - 1, selected.day - mondayOffset)),
+          new Date(Date.UTC(selected.year, selected.month - 1, selected.day - mondayOffset + 6)),
+          "UTC"
+        );
 
   const { pass, upcoming } = await loadMemberPass({
     userId: currentUser.id,
@@ -254,6 +292,7 @@ export default async function BookingsPage({
     locale: safeLocale,
     iconOptions,
     now,
+    range: { start: rangeStart, end: rangeEnd },
   });
 
   const canCreateStandaloneLesson = currentUser.role === "ADMIN" || currentUser.role === "TRAINER";
@@ -281,15 +320,17 @@ export default async function BookingsPage({
 
   return (
     <BookingsManager
-      key={selectedKey}
+      key={`${view}-${selectedKey}`}
       locale={safeLocale}
       labels={labels}
       lessonCreateLabels={dictionary.lessonsPage}
       lessons={items}
       days={days}
       initialDayKey={selectedKey}
-      previousWeekKey={previousWeekKey}
-      nextWeekKey={nextWeekKey}
+      view={view}
+      periodLabel={periodLabel}
+      previousKey={previousKey}
+      nextKey={nextKey}
       todayKey={todayKey}
       pass={pass}
       upcoming={upcoming}

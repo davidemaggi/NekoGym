@@ -68,6 +68,12 @@ enum NotificationStatus {
   FAILED
 }
 
+enum BookingsView {
+  DAY
+  WEEK
+  MONTH
+}
+
 enum ReportDigestFrequency {
   NEVER
   WEEKLY
@@ -103,6 +109,7 @@ model User {
   reportDigestFrequency      ReportDigestFrequency  @default(NEVER)
   reportDigestReportsCsv     String                 @default("COURSE_POPULARITY,TIME_CROWDING,TRAINER_PERFORMANCE")
   reportDigestLastSentAt     DateTime?
+  bookingsView               BookingsView           @default(DAY)
   totpEnabled                Boolean                @default(false)
   totpSecret                 String?
   membershipStatus           MembershipStatus       @default(INACTIVE)

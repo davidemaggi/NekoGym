@@ -1,10 +1,11 @@
 import type { UserRole } from "@prisma/client";
 
 import { isTrialActive, planWindowForLesson } from "@/lib/booking-rules";
-import { appDateKey, getAppDateTimeConfig } from "@/lib/date-time";
+import { appDateKey, formatDayRange, getAppDateTimeConfig } from "@/lib/date-time";
+import { planCountedBookingWhere } from "@/lib/plan-usage";
 import { sanitizeLessonTypeColor, sanitizeLessonTypeIconPath } from "@/lib/lesson-type-icons";
 import { prisma } from "@/lib/prisma";
-import type { BookingPass } from "@/components/bookings/pass-card";
+import type { BookingPass, PassPeriod } from "@/components/bookings/pass-card";
 
 export type UpcomingBooking = {
   id: string;
@@ -27,6 +28,8 @@ export async function loadMemberPass(input: {
   locale: string;
   iconOptions: string[];
   now?: Date;
+  /** Days the page shows: WEEKLY/MONTHLY passes then also report every plan period overlapping them. */
+  range?: { start: Date; end: Date };
 }): Promise<{ pass: BookingPass | null; upcoming: UpcomingBooking[] }> {
   const now = input.now ?? new Date();
   const { timeZone } = getAppDateTimeConfig();
@@ -95,20 +98,57 @@ export async function loadMemberPass(input: {
       const remaining = Math.max(0, fullUser.subscriptionRemaining ?? total);
       pass = { kind: "fixed", total, used: Math.max(0, total - remaining), remaining, validUntilLabel, activeBookings };
     } else if (fullUser.subscriptionType === "WEEKLY" || fullUser.subscriptionType === "MONTHLY") {
-      const window = planWindowForLesson(now, fullUser.subscriptionType, settings?.weeklyResetWeekday ?? "MONDAY");
-      const used = await prisma.lessonBooking.count({
-        where: {
-          traineeId: input.userId,
-          lesson: { status: "SCHEDULED", deletedAt: null, startsAt: { gte: window.start, lt: window.end } },
-        },
+      const type = fullUser.subscriptionType;
+      const resetWeekday = settings?.weeklyResetWeekday ?? "MONDAY";
+      const current = planWindowForLesson(now, type, resetWeekday);
+
+      // The current period plus every period overlapping the shown days, counted with the booking rules' own filter.
+      const windows = [current];
+      if (input.range) {
+        for (let probe = planWindowForLesson(input.range.start, type, resetWeekday); probe.start < input.range.end; ) {
+          if (probe.start.getTime() !== current.start.getTime()) windows.push(probe);
+          probe = planWindowForLesson(probe.end, type, resetWeekday);
+        }
+      }
+      const spanStart = new Date(Math.min(...windows.map((window) => window.start.getTime())));
+      const spanEnd = new Date(Math.max(...windows.map((window) => window.end.getTime())));
+      const counted = await prisma.lessonBooking.findMany({
+        where: planCountedBookingWhere(input.userId, { start: spanStart, end: spanEnd }),
+        select: { lesson: { select: { startsAt: true } } },
       });
+      const usedIn = (window: { start: Date; end: Date }) =>
+        counted.filter(({ lesson }) => lesson.startsAt >= window.start && lesson.startsAt < window.end).length;
+
+      const monthLabel = new Intl.DateTimeFormat(intlLocale, { timeZone, month: "long" });
+      const monthYearLabel = new Intl.DateTimeFormat(intlLocale, { timeZone, month: "long", year: "numeric" });
+      const nowYear = appDateKey(now).slice(0, 4);
+      const periods: PassPeriod[] = windows
+        .map((window) => {
+          const used = usedIn(window);
+          const lastDay = new Date(window.end.getTime() - 12 * 60 * 60 * 1000);
+          return {
+            startKey: appDateKey(window.start),
+            endKey: appDateKey(window.end),
+            used: Math.min(used, total),
+            remaining: Math.max(0, total - used),
+            isCurrent: window === current,
+            label:
+              type === "WEEKLY"
+                ? formatDayRange(intlLocale, window.start, lastDay, timeZone)
+                : (appDateKey(window.start).slice(0, 4) === nowYear ? monthLabel : monthYearLabel).format(window.start),
+          };
+        })
+        .sort((a, b) => a.startKey.localeCompare(b.startKey));
+      const currentPeriod = periods.find((period) => period.isCurrent)!;
+
       pass = {
-        kind: fullUser.subscriptionType === "WEEKLY" ? "weekly" : "monthly",
+        kind: type === "WEEKLY" ? "weekly" : "monthly",
         total,
-        used: Math.min(used, total),
-        remaining: Math.max(0, total - used),
+        used: currentPeriod.used,
+        remaining: currentPeriod.remaining,
         validUntilLabel,
         activeBookings,
+        periods: input.range ? periods : undefined,
       };
     } else {
       pass = { kind: "open", validUntilLabel, activeBookings };

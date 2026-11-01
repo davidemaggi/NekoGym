@@ -130,6 +130,15 @@ Automazione:
 
 ## 2.6 Prenotazioni (trainee + vista staff)
 
+Viste (`Giorno` / `Settimana` / `Mese`): la scelta è salvata sul profilo (`User.bookingsView`) e segue l'utente su ogni dispositivo.
+
+- `Giorno`: striscia della settimana + lezioni del giorno scelto
+- `Settimana`: tutte le lezioni della settimana raggruppate per giorno; i giorni senza lezioni sono una riga grigia
+- `Mese`: calendario del mese (lunedì primo giorno) con un punto per lezione (max 3), lezioni del giorno toccato sotto
+- i giorni senza lezioni sono grigi; per i trainee non sono selezionabili, per staff sì (per crearvi una lezione)
+- la tessera `WEEKLY`/`MONTHLY` segue il periodo guardato: "liberi questa settimana" per quello in corso, altrimenti "liberi 2–8 nov" / "liberi a dicembre"
+- staff: le richieste in attesa si confermano o rifiutano direttamente dalla riga della lezione (e dal dettaglio lezione), senza aprire "Gestisci lezione"
+
 Regole booking:
 
 - solo lezioni `SCHEDULED`, non eliminate, non iniziate

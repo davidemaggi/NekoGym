@@ -188,6 +188,17 @@ export type Dictionary = {
     today: string;
     noLessonsDay: string;
     closedDay: string;
+    viewLabel: string;
+    viewDay: string;
+    viewWeek: string;
+    viewMonth: string;
+    noLessonsWeek: string;
+    noLessonsShort: string;
+    closedShort: string;
+    lessonsCount: string;
+    lessonsCountOne: string;
+    monthGridLabel: string;
+    pendingToConfirm: string;
     seatsFree: string;
     seatFreeOne: string;
     full: string;
@@ -214,6 +225,8 @@ export type Dictionary = {
       remaining: string;
       availableWeek: string;
       availableMonth: string;
+      availableWeekOf: string;
+      availableMonthOf: string;
       validUntil: string;
       trialTitle: string;
       trialUntil: string;
@@ -1003,6 +1016,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       today: "Oggi",
       noLessonsDay: "Nessuna lezione in programma in questo giorno.",
       closedDay: "La palestra è chiusa in questo giorno.",
+      viewLabel: "Vista",
+      viewDay: "Giorno",
+      viewWeek: "Settimana",
+      viewMonth: "Mese",
+      noLessonsWeek: "Nessuna lezione in programma in questa settimana.",
+      noLessonsShort: "Nessuna lezione",
+      closedShort: "Chiuso",
+      lessonsCount: "{n} lezioni",
+      lessonsCountOne: "1 lezione",
+      monthGridLabel: "Giorni di {month}",
+      pendingToConfirm: "{n} da confermare",
       seatsFree: "{n} posti liberi",
       seatFreeOne: "Ultimo posto libero",
       full: "Al completo",
@@ -1029,6 +1053,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         remaining: "rimasti",
         availableWeek: "liberi questa settimana",
         availableMonth: "liberi questo mese",
+        availableWeekOf: "liberi {period}",
+        availableMonthOf: "liberi a {period}",
         validUntil: "Valido fino al {date}",
         trialTitle: "Prova gratuita",
         trialUntil: "Puoi prenotare fino al {date}",
@@ -1849,6 +1875,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       today: "Today",
       noLessonsDay: "No lessons scheduled on this day.",
       closedDay: "The gym is closed on this day.",
+      viewLabel: "View",
+      viewDay: "Day",
+      viewWeek: "Week",
+      viewMonth: "Month",
+      noLessonsWeek: "No lessons scheduled this week.",
+      noLessonsShort: "No lessons",
+      closedShort: "Closed",
+      lessonsCount: "{n} lessons",
+      lessonsCountOne: "1 lesson",
+      monthGridLabel: "Days of {month}",
+      pendingToConfirm: "{n} to confirm",
       seatsFree: "{n} seats left",
       seatFreeOne: "Last seat left",
       full: "Full",
@@ -1875,6 +1912,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         remaining: "left",
         availableWeek: "left this week",
         availableMonth: "left this month",
+        availableWeekOf: "left {period}",
+        availableMonthOf: "left in {period}",
         validUntil: "Valid until {date}",
         trialTitle: "Free trial",
         trialUntil: "You can book until {date}",

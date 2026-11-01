@@ -4,8 +4,22 @@ import { AlertCircle, Ticket } from "lucide-react";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
+/** One week/month of a WEEKLY/MONTHLY plan: day keys are `YYYY-MM-DD`, `endKey` exclusive. */
+export type PassPeriod = { startKey: string; endKey: string; used: number; remaining: number; isCurrent: boolean; label: string };
+
 export type BookingPass =
-  | { kind: "fixed" | "weekly" | "monthly"; total: number; used: number; remaining: number; validUntilLabel: string | null; activeBookings: number }
+  | {
+      kind: "fixed" | "weekly" | "monthly";
+      total: number;
+      used: number;
+      remaining: number;
+      validUntilLabel: string | null;
+      activeBookings: number;
+      /** Set when the figure describes a week/month other than the current one ("2–8 nov", "dicembre"). */
+      periodLabel?: string | null;
+      /** Every plan period the page shows, so the card can follow the day being looked at. */
+      periods?: PassPeriod[];
+    }
   | { kind: "open"; validUntilLabel: string | null; activeBookings: number }
   | { kind: "trial"; untilLabel: string; activeBookings: number }
   | { kind: "inactive"; activeBookings: number };
@@ -52,7 +66,14 @@ export function PassCard({ pass, labels }: { pass: BookingPass; labels: PassLabe
       pass.kind === "fixed" ? labels.fixedTitle : pass.kind === "weekly" ? labels.weeklyTitle : labels.monthlyTitle,
       { n: pass.total }
     );
-    const caption = pass.kind === "fixed" ? labels.remaining : pass.kind === "weekly" ? labels.availableWeek : labels.availableMonth;
+    const caption =
+      pass.kind === "fixed"
+        ? labels.remaining
+        : pass.periodLabel
+          ? fill(pass.kind === "weekly" ? labels.availableWeekOf : labels.availableMonthOf, { period: pass.periodLabel })
+          : pass.kind === "weekly"
+            ? labels.availableWeek
+            : labels.availableMonth;
     figure = (
       <p className="text-right leading-none">
         <span className="tabular text-[2.5rem] font-bold">{pass.remaining}</span>

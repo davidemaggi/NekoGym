@@ -1,5 +1,7 @@
 "use client";
 
+import { PendingApprovalActions } from "@/components/lessons/pending-approval-actions";
+import { cn } from "@/lib/utils";
 import { PlanUsageTag } from "@/components/users/plan-usage-tag";
 import { RepeatLessonDialog } from "@/components/lessons/repeat-lesson-dialog";
 import type { PlanUsage } from "@/lib/plan-usage";
@@ -235,12 +237,25 @@ export function LessonDetailsDialogTrigger({ locale, trigger, footerSlot, labels
         ) : (
           <ul className="mt-1 divide-y divide-[var(--rule)]">
             {people.map((person) => (
-              <li key={`${prefix}-${lesson.id}-${person.id}`} className="flex min-h-11 items-center justify-between gap-3 text-[15px]">
+              <li
+                key={`${prefix}-${lesson.id}-${person.id}`}
+                className={cn("flex min-h-11 flex-wrap items-center justify-between gap-x-3 text-[15px]", prefix === "pending" && manage ? "gap-y-1 py-2" : "")}
+              >
                 <UserQuickProfileTooltip userId={person.id} locale={locale}>
                   {person.name}
                 </UserQuickProfileTooltip>
                 {/* Plan spent in this lesson's week/month: decides approvals and queue promotions at a glance. */}
                 {person.planUsage ? <PlanUsageTag usage={person.planUsage} locale={locale} /> : null}
+                {prefix === "pending" && manage ? (
+                  <PendingApprovalActions
+                    locale={locale}
+                    lessonId={manage.lesson.id}
+                    traineeId={person.id}
+                    traineeName={person.name}
+                    labels={{ confirm: manage.labels.confirmPendingCta, reject: manage.labels.rejectPendingCta }}
+                    className="basis-full"
+                  />
+                ) : null}
               </li>
             ))}
           </ul>
