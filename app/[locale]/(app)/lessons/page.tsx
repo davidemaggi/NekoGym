@@ -92,7 +92,7 @@ export default async function LessonsPage({
       ...(onlyMine ? { trainerId: currentUser.id } : {}),
     },
     include: {
-      course: { select: { id: true, name: true, trainerId: true, durationMinutes: true } },
+      course: { select: { id: true, name: true, description: true, trainerId: true, durationMinutes: true } },
       trainer: { select: { id: true, name: true } },
       lessonType: { select: { name: true, iconSvg: true, colorHex: true } },
       bookings: { select: { status: true, attendanceStatus: true, trainee: { select: { id: true, name: true, email: true } } } },
@@ -160,6 +160,8 @@ export default async function LessonsPage({
       lessonTypeColor: lesson.lessonType ? sanitizeLessonTypeColor(lesson.lessonType.colorHex) : null,
       isCourseLesson: Boolean(lesson.course?.id),
       courseName: lesson.course?.name ?? "-",
+      courseId: lesson.course?.id ?? null,
+      courseDescription: lesson.course?.description?.trim() || null,
       bookedCount: confirmed.length,
       pendingCount: lesson.bookings.length - confirmed.length,
       occupancy: `${confirmed.length}/${lesson.maxAttendees}`,

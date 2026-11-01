@@ -16,7 +16,7 @@ Menu per ruolo:
 
 - `ADMIN`: dashboard, corsi, lezioni, prenotazioni, utenti, report, notifiche personali, impostazioni profilo, impostazioni sito, registri (tipi lezione), notifiche manuali, danger zone.
 - `TRAINER`: dashboard, corsi (solo propri), lezioni (solo proprie), prenotazioni, notifiche personali, impostazioni profilo, registri.
-- `TRAINEE`: dashboard, prenotazioni, notifiche personali, impostazioni profilo.
+- `TRAINEE`: dashboard, prenotazioni, corsi (catalogo in sola lettura), notifiche personali, impostazioni profilo.
 
 ## 2. Flussi principali per l’utente
 
@@ -50,9 +50,15 @@ La dashboard mostra:
 
 ## 2.3 Corsi
 
+Catalogo e scheda (`/courses`, `/courses/[id]`):
+
+- i trainee vedono una scheda per corso (icona del tipo lezione, trainer, inizio della descrizione, orari); admin/trainer vedono il gestore corsi
+- la scheda del corso (per tutti) mostra descrizione completa, orario settimanale con fine calcolata e le prossime lezioni, ognuna collegata al suo giorno in Prenotazioni
+- le lezioni generate da un corso lo dichiarano con un'icona "Corso" nel dettaglio lezione e nella riga di Prenotazioni, mostrano la descrizione del corso e il link alla sua scheda
+
 Un corso contiene:
 
-- nome, descrizione, icona
+- nome, descrizione in Markdown (scritta con un editor visuale: grassetto, corsivo, titoli, elenchi, citazioni; l'HTML non viene mai interpretato), icona
 - tipo lezione
 - trainer assegnato
 - durata, max partecipanti
@@ -129,6 +135,15 @@ Automazione:
 - admin/trainer possono correggere successivamente (anche impostando no-show)
 
 ## 2.6 Prenotazioni (trainee + vista staff)
+
+Viste (`Giorno` / `Settimana` / `Mese`): la scelta è salvata sul profilo (`User.bookingsView`) e segue l'utente su ogni dispositivo.
+
+- `Giorno`: striscia della settimana + lezioni del giorno scelto
+- `Settimana`: tutte le lezioni della settimana raggruppate per giorno; i giorni senza lezioni sono una riga grigia
+- `Mese`: calendario del mese (lunedì primo giorno) con un punto per lezione (max 3), lezioni del giorno toccato sotto
+- i giorni senza lezioni sono grigi; per i trainee non sono selezionabili, per staff sì (per crearvi una lezione)
+- la tessera `WEEKLY`/`MONTHLY` segue il periodo guardato: "liberi questa settimana" per quello in corso, altrimenti "liberi 2–8 nov" / "liberi a dicembre"
+- staff: le richieste in attesa si confermano o rifiutano direttamente dalla riga della lezione (e dal dettaglio lezione), senza aprire "Gestisci lezione"
 
 Regole booking:
 

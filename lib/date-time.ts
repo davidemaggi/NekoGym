@@ -276,3 +276,17 @@ export function formatDateTimeForApp(value: DateValue, options?: Intl.DateTimeFo
   );
   return format(value);
 }
+
+/**
+ * "2–8 nov" / "30 nov – 6 dic": a span of calendar days, both ends inclusive. Built by hand because
+ * Intl's formatRange pads days in some locales ("02–08 nov").
+ */
+export function formatDayRange(intlLocale: string, start: Date, endInclusive: Date, timeZone: string): string {
+  const day = new Intl.DateTimeFormat(intlLocale, { timeZone, day: "numeric" });
+  const month = new Intl.DateTimeFormat(intlLocale, { timeZone, month: "short" });
+  const startMonth = month.format(start);
+  const endMonth = month.format(endInclusive);
+  return startMonth === endMonth
+    ? `${day.format(start)}–${day.format(endInclusive)} ${endMonth}`
+    : `${day.format(start)} ${startMonth} – ${day.format(endInclusive)} ${endMonth}`;
+}

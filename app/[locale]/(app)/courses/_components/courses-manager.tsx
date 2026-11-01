@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, type FormEvent } from "react";
+import { useId, useMemo, useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Check, Pencil, Plus, RotateCcw, Search, Trash2, X } from "lucide-react";
@@ -35,7 +35,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { MarkdownEditor } from "@/components/ui/markdown-editor";
 
 type Weekday = "MONDAY" | "TUESDAY" | "WEDNESDAY" | "THURSDAY" | "FRIDAY" | "SATURDAY" | "SUNDAY";
 type CourseFormTab = "main" | "schedule";
@@ -652,6 +652,7 @@ export function CoursesManager({
 
               <form className="space-y-3" onSubmit={askCreateConfirmation}>
                 <CourseFields
+                  locale={locale}
                   activeTab={createTab}
                   defaultValues={emptyDraft}
                   labels={labels.fields}
@@ -866,6 +867,7 @@ export function CoursesManager({
                 </button>
               </div>
               <CourseFields
+                locale={locale}
                 activeTab={editTab}
                 defaultValues={{
                   name: selectedCourse.name,
@@ -987,6 +989,7 @@ export function CoursesManager({
 }
 
 function CourseFields({
+  locale,
   activeTab = "main",
   defaultValues,
   labels,
@@ -1001,6 +1004,7 @@ function CourseFields({
   onAddSlot,
   onRemoveSlot,
 }: {
+  locale: string;
   activeTab?: CourseFormTab;
   defaultValues: {
     name: string;
@@ -1024,6 +1028,7 @@ function CourseFields({
   onAddSlot: (weekday: Weekday, startTime: string) => void;
   onRemoveSlot: (weekday: Weekday, startTime: string) => void;
 }) {
+  const descriptionLabelId = useId();
   const [dayToAdd, setDayToAdd] = useState<Weekday>(() => weekdays[0]?.value ?? "MONDAY");
   const [timeToAdd, setTimeToAdd] = useState("08:00");
   const [durationInput, setDurationInput] = useState(defaultValues.durationMinutes);
@@ -1045,8 +1050,9 @@ function CourseFields({
       </div>
 
       <div className={activeTab === "main" ? "space-y-1" : "hidden"}>
-        <Label htmlFor="description">{labels.description}</Label>
-        <Textarea id="description" name="description" defaultValue={defaultValues.description} />
+        <Label id={descriptionLabelId}>{labels.description}</Label>
+        {/* Markdown, edited as formatted text: shown on the course page and in its lessons. */}
+        <MarkdownEditor name="description" defaultValue={defaultValues.description} locale={locale} labelledBy={descriptionLabelId} />
       </div>
 
       <div className={activeTab === "main" ? "grid grid-cols-1 gap-3 sm:grid-cols-2" : "hidden"}>

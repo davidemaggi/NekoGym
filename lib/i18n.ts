@@ -188,6 +188,17 @@ export type Dictionary = {
     today: string;
     noLessonsDay: string;
     closedDay: string;
+    viewLabel: string;
+    viewDay: string;
+    viewWeek: string;
+    viewMonth: string;
+    noLessonsWeek: string;
+    noLessonsShort: string;
+    closedShort: string;
+    lessonsCount: string;
+    lessonsCountOne: string;
+    monthGridLabel: string;
+    pendingToConfirm: string;
     seatsFree: string;
     seatFreeOne: string;
     full: string;
@@ -214,6 +225,8 @@ export type Dictionary = {
       remaining: string;
       availableWeek: string;
       availableMonth: string;
+      availableWeekOf: string;
+      availableMonthOf: string;
       validUntil: string;
       trialTitle: string;
       trialUntil: string;
@@ -489,6 +502,29 @@ export type Dictionary = {
       };
     };
   };
+  courseCatalog: {
+    title: string;
+    subtitle: string;
+    empty: string;
+    openCta: string;
+    noDescription: string;
+    durationLabel: string;
+    capacityLabel: string;
+    trainerLabel: string;
+    noTrainer: string;
+    scheduleTitle: string;
+    scheduleEmpty: string;
+    nextLessonsTitle: string;
+    nextLessonsEmpty: string;
+    seatsFree: string;
+    seatFreeOne: string;
+    full: string;
+    bookCta: string;
+    allCourses: string;
+    aboutTitle: string;
+    courseLabel: string;
+    courseSheetCta: string;
+  };
   appPages: {
     dashboard: {
       title: string;
@@ -692,6 +728,8 @@ export type Dictionary = {
       descriptionLabel: string;
       iconSvgLabel: string;
       colorLabel: string;
+      previewLabel: string;
+      previewPlaceholder: string;
       createCta: string;
       editCta: string;
       updateTitle: string;
@@ -1003,6 +1041,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       today: "Oggi",
       noLessonsDay: "Nessuna lezione in programma in questo giorno.",
       closedDay: "La palestra è chiusa in questo giorno.",
+      viewLabel: "Vista",
+      viewDay: "Giorno",
+      viewWeek: "Settimana",
+      viewMonth: "Mese",
+      noLessonsWeek: "Nessuna lezione in programma in questa settimana.",
+      noLessonsShort: "Nessuna lezione",
+      closedShort: "Chiuso",
+      lessonsCount: "{n} lezioni",
+      lessonsCountOne: "1 lezione",
+      monthGridLabel: "Giorni di {month}",
+      pendingToConfirm: "{n} da confermare",
       seatsFree: "{n} posti liberi",
       seatFreeOne: "Ultimo posto libero",
       full: "Al completo",
@@ -1029,6 +1078,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         remaining: "rimasti",
         availableWeek: "liberi questa settimana",
         availableMonth: "liberi questo mese",
+        availableWeekOf: "liberi {period}",
+        availableMonthOf: "liberi a {period}",
         validUntil: "Valido fino al {date}",
         trialTitle: "Prova gratuita",
         trialUntil: "Puoi prenotare fino al {date}",
@@ -1336,6 +1387,29 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
     },
+    courseCatalog: {
+      title: "Corsi",
+      subtitle: "Scopri i corsi della palestra e quando si tengono.",
+      empty: "Non ci sono ancora corsi.",
+      openCta: "Scopri il corso",
+      noDescription: "Nessuna descrizione per questo corso.",
+      durationLabel: "{n} min",
+      capacityLabel: "Fino a {n} persone",
+      trainerLabel: "Trainer",
+      noTrainer: "Trainer da definire",
+      scheduleTitle: "Quando si tiene",
+      scheduleEmpty: "Nessun orario fisso.",
+      nextLessonsTitle: "Prossime lezioni",
+      nextLessonsEmpty: "Nessuna lezione in programma.",
+      seatsFree: "{n} posti liberi",
+      seatFreeOne: "Ultimo posto libero",
+      full: "Al completo",
+      bookCta: "Prenota",
+      allCourses: "Tutti i corsi",
+      aboutTitle: "Il corso",
+      courseLabel: "Corso",
+      courseSheetCta: "Scheda del corso",
+    },
     appPages: {
       dashboard: {
         title: "Dashboard",
@@ -1537,8 +1611,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         description: "Definisci nome, descrizione e icona SVG da riutilizzare in corsi e lezioni.",
         nameLabel: "Nome",
         descriptionLabel: "Descrizione",
-        iconSvgLabel: "Icona SVG",
+        iconSvgLabel: "Icona",
         colorLabel: "Colore",
+        previewLabel: "Anteprima",
+        previewPlaceholder: "Nome del tipo",
         createCta: "Crea tipo",
         editCta: "Modifica",
         updateTitle: "Modifica tipo di lezione",
@@ -1849,6 +1925,17 @@ const dictionaries: Record<Locale, Dictionary> = {
       today: "Today",
       noLessonsDay: "No lessons scheduled on this day.",
       closedDay: "The gym is closed on this day.",
+      viewLabel: "View",
+      viewDay: "Day",
+      viewWeek: "Week",
+      viewMonth: "Month",
+      noLessonsWeek: "No lessons scheduled this week.",
+      noLessonsShort: "No lessons",
+      closedShort: "Closed",
+      lessonsCount: "{n} lessons",
+      lessonsCountOne: "1 lesson",
+      monthGridLabel: "Days of {month}",
+      pendingToConfirm: "{n} to confirm",
       seatsFree: "{n} seats left",
       seatFreeOne: "Last seat left",
       full: "Full",
@@ -1875,6 +1962,8 @@ const dictionaries: Record<Locale, Dictionary> = {
         remaining: "left",
         availableWeek: "left this week",
         availableMonth: "left this month",
+        availableWeekOf: "left {period}",
+        availableMonthOf: "left in {period}",
         validUntil: "Valid until {date}",
         trialTitle: "Free trial",
         trialUntil: "You can book until {date}",
@@ -2182,6 +2271,29 @@ const dictionaries: Record<Locale, Dictionary> = {
         },
       },
     },
+    courseCatalog: {
+      title: "Courses",
+      subtitle: "Discover the gym's courses and when they run.",
+      empty: "No courses yet.",
+      openCta: "Discover the course",
+      noDescription: "No description for this course.",
+      durationLabel: "{n} min",
+      capacityLabel: "Up to {n} people",
+      trainerLabel: "Trainer",
+      noTrainer: "Trainer to be confirmed",
+      scheduleTitle: "When it runs",
+      scheduleEmpty: "No fixed schedule.",
+      nextLessonsTitle: "Next lessons",
+      nextLessonsEmpty: "No lessons scheduled.",
+      seatsFree: "{n} seats free",
+      seatFreeOne: "Last seat free",
+      full: "Full",
+      bookCta: "Book",
+      allCourses: "All courses",
+      aboutTitle: "About the course",
+      courseLabel: "Course",
+      courseSheetCta: "Course page",
+    },
     appPages: {
       dashboard: {
         title: "Dashboard",
@@ -2383,8 +2495,10 @@ const dictionaries: Record<Locale, Dictionary> = {
         description: "Define name, description and SVG icon reused by courses and lessons.",
         nameLabel: "Name",
         descriptionLabel: "Description",
-        iconSvgLabel: "SVG icon",
+        iconSvgLabel: "Icon",
         colorLabel: "Color",
+        previewLabel: "Preview",
+        previewPlaceholder: "Type name",
         createCta: "Create type",
         editCta: "Edit",
         updateTitle: "Edit lesson type",

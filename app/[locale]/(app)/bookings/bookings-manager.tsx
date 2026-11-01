@@ -7,6 +7,7 @@ import { useId, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  BookOpen,
   CalendarX2,
   ChevronDown,
   ChevronLeft,
@@ -21,9 +22,17 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { bookLessonAction, unbookLessonAction } from "@/app/[locale]/(app)/bookings/actions";
+import {
+  bookLessonAction,
+  setBookingsViewAction,
+  unbookLessonAction,
+  type BookingsViewValue,
+} from "@/app/[locale]/(app)/bookings/actions";
 import { StandaloneLessonCreateDialog } from "@/app/[locale]/(app)/lessons/standalone-lesson-create-dialog";
 import { LessonManageButton } from "@/components/lessons/lesson-manage-button";
+import { PendingApprovalActions } from "@/components/lessons/pending-approval-actions";
+import { PlanUsageTag } from "@/components/users/plan-usage-tag";
+import { UserQuickProfileTooltip } from "@/components/users/user-quick-profile-tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +46,8 @@ import {
 import { PassCard, fill, type BookingPass } from "@/components/bookings/pass-card";
 import { Button } from "@/components/ui/button";
 import { LessonTypeIcon } from "@/components/ui/lesson-type-icon";
+import { MarkdownView } from "@/components/ui/markdown-view";
+import { SegmentedTabs } from "@/components/settings/settings-ui";
 import type { Dictionary } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
@@ -76,6 +87,8 @@ export type BookingsLesson = {
   occupancy: string;
   isCourseLesson: boolean;
   courseName: string;
+  courseId: string | null;
+  courseDescription: string | null;
   lessonTypeName: string | null;
   lessonTypeId: string;
   lessonTypeIcon: string | null;
@@ -97,6 +110,8 @@ export type BookingsDay = {
   isToday: boolean;
   isPast: boolean;
   isClosed: boolean;
+  /** Month view: false for the leading/trailing days that belong to the neighbouring months. */
+  inMonth: boolean;
   lessonCount: number;
   hasOwnBooking: boolean;
 };
@@ -123,8 +138,12 @@ type BookingsManagerProps = {
   lessons: BookingsLesson[];
   days: BookingsDay[];
   initialDayKey: string;
-  previousWeekKey: string;
-  nextWeekKey: string;
+  view: BookingsViewValue;
+  /** "2–8 nov" for the week, "novembre 2026" for the month. */
+  periodLabel: string;
+  /** Previous/next week (day and week views) or first day of the previous/next month. */
+  previousKey: string;
+  nextKey: string;
   todayKey: string;
   pass: BookingPass | null;
   upcoming: UpcomingBooking[];
@@ -140,9 +159,12 @@ type BookingsManagerProps = {
 };
 
 
-function bookingsHref(locale: string, dayKey: string) {
-  return `/${locale}/bookings?day=${dayKey}`;
+function bookingsHref(locale: string, dayKey: string, view: BookingsViewValue) {
+  return `/${locale}/bookings?day=${dayKey}&view=${view.toLowerCase()}`;
 }
+
+const navArrowClass =
+  "inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)] sm:w-11";
 
 /* ------------------------------------------------------------------ */
 /* Row action: Prenota / stamp / queue                                 */
@@ -334,8 +356,9 @@ function LessonRow({
 
   return (
     <li
+      id={`lesson-${lesson.id}`}
       className={cn(
-        "border-b border-[var(--rule)] transition-colors duration-150 last:border-b-0 lg:rounded-xl",
+        "scroll-mt-24 border-b border-[var(--rule)] transition-colors duration-150 last:border-b-0 lg:rounded-xl",
         expanded ? "bg-[var(--surface)] shadow-[var(--shadow-lift)]" : ""
       )}
     >
@@ -374,6 +397,13 @@ function LessonRow({
             </span>
             <span className="mt-0.5 block text-[15px] text-[var(--muted-foreground)] sm:truncate">
               {meta}
+              {/* Staff see open requests without expanding the row. */}
+              {lesson.canManageLesson && lesson.pendingApprovals.length > 0 ? (
+                <span className="font-semibold text-[var(--warning-fg)]">
+                  {" · "}
+                  {fill(labels.pendingToConfirm, { n: lesson.pendingApprovals.length })}
+                </span>
+              ) : null}
             </span>
           </span>
           <ChevronDown
@@ -395,6 +425,24 @@ function LessonRow({
             <span className="tabular">{lesson.timeLabel}–{lesson.endTimeLabel}</span>
             {lesson.lessonTypeName ? <span className="text-[var(--muted-foreground)]">· {lesson.lessonTypeName}</span> : null}
           </li>
+          {lesson.isCourseLesson ? (
+            <li className="flex items-center gap-2.5">
+              <BookOpen size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
+              <span>
+                {labels.courseTag}{" "}
+                {lesson.courseId ? (
+                  <Link
+                    href={`/${locale}/courses/${lesson.courseId}`}
+                    className="font-semibold underline decoration-[1.5px] underline-offset-4 hover:decoration-2"
+                  >
+                    {lesson.courseName}
+                  </Link>
+                ) : (
+                  <span className="font-semibold">{lesson.courseName}</span>
+                )}
+              </span>
+            </li>
+          ) : null}
           {lesson.trainerName ? (
             <li className="flex items-center gap-2.5">
               <UserRound size={16} aria-hidden="true" className="shrink-0 text-[var(--muted-foreground)]" />
@@ -435,6 +483,34 @@ function LessonRow({
         {lesson.description ? (
           <p className="mt-3 max-w-[65ch] text-[15px] text-[var(--muted-foreground)]">{lesson.description}</p>
         ) : null}
+        {lesson.courseDescription ? <MarkdownView markdown={lesson.courseDescription} className="mt-3" /> : null}
+        {lesson.canManageLesson && lesson.pendingApprovals.length > 0 ? (
+          <section className="mt-4 max-w-xl">
+            <h3 className="text-[15px] font-semibold">
+              {lessonCreateLabels.pendingApprovalsLabel}{" "}
+              <span className="tabular font-medium text-[var(--muted-foreground)]">{lesson.pendingApprovals.length}</span>
+            </h3>
+            <ul className="mt-1 divide-y divide-[var(--rule)]">
+              {lesson.pendingApprovals.map((person) => (
+                <li key={person.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
+                  <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                    <UserQuickProfileTooltip userId={person.id} locale={locale}>
+                      {person.name}
+                    </UserQuickProfileTooltip>
+                    {person.planUsage ? <PlanUsageTag usage={person.planUsage} locale={locale} /> : null}
+                  </span>
+                  <PendingApprovalActions
+                    locale={locale}
+                    lessonId={lesson.id}
+                    traineeId={person.id}
+                    traineeName={person.name}
+                    labels={{ confirm: lessonCreateLabels.confirmPendingCta, reject: lessonCreateLabels.rejectPendingCta }}
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
         {manage ? <div className="mt-3 w-fit">{manage}</div> : null}
       </div>
     </li>
@@ -452,8 +528,10 @@ export function BookingsManager({
   lessons,
   days,
   initialDayKey,
-  previousWeekKey,
-  nextWeekKey,
+  view,
+  periodLabel,
+  previousKey,
+  nextKey,
   todayKey,
   pass,
   upcoming,
@@ -467,20 +545,40 @@ export function BookingsManager({
   closedDates,
   isAdmin,
 }: BookingsManagerProps) {
+  const router = useRouter();
+  const [isSwitching, startSwitch] = useTransition();
   const [selectedKey, setSelectedKey] = useState(initialDayKey);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [justStampedId, setJustStampedId] = useState<string | null>(null);
 
   const selectedDay = days.find((day) => day.key === selectedKey) ?? days[0];
   const dayLessons = lessons.filter((lesson) => lesson.dayKey === selectedDay.key);
+  // A weekly/monthly pass follows the day being looked at (in the week view: today, or the week's first day).
+  const focusKey = view === "WEEK" ? (days.find((day) => day.key === todayKey) ?? days[0]).key : selectedDay.key;
+  const shownPass: BookingPass | null = (() => {
+    if (!pass || (pass.kind !== "weekly" && pass.kind !== "monthly") || !pass.periods) return pass;
+    const period = pass.periods.find((item) => focusKey >= item.startKey && focusKey < item.endKey);
+    if (!period) return pass;
+    return { ...pass, used: period.used, remaining: period.remaining, periodLabel: period.isCurrent ? null : period.label };
+  })();
   const showPlanCost = pass && (pass.kind === "fixed" ? "fixed" : pass.kind === "weekly" || pass.kind === "monthly" ? "period" : null);
-  const weekHasToday = days.some((day) => day.key === todayKey);
+  const periodHasToday = days.some((day) => day.key === todayKey && (view !== "MONTH" || day.inMonth));
   const showUpcoming = upcoming.length > 0 || pass !== null;
+  // Days without lessons are greyed; members cannot open them at all, staff still can to add a lesson there.
+  const isDayLocked = (day: BookingsDay) => day.lessonCount === 0 && !canCreateStandaloneLesson;
 
   function selectDay(key: string) {
     setSelectedKey(key);
     setExpandedId(null);
-    window.history.replaceState(null, "", bookingsHref(locale, key));
+    window.history.replaceState(null, "", bookingsHref(locale, key, view));
+  }
+
+  function switchView(next: BookingsViewValue) {
+    if (next === view) return;
+    startSwitch(async () => {
+      await setBookingsViewAction(next);
+      router.push(bookingsHref(locale, selectedDay.key, next), { scroll: false });
+    });
   }
 
   function defaultStartsAt(dayKey: string) {
@@ -505,8 +603,10 @@ export function BookingsManager({
     );
   }
 
+  // The week view has no selected day: new lessons default to the first open day still ahead.
+  const createDay = view === "WEEK" ? days.find((day) => !day.isPast && !day.isClosed) : selectedDay;
   const createLessonButton =
-    canCreateStandaloneLesson && !selectedDay.isClosed && !selectedDay.isPast ? (
+    canCreateStandaloneLesson && createDay && !createDay.isClosed && !createDay.isPast ? (
       <StandaloneLessonCreateDialog
         locale={locale}
         trainerCandidates={trainerCandidates}
@@ -515,7 +615,7 @@ export function BookingsManager({
         closedDates={closedDates}
         defaultTrainerId={defaultTrainerId}
         disableTrainerSelection={!canUpdateTrainer}
-        defaultStartsAt={defaultStartsAt(selectedDay.key)}
+        defaultStartsAt={defaultStartsAt(createDay.key)}
         labels={{
           triggerCta: lessonCreateLabels.createStandaloneCta,
           title: lessonCreateLabels.standaloneTitle,
@@ -533,13 +633,60 @@ export function BookingsManager({
           closeCta: labels.closeCta,
         }}
         trigger={
-          <Button variant="ghost" size="sm" className="h-11 gap-1.5 px-3">
+          <Button variant="ghost" size="sm" className="h-11 gap-1.5 whitespace-nowrap px-3">
             <Plus size={18} aria-hidden="true" />
             {lessonCreateLabels.createStandaloneCta}
           </Button>
         }
       />
     ) : null;
+
+  const todayLink = !periodHasToday ? (
+    <Link
+      href={bookingsHref(locale, todayKey, view)}
+      className="inline-flex h-11 items-center rounded-xl px-3 text-[15px] font-semibold underline-offset-4 hover:underline"
+    >
+      {labels.today}
+    </Link>
+  ) : null;
+
+  function lessonCountLabel(count: number) {
+    return count === 1 ? labels.lessonsCountOne : fill(labels.lessonsCount, { n: count });
+  }
+
+  function dayAriaLabel(day: BookingsDay) {
+    return [
+      day.longLabel,
+      day.isToday ? labels.today : null,
+      day.isClosed ? labels.closedShort : lessonCountLabel(day.lessonCount),
+      day.hasOwnBooking ? labels.stampBooked : null,
+    ]
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  function renderLessonList(items: BookingsLesson[], ariaLabel: string) {
+    return (
+      <ul aria-label={ariaLabel}>
+        {items.map((lesson) => (
+          <LessonRow
+            key={lesson.id}
+            lesson={lesson}
+            locale={locale}
+            labels={labels}
+            lessonCreateLabels={lessonCreateLabels}
+            expanded={expandedId === lesson.id}
+            onToggle={() => setExpandedId((current) => (current === lesson.id ? null : lesson.id))}
+            justStamped={justStampedId === lesson.id}
+            onBooked={setJustStampedId}
+            showPlanCost={showPlanCost ?? null}
+            manage={renderManage(lesson)}
+            dimmed={expandedId !== null && expandedId !== lesson.id}
+          />
+        ))}
+      </ul>
+    );
+  }
 
   function renderUpcoming(headingId: string, className: string) {
     return (
@@ -552,13 +699,15 @@ export function BookingsManager({
             {upcoming.map((item) => (
               <li key={item.id}>
                 <Link
-                  href={bookingsHref(locale, item.dayKey)}
+                  href={bookingsHref(locale, item.dayKey, view)}
                   onClick={(event) => {
-                    if (days.some((day) => day.key === item.dayKey)) {
-                      event.preventDefault();
-                      selectDay(item.dayKey);
-                      setExpandedId(item.id);
-                    }
+                    if (!days.some((day) => day.key === item.dayKey)) return;
+                    event.preventDefault();
+                    if (view !== "WEEK") selectDay(item.dayKey);
+                    setExpandedId(item.id);
+                    window.requestAnimationFrame(() =>
+                      document.getElementById(`lesson-${item.id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    );
                   }}
                   className="-mx-2 flex min-h-11 items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--muted)]"
                 >
@@ -588,131 +737,249 @@ export function BookingsManager({
     );
   }
 
+  /* --- Band navigation, one per view --- */
+
+  const dayStrip = (
+    <div className="-mx-4 flex items-center gap-1 px-1.5 pb-2 sm:-mx-6 sm:px-4 lg:mx-0 lg:px-0">
+      <Link href={bookingsHref(locale, previousKey, view)} aria-label={labels.prevWeek} className={navArrowClass}>
+        <ChevronLeft size={20} aria-hidden="true" />
+      </Link>
+      <div role="group" aria-label={labels.weekNavigationLabel} className="grid flex-1 grid-cols-7 gap-0.5 sm:gap-1">
+        {days.map((day) => {
+          const selected = day.key === selectedDay.key;
+          const empty = day.lessonCount === 0;
+          const locked = isDayLocked(day) && !selected;
+          return (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => selectDay(day.key)}
+              disabled={locked}
+              aria-pressed={selected}
+              aria-label={dayAriaLabel(day)}
+              className={cn(
+                "relative flex min-h-[3.75rem] flex-col items-center justify-center rounded-xl transition-colors",
+                selected
+                  ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                  : empty
+                    ? "text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-transparent"
+                    : day.isPast
+                      ? "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
+                      : "hover:bg-[var(--muted)]"
+              )}
+            >
+              <span className={cn("text-xs font-semibold uppercase", selected ? "opacity-80" : "text-[var(--muted-foreground)]")}>
+                {day.weekdayLabel}
+              </span>
+              <span
+                className={cn(
+                  "tabular text-xl leading-tight",
+                  empty && !selected ? "font-medium" : "font-bold",
+                  day.isToday && !selected ? "underline decoration-2 underline-offset-4" : ""
+                )}
+              >
+                {day.dayNumberLabel}
+              </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute bottom-1.5 h-1.5 w-1.5 rounded-full",
+                  day.hasOwnBooking ? (selected ? "bg-[var(--primary-foreground)]" : "bg-[var(--stamp)]") : "bg-transparent"
+                )}
+              />
+            </button>
+          );
+        })}
+      </div>
+      <Link href={bookingsHref(locale, nextKey, view)} aria-label={labels.nextWeek} className={navArrowClass}>
+        <ChevronRight size={20} aria-hidden="true" />
+      </Link>
+    </div>
+  );
+
+  const periodNav = (prevLabel: string, nextLabel: string) => (
+    <div className="-mx-1.5 flex items-center gap-1 sm:mx-0">
+      <Link href={bookingsHref(locale, previousKey, view)} aria-label={prevLabel} className={navArrowClass}>
+        <ChevronLeft size={20} aria-hidden="true" />
+      </Link>
+      <h2 className="tabular flex-1 text-center text-[17px] font-semibold first-letter:uppercase">{periodLabel}</h2>
+      <Link href={bookingsHref(locale, nextKey, view)} aria-label={nextLabel} className={navArrowClass}>
+        <ChevronRight size={20} aria-hidden="true" />
+      </Link>
+    </div>
+  );
+
+  // Weekday initials for the month grid header come from the first grid row (always Monday first).
+  const monthGrid = (
+    <div className="pb-3">
+      {periodNav(labels.prevMonth, labels.nextMonth)}
+      <div aria-hidden="true" className="mt-2 grid grid-cols-7 gap-0.5 text-center text-xs font-semibold uppercase text-[var(--muted-foreground)] sm:gap-1">
+        {days.slice(0, 7).map((day) => (
+          <span key={day.key}>{day.weekdayLabel}</span>
+        ))}
+      </div>
+      <div role="group" aria-label={fill(labels.monthGridLabel, { month: periodLabel })} className="mt-1 grid grid-cols-7 gap-0.5 sm:gap-1">
+        {days.map((day) => {
+          const selected = day.key === selectedDay.key;
+          const empty = day.lessonCount === 0;
+          const locked = isDayLocked(day) && !selected;
+          const dots = Math.min(3, day.lessonCount);
+          return (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => selectDay(day.key)}
+              disabled={locked}
+              aria-pressed={selected}
+              aria-label={dayAriaLabel(day)}
+              className={cn(
+                "relative flex min-h-12 flex-col items-center justify-center gap-1 rounded-xl py-1.5 transition-colors sm:min-h-14",
+                selected
+                  ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
+                  : empty || day.isPast
+                    ? "text-[var(--muted-foreground)] hover:bg-[var(--muted)] disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:bg-transparent"
+                    : "hover:bg-[var(--muted)]",
+                !day.inMonth && !selected ? "opacity-45" : ""
+              )}
+            >
+              <span
+                className={cn(
+                  "tabular text-[17px] leading-none",
+                  empty && !selected ? "font-medium" : "font-bold",
+                  day.isClosed && !selected ? "line-through decoration-1" : "",
+                  day.isToday && !selected ? "underline decoration-2 underline-offset-4" : ""
+                )}
+              >
+                {day.dayNumberLabel}
+              </span>
+              <span aria-hidden="true" className="flex h-1.5 items-center gap-0.5">
+                {Array.from({ length: dots }, (_, index) => (
+                  <span
+                    key={index}
+                    className={cn(
+                      "h-1.5 w-1.5 rounded-full",
+                      selected
+                        ? "bg-[var(--primary-foreground)]"
+                        : index === 0 && day.hasOwnBooking
+                          ? "bg-[var(--stamp)]"
+                          : "bg-[var(--muted-foreground)]"
+                    )}
+                  />
+                ))}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const bandNav = view === "MONTH" ? monthGrid : view === "WEEK" ? <div className="pb-3">{periodNav(labels.prevWeek, labels.nextWeek)}</div> : dayStrip;
+
+  /* --- Lessons under the band --- */
+
+  const selectedDaySection = (
+    <section aria-labelledby="day-heading" className="-mx-4 min-w-0 sm:-mx-6 lg:mx-0">
+      <div className="flex min-h-14 items-center justify-between gap-2 px-4 pt-3 sm:px-6 lg:px-5">
+        <h2 id="day-heading" className="text-[17px] font-semibold first-letter:uppercase">
+          {selectedDay.longLabel}
+        </h2>
+        <div className="flex items-center gap-1">
+          {todayLink}
+          {createLessonButton}
+        </div>
+      </div>
+      {dayLessons.length > 0 ? (
+        renderLessonList(dayLessons, fill(labels.dayLessons, { day: selectedDay.longLabel }))
+      ) : (
+        <p className="px-4 pb-8 pt-4 text-[15px] text-[var(--muted-foreground)] sm:px-6 lg:px-5">
+          {selectedDay.isClosed ? labels.closedDay : labels.noLessonsDay}
+        </p>
+      )}
+    </section>
+  );
+
+  const weekSection = (
+    <section aria-label={periodLabel} className="-mx-4 min-w-0 sm:-mx-6 lg:mx-0">
+      {todayLink || createLessonButton ? (
+        <div className="flex min-h-14 items-center justify-end gap-1 px-4 pt-3 sm:px-6 lg:px-5">
+          {todayLink}
+          {createLessonButton}
+        </div>
+      ) : null}
+      {lessons.length === 0 ? (
+        <p className="px-4 pb-8 pt-4 text-[15px] text-[var(--muted-foreground)] sm:px-6 lg:px-5">{labels.noLessonsWeek}</p>
+      ) : (
+        days.map((day) => {
+          const items = lessons.filter((lesson) => lesson.dayKey === day.key);
+          const headingId = `week-day-${day.key}`;
+          if (items.length === 0) {
+            // Empty days collapse to one greyed line, so the week still reads Monday to Sunday.
+            return (
+              <p
+                key={day.key}
+                className="flex min-h-11 items-center gap-2 border-b border-[var(--rule)] px-4 text-[15px] text-[var(--muted-foreground)] sm:px-6 lg:px-5"
+              >
+                <span className="font-semibold first-letter:uppercase">{day.longLabel}</span>
+                <span aria-hidden="true">·</span>
+                <span>{day.isClosed ? labels.closedShort : labels.noLessonsShort}</span>
+              </p>
+            );
+          }
+          return (
+            <section key={day.key} aria-labelledby={headingId} className="border-b border-[var(--rule)] last:border-b-0">
+              <h3 id={headingId} className="flex items-center gap-2 px-4 pb-1 pt-5 text-[17px] font-semibold sm:px-6 lg:px-5">
+                <span className="first-letter:uppercase">{day.longLabel}</span>
+                {day.isToday ? (
+                  <span className="rounded-full bg-[var(--muted)] px-2 py-0.5 text-sm font-semibold">{labels.today}</span>
+                ) : null}
+              </h3>
+              {renderLessonList(items, fill(labels.dayLessons, { day: day.longLabel }))}
+            </section>
+          );
+        })
+      )}
+    </section>
+  );
+
   const columns = showUpcoming ? "lg:grid-cols-[minmax(0,1fr)_20rem]" : "max-w-4xl";
 
   return (
     <div>
-      {/* The page owns its stock band: title, pass and day strip sit on the section card stock,
-          and the band ends exactly on the strip's edge, never across a line of text. */}
+      {/* The page owns its stock band: title, pass and calendar navigation sit on the section card stock,
+          and the band ends exactly on the navigation's edge, never across a line of text. */}
       <div
         data-page-band
         className="-mt-4 bg-[var(--stock)] pt-1 shadow-[0_0_0_100vmax_var(--stock)] [clip-path:inset(0_-100vmax)] lg:-mt-10 lg:pt-10"
       >
-        <header>
-        <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
-        <p className="mt-1 hidden text-[15px] text-[var(--stock-ink)]/75 lg:block">{labels.description}</p>
+        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+          <div className="min-w-0">
+            <h1 className="text-[1.375rem] font-bold leading-tight lg:text-[2rem]">{labels.title}</h1>
+            <p className="mt-1 hidden text-[15px] text-[var(--stock-ink)]/75 lg:block">{labels.description}</p>
+          </div>
+          <SegmentedTabs<BookingsViewValue>
+            label={labels.viewLabel}
+            value={view}
+            onChange={switchView}
+            options={[
+              ["DAY", labels.viewDay],
+              ["WEEK", labels.viewWeek],
+              ["MONTH", labels.viewMonth],
+            ]}
+            className={cn("bg-[var(--surface)]/60 transition-opacity", isSwitching ? "opacity-60" : "")}
+          />
         </header>
         <div className={cn("mt-5 grid gap-5 lg:gap-8", columns)}>
           <div className="min-w-0 space-y-4">
-            {pass ? <PassCard pass={pass} labels={labels.pass} /> : null}
-            <div className="-mx-4 flex items-center gap-1 px-1.5 pb-2 sm:-mx-6 sm:px-4 lg:mx-0 lg:px-0">
-              <Link
-                href={bookingsHref(locale, previousWeekKey)}
-                aria-label={labels.prevWeek}
-                className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)] sm:w-11"
-              >
-                <ChevronLeft size={20} aria-hidden="true" />
-              </Link>
-              <div role="group" aria-label={labels.weekNavigationLabel} className="grid flex-1 grid-cols-7 gap-0.5 sm:gap-1">
-                {days.map((day) => {
-                  const selected = day.key === selectedDay.key;
-                  return (
-                    <button
-                      key={day.key}
-                      type="button"
-                      onClick={() => selectDay(day.key)}
-                      aria-pressed={selected}
-                      aria-label={`${day.longLabel}${day.isToday ? `, ${labels.today}` : ""}${day.hasOwnBooking ? `, ${labels.stampBooked}` : ""}`}
-                      className={cn(
-                        "relative flex min-h-[3.75rem] flex-col items-center justify-center rounded-xl transition-colors",
-                        selected
-                          ? "bg-[var(--primary)] text-[var(--primary-foreground)]"
-                          : day.isClosed || day.isPast
-                            ? "text-[var(--muted-foreground)] hover:bg-[var(--muted)]"
-                            : "hover:bg-[var(--muted)]"
-                      )}
-                    >
-                      <span className={cn("text-xs font-semibold uppercase", selected ? "opacity-80" : "text-[var(--muted-foreground)]")}>
-                        {day.weekdayLabel}
-                      </span>
-                      <span
-                        className={cn(
-                          "tabular text-xl font-bold leading-tight",
-                          day.isToday && !selected ? "underline decoration-2 underline-offset-4" : ""
-                        )}
-                      >
-                        {day.dayNumberLabel}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        className={cn(
-                          "absolute bottom-1.5 h-1.5 w-1.5 rounded-full",
-                          day.hasOwnBooking ? (selected ? "bg-[var(--primary-foreground)]" : "bg-[var(--stamp)]") : "bg-transparent"
-                        )}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
-              <Link
-                href={bookingsHref(locale, nextWeekKey)}
-                aria-label={labels.nextWeek}
-                className="inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-xl text-[var(--muted-foreground)] transition-colors hover:bg-[var(--muted)] hover:text-[var(--foreground)] sm:w-11"
-              >
-                <ChevronRight size={20} aria-hidden="true" />
-              </Link>
-            </div>
+            {shownPass ? <PassCard pass={shownPass} labels={labels.pass} /> : null}
+            {bandNav}
           </div>
           {showUpcoming ? renderUpcoming("upcoming-heading-desktop", "hidden pb-6 lg:block lg:pt-1") : null}
         </div>
       </div>
 
       {/* Rows lie directly on the section paper; the pass is the page's only card. */}
-      <div className={cn("grid lg:gap-8", columns)}>
-        <section aria-labelledby="day-heading" className="-mx-4 min-w-0 sm:-mx-6 lg:mx-0">
-            <div className="flex min-h-14 items-center justify-between gap-2 px-4 pt-3 sm:px-6 lg:px-5">
-              <h2 id="day-heading" className="text-[17px] font-semibold first-letter:uppercase">
-                {selectedDay.longLabel}
-              </h2>
-              <div className="flex items-center gap-1">
-                {!weekHasToday ? (
-                  <Link
-                    href={bookingsHref(locale, todayKey)}
-                    className="inline-flex h-11 items-center rounded-xl px-3 text-[15px] font-semibold underline-offset-4 hover:underline"
-                  >
-                    {labels.today}
-                  </Link>
-                ) : null}
-                {createLessonButton}
-              </div>
-            </div>
-
-            {dayLessons.length > 0 ? (
-              <ul aria-label={fill(labels.dayLessons, { day: selectedDay.longLabel })}>
-                {dayLessons.map((lesson) => (
-                  <LessonRow
-                    key={lesson.id}
-                    lesson={lesson}
-                    locale={locale}
-                    labels={labels}
-                    lessonCreateLabels={lessonCreateLabels}
-                    expanded={expandedId === lesson.id}
-                    onToggle={() => setExpandedId((current) => (current === lesson.id ? null : lesson.id))}
-                    justStamped={justStampedId === lesson.id}
-                    onBooked={setJustStampedId}
-                    showPlanCost={showPlanCost ?? null}
-                    manage={renderManage(lesson)}
-                    dimmed={expandedId !== null && expandedId !== lesson.id}
-                  />
-                ))}
-              </ul>
-            ) : (
-              <p className="px-4 pb-8 pt-4 text-[15px] text-[var(--muted-foreground)] sm:px-6 lg:px-5">
-                {selectedDay.isClosed ? labels.closedDay : labels.noLessonsDay}
-              </p>
-            )}
-        </section>
-      </div>
+      <div className={cn("grid lg:gap-8", columns)}>{view === "WEEK" ? weekSection : selectedDaySection}</div>
 
       {showUpcoming ? renderUpcoming("upcoming-heading", "mt-6 border-t border-[var(--rule)] pt-5 lg:hidden") : null}
     </div>

@@ -686,3 +686,18 @@ export async function rejectLessonBookingAction(formData: FormData): Promise<Boo
     };
   }
 }
+
+const BOOKINGS_VIEWS = ["DAY", "WEEK", "MONTH"] as const;
+export type BookingsViewValue = (typeof BOOKINGS_VIEWS)[number];
+
+/** Remembers the bookings layout the user picked, so it opens the same way on every device. */
+export async function setBookingsViewAction(view: string): Promise<void> {
+  try {
+    const user = await requireAuth();
+    if (!BOOKINGS_VIEWS.includes(view as BookingsViewValue)) return;
+    await prisma.user.update({ where: { id: user.id }, data: { bookingsView: view as BookingsViewValue } });
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("[bookings] failed to save view preference", error);
+  }
+}
