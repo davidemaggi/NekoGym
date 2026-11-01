@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/davidemaggi/NekoGym/compare/v1.4.0...v1.5.0) (2026-11-01)
+
+
+### Features
+
+* **lessons:** searchable people and trainer pickers with plan usage ([1949f41](https://github.com/davidemaggi/NekoGym/commit/1949f41b664c9c7cdc1158f1455c9dc3f785ba5e))
+
 # [1.4.0](https://github.com/davidemaggi/NekoGym/compare/v1.3.0...v1.4.0) (2026-11-01)
 
 
